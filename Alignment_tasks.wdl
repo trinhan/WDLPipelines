@@ -27,10 +27,15 @@ task SamToFastqAndBwaMemAndMba {
     File ref_fasta
     File ref_fasta_index
     File ref_dict
+    File? ref_alt
+    File ref_amb
+    File ref_ann
+    File ref_bwt
+    File ref_pac
+    File ref_sa
     Int compression_level
     Int preemptible_tries
     Boolean hard_clip_reads = false
-    String bwa_path
     String gotc_docker  
   }
 
@@ -292,9 +297,7 @@ workflow SplitLargeReadGroup {
     File ref_pac
     File ref_sa
     
-    String gotc_docker
-    String bwa_path
-    String gotc_path   
+    String gotc_docker 
 	
     Int compression_level
     Int preemptible_tries
@@ -321,11 +324,16 @@ workflow SplitLargeReadGroup {
         output_bam_basename = current_name,
         compression_level = compression_level,
         preemptible_tries = preemptible_tries,
-        bwa_path=gotc_path,
         gotc_docker = gotc_docker,
         ref_fasta=ref_fasta,
         ref_fasta_index=ref_fasta_index,
         ref_dict=ref_dict,
+        ref_alt=ref_alt,
+        ref_amb=ref_amb,
+    	ref_ann=ref_ann,
+    	ref_bwt=ref_bwt,
+    	ref_pac=ref_pac,
+    	ref_sa=ref_sa,
         hard_clip_reads = hard_clip_reads
     }
 
