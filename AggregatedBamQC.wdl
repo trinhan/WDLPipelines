@@ -15,8 +15,8 @@ version 1.0
 ## page at https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/ for detailed
 ## licensing information pertaining to the included programs.
 
-#import "Qc.wdl" as QC
-#import "DNASeqStructs.wdl"
+import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/Qc.wdl?token=ABVSYKAUTHJEFZZC72KDE4DA6EGTI" as QC
+import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/DNASeqStructs.wdl?token=ABVSYKHO756SWW4KHSKBODLA6EGWK"
 
 # WORKFLOW DEFINITION
 workflow AggregatedBamQC {
