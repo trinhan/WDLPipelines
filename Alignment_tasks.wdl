@@ -52,23 +52,21 @@ task SamToFastqAndBwaMemAndMba {
 
   command <<<
 
+	BWA_VERSION=$(/usr/gitc/bwa 2>&1 | \
+    	grep -e '^Version' | \
+    	sed 's/Version: //')
 
-    # This is done before "set -o pipefail" because "bwa" will have a rc=1 and we don't want to allow rc=1 to succeed
-    # because the sed may also fail with that error and that is something we actually want to fail on.
-   # BWA_VERSION=$(/usr/gitc/bwa 2>&1 | \
-   # grep -e '^Version' | \
-   # sed 's/Version: //')
+    	set -o pipefail
+    	set -e
 
-    set -o pipefail
-    set -e
-
-
+    	if [ -z ${BWA_VERSION} ]; then
+        	exit 1;
+    	fi
 
     # set the bash variable needed for the command-line
-    bash_ref_fasta=~{ref_fasta}
-    
-    ## if reference_fasta.ref_alt has data in it, if [ -s ~ ref_alt ]; then
-    
+    	bash_ref_fasta=~{ref_fasta}
+    # if reference_fasta.ref_alt has data in it,
+    if [ -s ~{ref_alt} ]; then
       java -Xms1000m -Xmx1000m -jar /usr/gitc/picard.jar \
         SamToFastq \
         INPUT=~{input_bam} \
@@ -106,9 +104,13 @@ task SamToFastqAndBwaMemAndMba {
         UNMAP_CONTAMINANT_READS=true \
         ADD_PG_TAG_TO_READS=false
 
-    ##  grep -m1 "read .* ALT contigs" ~{output_bam_basename}.bwa.stderr.log | \
-    ##  grep -v "read 0 ALT contigs"
-    ## else reference_fasta.ref_alt is empty or could not be found else  exit 1; fi
+      	grep -m1 "read .* ALT contigs" ~{output_bam_basename}.bwa.stderr.log | \
+     	 grep -v "read 0 ALT contigs"
+
+    	# else reference_fasta.ref_alt is empty or could not be found
+   else
+      exit 1;
+    fi
     
   >>>
   runtime {
