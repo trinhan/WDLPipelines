@@ -1,7 +1,7 @@
 version 1.0
 
-import "Utilities.wdl" as Utils
-import "Qc.wdl" as QC
+import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/Utilities.wdl?token=ABVSYKBEMUCIWY36QNLGO23A6EGVK" as Utils
+import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/Qc.wdl?token=ABVSYKAUTHJEFZZC72KDE4DA6EGTI" as QC
 
 workflow BamToCram {
 
