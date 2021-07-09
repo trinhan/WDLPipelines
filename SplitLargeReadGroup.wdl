@@ -16,7 +16,7 @@ version 1.0
 ## licensing information pertaining to the included programs.
 
 import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/Alignment.wdl?token=ABVSYKEGDKI2OJV55T3SGZDA6EFY6" as Alignment
-import "BamProcessing.wdl" as Processing
+import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/BamProcessing.wdl?token=ABVSYKA5Y3SRRLFZXT33GV3A6EHME" as Processing
 import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/Utilities.wdl?token=ABVSYKBEMUCIWY36QNLGO23A6EGVK" as Utils
 import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/DNASeqStructs.wdl?token=ABVSYKHO756SWW4KHSKBODLA6EGWK" as Structs
 
