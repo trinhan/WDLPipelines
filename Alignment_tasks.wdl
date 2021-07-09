@@ -16,36 +16,27 @@ version 1.0
 ## licensing information pertaining to the included programs.
 
 
+
+
 # Read unmapped BAM, convert on-the-fly to FASTQ and stream to BWA MEM for alignment, then stream to MergeBamAlignment
 task SamToFastqAndBwaMemAndMba {
   input {
     File input_bam
     String bwa_commandline
     String output_bam_basename
-
     File ref_fasta
     File ref_fasta_index
     File ref_dict
-    File? ref_alt
-    File ref_amb
-    File ref_ann
-    File ref_bwt
-    File ref_pac
-    File ref_sa
-
     Int compression_level
     Int preemptible_tries
     Boolean hard_clip_reads = false
-    
-    String docker_image
     String bwa_path
-    String gotc_path
-    
+    String gotc_docker  
   }
 
   Float unmapped_bam_size = size(input_bam, "GiB")
-  Float ref_size = size(ref_fasta, "GiB") + size(ref_fasta_index, "GiB") + size(ref_dict, "GiB")
-  Float bwa_ref_size = ref_size + size(ref_alt, "GiB") + size(ref_amb, "GiB") + size(ref_ann, "GiB") + size(ref_bwt, "GiB") + size(ref_pac, "GiB") + size(ref_sa, "GiB")
+  Float bwa_ref_size = size(ref_fasta, "GiB") + size(ref_fasta_index, "GiB") + size(ref_dict, "GiB")
+  ## Float bwa_ref_size = ref_size + size(ref_alt, "GiB") + size(ref_amb, "GiB") + size(ref_ann, "GiB") + size(ref_bwt, "GiB") + size(ref_pac, "GiB") + size(ref_sa, "GiB")
   
   # Sometimes the output is larger than the input, or a task can spill to disk.
   # In these cases we need to account for the input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
@@ -59,22 +50,20 @@ task SamToFastqAndBwaMemAndMba {
 
     # This is done before "set -o pipefail" because "bwa" will have a rc=1 and we don't want to allow rc=1 to succeed
     # because the sed may also fail with that error and that is something we actually want to fail on.
-    BWA_VERSION=$(/usr/gitc/bwa 2>&1 | \
-    grep -e '^Version' | \
-    sed 's/Version: //')
+   # BWA_VERSION=$(/usr/gitc/bwa 2>&1 | \
+   # grep -e '^Version' | \
+   # sed 's/Version: //')
 
     set -o pipefail
     set -e
 
-    if [ -z ${BWA_VERSION} ]; then
-        exit 1;
-    fi
+
 
     # set the bash variable needed for the command-line
     bash_ref_fasta=~{ref_fasta}
     
-    # if reference_fasta.ref_alt has data in it,
-    if [ -s ~{ref_alt} ]; then
+    ## if reference_fasta.ref_alt has data in it, if [ -s ~ ref_alt ]; then
+    
       java -Xms1000m -Xmx1000m -jar /usr/gitc/picard.jar \
         SamToFastq \
         INPUT=~{input_bam} \
@@ -112,16 +101,13 @@ task SamToFastqAndBwaMemAndMba {
         UNMAP_CONTAMINANT_READS=true \
         ADD_PG_TAG_TO_READS=false
 
-    #  grep -m1 "read .* ALT contigs" ~{output_bam_basename}.bwa.stderr.log | \
-    #  grep -v "read 0 ALT contigs"
-
-    # else reference_fasta.ref_alt is empty or could not be found
-    else
-      exit 1;
-    fi
+    ##  grep -m1 "read .* ALT contigs" ~{output_bam_basename}.bwa.stderr.log | \
+    ##  grep -v "read 0 ALT contigs"
+    ## else reference_fasta.ref_alt is empty or could not be found else  exit 1; fi
+    
   >>>
   runtime {
-    docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.7-1603303710"
+    docker: gotc_docker
     preemptible: preemptible_tries
     memory: "14 GiB"
     cpu: "16"
@@ -129,7 +115,6 @@ task SamToFastqAndBwaMemAndMba {
   }
   output {
     File output_bam = "~{output_bam_basename}.bam"
-  #  File bwa_stderr_log = "~{output_bam_basename}.bwa.stderr.log"
   }
 }
 
@@ -306,6 +291,10 @@ workflow SplitLargeReadGroup {
     File ref_bwt
     File ref_pac
     File ref_sa
+    
+    String gotc_docker
+    String bwa_path
+    String gotc_path   
 	
     Int compression_level
     Int preemptible_tries
@@ -332,6 +321,11 @@ workflow SplitLargeReadGroup {
         output_bam_basename = current_name,
         compression_level = compression_level,
         preemptible_tries = preemptible_tries,
+        bwa_path=gotc_path,
+        gotc_docker = gotc_docker,
+        ref_fasta=ref_fasta,
+        ref_fasta_index=ref_fasta_index,
+        ref_dict=ref_dict,
         hard_clip_reads = hard_clip_reads
     }
 
