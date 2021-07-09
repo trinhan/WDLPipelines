@@ -52,19 +52,19 @@ task SamToFastqAndBwaMemAndMba {
 
   command <<<
 
-	BWA_VERSION=$(/usr/gitc/bwa 2>&1 | \
-    	grep -e '^Version' | \
-    	sed 's/Version: //')
+   BWA_VERSION=$(/usr/gitc/bwa 2>&1 | \
+    grep -e '^Version' | \
+    sed 's/Version: //')
 
-    	set -o pipefail
-    	set -e
+    set -o pipefail
+    set -e
 
-    	if [ -z ${BWA_VERSION} ]; then
-        	exit 1;
-    	fi
+    if [ -z ${BWA_VERSION} ]; then
+        exit 1;
+    fi
 
     # set the bash variable needed for the command-line
-    	bash_ref_fasta=~{ref_fasta}
+    bash_ref_fasta=~{ref_fasta}
     # if reference_fasta.ref_alt has data in it,
     if [ -s ~{ref_alt} ]; then
       java -Xms1000m -Xmx1000m -jar /usr/gitc/picard.jar \
@@ -104,10 +104,10 @@ task SamToFastqAndBwaMemAndMba {
         UNMAP_CONTAMINANT_READS=true \
         ADD_PG_TAG_TO_READS=false
 
-      	grep -m1 "read .* ALT contigs" ~{output_bam_basename}.bwa.stderr.log | \
-     	 grep -v "read 0 ALT contigs"
+      grep -m1 "read .* ALT contigs" ~{output_bam_basename}.bwa.stderr.log | \
+      grep -v "read 0 ALT contigs"
 
-    	# else reference_fasta.ref_alt is empty or could not be found
+    # else reference_fasta.ref_alt is empty or could not be found
    else
       exit 1;
     fi
