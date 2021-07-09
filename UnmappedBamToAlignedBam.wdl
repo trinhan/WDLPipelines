@@ -16,12 +16,19 @@ version 1.0
 ## page at https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud/ for detailed
 ## licensing information pertaining to the included programs.
 
-import "Alignment.wdl" as Alignment
-import "SplitLargeReadGroup.wdl" as SplitRG
-import "Qc.wdl" as QC
-import "BamProcessing.wdl" as Processing
-import "Utilities.wdl" as Utils
-import "DNASeqStructs.wdl" as Structs
+import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/Utilities.wdl?token=ABVSYKBEMUCIWY36QNLGO23A6EGVK" as Utils
+import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/Alignment.wdl?token=ABVSYKEGDKI2OJV55T3SGZDA6EFY6" as Alignment
+import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/SplitLargeReadGroup.wdl?token=ABVSYKC237BFHAXEJGUX5B3A6EGXM" as SplitRG
+import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/Qc.wdl?token=ABVSYKAUTHJEFZZC72KDE4DA6EGTI" as QC
+import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/BamProcessing.wdl?token=ABVSYKA5Y3SRRLFZXT33GV3A6EHME" as Processing
+import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/DNASeqStructs.wdl?token=ABVSYKHO756SWW4KHSKBODLA6EGWK" as Structs
+#
+#import "Alignment.wdl" as Alignment
+#import "SplitLargeReadGroup.wdl" as SplitRG
+#import "Qc.wdl" as QC
+#import "BamProcessing.wdl" as Processing
+#import "Utilities.wdl" as Utils
+#import "DNASeqStructs.wdl" as Structs
 
 # WORKFLOW DEFINITION
 workflow UnmappedBamToAlignedBam {
