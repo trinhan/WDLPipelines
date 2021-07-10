@@ -118,7 +118,7 @@ task SamToFastqAndBwaMemAndMba {
     preemptible: preemptible_tries
     memory: "14 GiB"
     cpu: "16"
-    disks: disk_size + " HDD"
+    disks: "local-disk " + disk_size + " HDD"
   }
   output {
     File output_bam = "~{output_bam_basename}.bam"
