@@ -64,8 +64,10 @@ task SamToFastqAndBwaMemAndMba {
     echo $BWA_VERSION
     # set the bash variable needed for the command-line
     bash_ref_fasta=~{ref_fasta}
+    echo $bash_ref_fasta
     # if reference_fasta.ref_alt has data in it,
     if [ -s ~{ref_alt} ]; then
+    echo $run_this
       java -Xms1000m -Xmx1000m -jar /usr/gitc/picard.jar \
         SamToFastq \
         INPUT=~{input_bam} \
@@ -108,6 +110,7 @@ task SamToFastqAndBwaMemAndMba {
 
     # else reference_fasta.ref_alt is empty or could not be found
    else
+   	echo 'run failed'
       exit 1;
     fi
     
