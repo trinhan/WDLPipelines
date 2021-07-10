@@ -57,10 +57,11 @@ task SamToFastqAndBwaMemAndMba {
 
     set -o pipefail
     set -e
-
-    if [ -z ${BWA_VERSION} ]; then
+    echo 'set up step 1'
+    if [ -z $BWA_VERSION ]; then
         exit 1;
     fi
+    echo $BWA_VERSION
     # set the bash variable needed for the command-line
     bash_ref_fasta=~{ref_fasta}
     # if reference_fasta.ref_alt has data in it,
