@@ -40,8 +40,8 @@ task SamToFastqAndBwaMemAndMba {
   }
 
   Float unmapped_bam_size = size(input_bam, "GiB")
-  Float bwa_ref_size = size(ref_fasta, "GiB") + size(ref_fasta_index, "GiB") + size(ref_dict, "GiB")
-  ## Float bwa_ref_size = ref_size + size(ref_alt, "GiB") + size(ref_amb, "GiB") + size(ref_ann, "GiB") + size(ref_bwt, "GiB") + size(ref_pac, "GiB") + size(ref_sa, "GiB")
+  Float ref_size = size(ref_fasta, "GiB") + size(ref_fasta_index, "GiB") + size(ref_dict, "GiB")
+  Float bwa_ref_size = ref_size + size(ref_alt, "GiB") + size(ref_amb, "GiB") + size(ref_ann, "GiB") + size(ref_bwt, "GiB") + size(ref_pac, "GiB") + size(ref_sa, "GiB")
   
   # Sometimes the output is larger than the input, or a task can spill to disk.
   # In these cases we need to account for the input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
@@ -51,7 +51,7 @@ task SamToFastqAndBwaMemAndMba {
   Int disk_size = ceil(unmapped_bam_size + bwa_ref_size + (disk_multiplier * unmapped_bam_size) + 20)
 
   command <<<
-
+   echo ('get bwa version')
    BWA_VERSION=$(/usr/gitc/bwa 2>&1 | \
     grep -e '^Version' | \
     sed 's/Version: //')
@@ -62,7 +62,7 @@ task SamToFastqAndBwaMemAndMba {
     if [ -z ${BWA_VERSION} ]; then
         exit 1;
     fi
-
+    echo ('run picard')
     # set the bash variable needed for the command-line
     bash_ref_fasta=~{ref_fasta}
     # if reference_fasta.ref_alt has data in it,
@@ -118,7 +118,7 @@ task SamToFastqAndBwaMemAndMba {
     preemptible: preemptible_tries
     memory: "14 GiB"
     cpu: "16"
-    disks: "local-disk " + disk_size + " HDD"
+    disks: disk_size + " HDD"
   }
   output {
     File output_bam = "~{output_bam_basename}.bam"
