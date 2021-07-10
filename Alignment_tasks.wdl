@@ -51,23 +51,22 @@ task SamToFastqAndBwaMemAndMba {
   Int disk_size = ceil(unmapped_bam_size + bwa_ref_size + (disk_multiplier * unmapped_bam_size) + 20)
 
   command <<<
+   echo 'get bwa version'
    BWA_VERSION=$(/usr/gitc/bwa 2>&1 | \
     grep -e '^Version' | \
     sed 's/Version: //')
-
     set -o pipefail
     set -e
-    echo 'set up step 1'
-    if [ -z $BWA_VERSION ]; then
+    echo $BWA_VERSION
+    if [ -z ${BWA_VERSION} ]; then
         exit 1;
     fi
-    echo $BWA_VERSION
+    echo 'bash fasta'
     # set the bash variable needed for the command-line
     bash_ref_fasta=~{ref_fasta}
-    echo $bash_ref_fasta
     # if reference_fasta.ref_alt has data in it,
     if [ -s ~{ref_alt} ]; then
-    echo 'run_this'
+      echo 'run picard'
       java -Xms1000m -Xmx1000m -jar /usr/gitc/picard.jar \
         SamToFastq \
         INPUT=~{input_bam} \
@@ -110,7 +109,7 @@ task SamToFastqAndBwaMemAndMba {
 
     # else reference_fasta.ref_alt is empty or could not be found
    else
-      echo 'run failed'
+    echo 'run failed'
       exit 1;
     fi
     
