@@ -63,7 +63,9 @@ task SamToFastqAndBwaMemAndMba {
     fi
     echo 'bash fasta'
     # set the bash variable needed for the command-line
+    # set the bash variable needed for the command-line
     bash_ref_fasta=~{ref_fasta}
+     echo 'bash fasta'
     echo $bash_ref_fasta
     size2=size(ref_alt, "GiB")
     echo $size2
