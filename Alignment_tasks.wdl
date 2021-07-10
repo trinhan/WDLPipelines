@@ -64,6 +64,9 @@ task SamToFastqAndBwaMemAndMba {
     echo 'bash fasta'
     # set the bash variable needed for the command-line
     bash_ref_fasta=~{ref_fasta}
+    echo $bash_ref_fasta
+    size2=size(ref_alt, "GiB")
+    echo $size2
     # if reference_fasta.ref_alt has data in it,
     if [ -s ~{ref_alt} ]; then
       echo 'run picard'
