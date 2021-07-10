@@ -51,7 +51,6 @@ task SamToFastqAndBwaMemAndMba {
   Int disk_size = ceil(unmapped_bam_size + bwa_ref_size + (disk_multiplier * unmapped_bam_size) + 20)
 
   command <<<
-   echo ('get bwa version')
    BWA_VERSION=$(/usr/gitc/bwa 2>&1 | \
     grep -e '^Version' | \
     sed 's/Version: //')
@@ -62,7 +61,6 @@ task SamToFastqAndBwaMemAndMba {
     if [ -z ${BWA_VERSION} ]; then
         exit 1;
     fi
-    echo ('run picard')
     # set the bash variable needed for the command-line
     bash_ref_fasta=~{ref_fasta}
     # if reference_fasta.ref_alt has data in it,
