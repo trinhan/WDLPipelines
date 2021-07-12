@@ -65,7 +65,7 @@ task SamToFastqAndBwaMem {
     | \
     ~{bwa_path}~{bwa_commandline} /dev/stdin -  2> >(tee ~{output_bam_basename}.bwa.stderr.log >&2) \
     | \
-    samtools view -1 - > ~{output_bam_basename}.bam
+    samtools view -1 - > ~{output_bam_basename}.bwa.bam
  }
 runtime {
     preemptible: preemptible_tries
@@ -75,7 +75,7 @@ runtime {
     disks: "local-disk " + disk_size + " HDD"
   }
   output {
-    File output_bam = "~{output_bam_basename}.bam"
+    File output_bam = "~{output_bam_basename}.bwa.bam"
     File bwa_stderr_log = "~{output_bam_basename}.bwa.stderr.log"
   }
 }
@@ -113,9 +113,9 @@ task MergeBamAlignment {
       --VALIDATION_STRINGENCY SILENT \
       --EXPECTED_ORIENTATIONS FR \
       --ATTRIBUTES_TO_RETAIN X0 \
-      --ALIGNED_BAM ~{aligned_bam}.bam \
+      --ALIGNED_BAM ~{aligned_bam} \
       --UNMAPPED_BAM ~{unmapped_bam} \
-      --OUTPUT ~{output_bam_basename}.bam \
+      --OUTPUT ~{output_bam_basename}.aligned.bam \
       --REFERENCE_SEQUENCE ~{ref_fasta} \
       --PAIRED_RUN true \
       --SORT_ORDER "unsorted" \
@@ -142,7 +142,7 @@ task MergeBamAlignment {
     disks: "local-disk " + disk_size + " HDD"
   }
   output {
-    File output_bam = "~{output_bam_basename}.bam"
+    File output_bam = "~{output_bam_basename}.aligned.bam"
   }
 }
 
