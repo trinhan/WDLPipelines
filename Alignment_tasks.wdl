@@ -19,7 +19,7 @@ version 1.0
 
 
 # Read unmapped BAM, convert on-the-fly to FASTQ and stream to BWA MEM for alignment, then stream to MergeBamAlignment
-task SamToFastqAndBwaMemAndMba {
+task SamToFastqAndBwaMem {
   input {
     File input_bam
     String bwa_commandline
@@ -35,10 +35,10 @@ task SamToFastqAndBwaMemAndMba {
     File ref_sa
     Int compression_level
     Int preemptible_tries
-    Boolean hard_clip_reads = false
     String gotc_docker  
+    String gotc_path
+    String bwa_path
   }
-
   Float unmapped_bam_size = size(input_bam, "GiB")
   Float ref_size = size(ref_fasta, "GiB") + size(ref_fasta_index, "GiB") + size(ref_dict, "GiB")
   Float bwa_ref_size = ref_size + size(ref_alt, "GiB") + size(ref_amb, "GiB") + size(ref_ann, "GiB") + size(ref_bwt, "GiB") + size(ref_pac, "GiB") + size(ref_sa, "GiB")
@@ -50,75 +50,92 @@ task SamToFastqAndBwaMemAndMba {
   
   Int disk_size = ceil(unmapped_bam_size + bwa_ref_size + (disk_multiplier * unmapped_bam_size) + 20)
 
-   command <<<
-   echo 'get bwa version'
-   BWA_VERSION=$(/usr/gitc/bwa 2>&1 | \
-    grep -e '^Version' | \
-    sed 's/Version: //')
-    set -o pipefail
-    set -e
-    echo $BWA_VERSION
-    if [ -z ${BWA_VERSION} ]; then
-        exit 1;
-    fi
+  command {
+    
     # set the bash variable needed for the command-line
     bash_ref_fasta=~{ref_fasta}
-     echo 'bash fasta'
-    echo $bash_ref_fasta
-    # if reference_fasta.ref_alt has data in it,
-    #if [ -s ~{ref_alt} ]; then
-      echo 'run picard'
-      java -Xms1000m -Xmx1000m -jar /usr/gitc/picard.jar \
-        SamToFastq \
-        INPUT=~{input_bam} \
-        FASTQ=/dev/stdout \
-        INTERLEAVE=true \
-        NON_PF=true | \
-      /usr/gitc/~{bwa_commandline} /dev/stdin - 2> >(tee ~{output_bam_basename}.bwa.stderr.log >&2) | \
-      java -Dsamjdk.compression_level=~{compression_level} -Xms1000m -Xmx1000m -jar /usr/gitc/picard.jar \
-        MergeBamAlignment \
-        VALIDATION_STRINGENCY=SILENT \
-        EXPECTED_ORIENTATIONS=FR \
-        ATTRIBUTES_TO_RETAIN=X0 \
-        ATTRIBUTES_TO_REMOVE=NM \
-        ATTRIBUTES_TO_REMOVE=MD \
-        ALIGNED_BAM=/dev/stdin \
-        UNMAPPED_BAM=~{input_bam} \
-        OUTPUT=~{output_bam_basename}.bam \
-        REFERENCE_SEQUENCE=~{ref_fasta} \
-        SORT_ORDER="unsorted" \
-        IS_BISULFITE_SEQUENCE=false \
-        ALIGNED_READS_ONLY=false \
-        CLIP_ADAPTERS=false \
-        ~{true='CLIP_OVERLAPPING_READS=true' false="" hard_clip_reads} \
-        ~{true='CLIP_OVERLAPPING_READS_OPERATOR=H' false="" hard_clip_reads} \
-        MAX_RECORDS_IN_RAM=2000000 \
-        ADD_MATE_CIGAR=true \
-        MAX_INSERTIONS_OR_DELETIONS=-1 \
-        PRIMARY_ALIGNMENT_STRATEGY=MostDistant \
-        PROGRAM_RECORD_ID="bwamem" \
-        PROGRAM_GROUP_VERSION="${BWA_VERSION}" \
-        PROGRAM_GROUP_COMMAND_LINE="~{bwa_commandline}" \
-        PROGRAM_GROUP_NAME="bwamem" \
-        UNMAPPED_READ_STRATEGY=COPY_TO_TAG \
-        ALIGNER_PROPER_PAIR_FLAGS=true \
-        UNMAP_CONTAMINANT_READS=true \
-        ADD_PG_TAG_TO_READS=false
-
-      grep -m1 "read .* ALT contigs" ~{output_bam_basename}.bwa.stderr.log | \
-      grep -v "read 0 ALT contigs"
-
-    # else reference_fasta.ref_alt is empty or could not be found
-   #else
-    #echo 'run failed'
-     # exit 1;
-    #fi
-    
-
-    
-  >>>
-  runtime {
+     
+ # Do alignment here
+   java -Dsamjdk.compression_level=~{compression_level} -Xms1000m -jar ~{gotc_path}picard.jar \
+    SamToFastq \
+    INPUT=~{input_bam} \
+    FASTQ=/dev/stdout \
+    INTERLEAVE=true \
+    NON_PF=true \
+    | \
+    ~{bwa_path}~{bwa_commandline} /dev/stdin -  2> >(tee ~{output_bam_basename}.bwa.stderr.log >&2) \
+    | \
+    samtools view -1 - > ~{output_bam_basename}.bam
+ }
+runtime {
+    preemptible: preemptible_tries
     docker: gotc_docker
+    memory: "14 GiB"
+    cpu: "16"
+    disks: "local-disk " + disk_size + " HDD"
+  }
+  output {
+    File output_bam = "~{output_bam_basename}.bam"
+    File bwa_stderr_log = "~{output_bam_basename}.bwa.stderr.log"
+  }
+}
+
+task MergeBamAlignment {
+  input {
+    File unmapped_bam
+    String bwa_commandline
+    String bwa_version
+    File aligned_bam
+    String output_bam_basename
+    File ref_fasta
+    File ref_fasta_index
+    File ref_dict
+    Int compression_level
+    Int preemptible_tries
+    Float mem_size_gb = 4
+    String gatk_docker
+    String gatk_path
+  }
+   # calculate the disk size required?
+   Float unmapped_bam_size = size(unmapped_bam, "GiB") + size(aligned_bam, "GiB")
+   Float ref_size = size(ref_fasta, "GiB") + size(ref_fasta_index, "GiB") + size(ref_dict, "GiB")
+   # Sometimes the output is larger than the input, or a task can spill to disk.
+   # In these cases we need to account for the input (1) and the output (1.5) or the input(1), the output(1), and spillage (.5).
+  
+  Float disk_multiplier = 2.5
+  
+  Int disk_size = ceil(disk_multiplier*unmapped_bam_size + ref_size + 20)
+
+  command { 
+# Merge BAM ALIGNMENT HERE
+ ~{gatk_path} --java-options "-Dsamjdk.compression_level=~{compression_level} -Xms1000m" \
+      MergeBamAlignment \
+      --VALIDATION_STRINGENCY SILENT \
+      --EXPECTED_ORIENTATIONS FR \
+      --ATTRIBUTES_TO_RETAIN X0 \
+      --ALIGNED_BAM ~{aligned_bam}.bam \
+      --UNMAPPED_BAM ~{unmapped_bam} \
+      --OUTPUT ~{output_bam_basename}.bam \
+      --REFERENCE_SEQUENCE ~{ref_fasta} \
+      --PAIRED_RUN true \
+      --SORT_ORDER "unsorted" \
+      --IS_BISULFITE_SEQUENCE false \
+      --ALIGNED_READS_ONLY false \
+      --CLIP_ADAPTERS false \
+      --MAX_RECORDS_IN_RAM 2000000 \
+      --ADD_MATE_CIGAR true \
+      --MAX_INSERTIONS_OR_DELETIONS -1 \
+      --PRIMARY_ALIGNMENT_STRATEGY MostDistant \
+      --PROGRAM_RECORD_ID "bwamem" \
+      --PROGRAM_GROUP_VERSION "~{bwa_version}" \
+      --PROGRAM_GROUP_COMMAND_LINE "~{bwa_commandline}" \
+      --PROGRAM_GROUP_NAME "bwamem" \
+      --UNMAPPED_READ_STRATEGY COPY_TO_TAG \
+      --ALIGNER_PROPER_PAIR_FLAGS true \
+      --UNMAP_CONTAMINANT_READS true
+ }
+  runtime {
+    docker: gatk_docker
     preemptible: preemptible_tries
     memory: "14 GiB"
     cpu: "16"
@@ -291,9 +308,10 @@ workflow SplitLargeReadGroup {
   input {
     File input_bam
     String bwa_commandline
+    String bwa_version
+    String bwa_path
     String output_bam_basename
-	
-	File ref_fasta
+    File ref_fasta
     File ref_fasta_index
     File ref_dict
     File? ref_alt
@@ -304,7 +322,9 @@ workflow SplitLargeReadGroup {
     File ref_sa
     
     String gotc_docker 
-	
+    String gatk_docker
+    String gotc_path
+    String gatk_path
     Int compression_level
     Int preemptible_tries
     Int reads_per_file = 50000000
@@ -323,10 +343,12 @@ workflow SplitLargeReadGroup {
     Float current_unmapped_bam_size = size(unmapped_bam, "GiB")
     String current_name = basename(unmapped_bam, ".bam")
 
-    call SamToFastqAndBwaMemAndMba {
+    call SamToFastqAndBwaMem {
       input:
         input_bam = unmapped_bam,
         bwa_commandline = bwa_commandline,
+        bwa_path=gotc_path,
+        gotc_path=gotc_path,
         output_bam_basename = current_name,
         compression_level = compression_level,
         preemptible_tries = preemptible_tries,
@@ -336,14 +358,28 @@ workflow SplitLargeReadGroup {
         ref_dict=ref_dict,
         ref_alt=ref_alt,
         ref_amb=ref_amb,
-    	ref_ann=ref_ann,
-    	ref_bwt=ref_bwt,
-    	ref_pac=ref_pac,
-    	ref_sa=ref_sa,
-        hard_clip_reads = hard_clip_reads
+        ref_ann=ref_ann,
+        ref_bwt=ref_bwt,
+        ref_pac=ref_pac,
+        ref_sa=ref_sa,
     }
+    call MergeBamAlignment {
+      input:
+        unmapped_bam = unmapped_bam,
+        bwa_commandline = bwa_commandline, # put in a call to figure out bwa_version
+        bwa_version=bwa_version,
+        aligned_bam=SamToFastqAndBwaMem.output_bam,
+        output_bam_basename=current_name,
+        ref_fasta=ref_fasta,
+        ref_fasta_index=ref_fasta_index,
+        ref_dict=ref_dict,
+        compression_level=4,
+        preemptible_tries=preemptible_tries,
+        gatk_docker=gatk_docker,
+        gatk_path=gatk_path
+     }
 
-    Float current_mapped_size = size(SamToFastqAndBwaMemAndMba.output_bam, "GiB")
+    Float current_mapped_size = size(MergeBamAlignment.output_bam, "GiB")
   }
 
   call SumFloats{
@@ -354,7 +390,7 @@ workflow SplitLargeReadGroup {
 
   call GatherUnsortedBamFiles {
     input:
-      input_bams = SamToFastqAndBwaMemAndMba.output_bam,
+      input_bams = MergeBamAlignment.output_bam,
       total_input_size = SumFloats.total_size,
       output_bam_basename = output_bam_basename,
       preemptible_tries = preemptible_tries,
