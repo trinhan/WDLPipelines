@@ -39,6 +39,7 @@ task SamToFastqAndBwaMem {
     String gotc_path
     String bwa_path
     Int mem_in = 32
+    Int num_cpu=1
   }
   Float unmapped_bam_size = size(input_bam, "GiB")
   Float ref_size = size(ref_fasta, "GiB") + size(ref_fasta_index, "GiB") + size(ref_dict, "GiB")
@@ -71,6 +72,7 @@ task SamToFastqAndBwaMem {
 runtime {
     preemptible: preemptible_tries
     docker: gotc_docker
+    cpu: num_cpu
     memory: mem_in + "GiB"
     disks: "local-disk " + disk_size + " HDD"
   }
