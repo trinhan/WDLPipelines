@@ -95,6 +95,7 @@ task MergeBamAlignment {
     Float mem_size_gb = 4
     String gatk_docker
     String gatk_path
+    Int run_mem = 20
   }
    # calculate the disk size required?
    Float unmapped_bam_size = size(unmapped_bam, "GiB") + size(aligned_bam, "GiB")
@@ -137,7 +138,7 @@ task MergeBamAlignment {
   runtime {
     docker: gatk_docker
     preemptible: preemptible_tries
-    memory: "16 GiB"
+    memory: run_mem + " GiB"
     disks: "local-disk " + disk_size + " HDD"
   }
   output {
