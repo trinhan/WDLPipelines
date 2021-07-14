@@ -95,7 +95,7 @@ task MergeBamAlignment {
     Float mem_size_gb = 4
     String gatk_docker
     String gatk_path
-    In mem_in = 32
+    Int mem_in = 32
   }
    # calculate the disk size required?
    Float unmapped_bam_size = size(unmapped_bam, "GiB") + size(aligned_bam, "GiB")
