@@ -38,7 +38,6 @@ task SamToFastqAndBwaMem {
     String gotc_docker  
     String gotc_path
     String bwa_path
-    Int num_cpu = 2
     Int mem_in = 32
   }
   Float unmapped_bam_size = size(input_bam, "GiB")
@@ -73,7 +72,6 @@ runtime {
     preemptible: preemptible_tries
     docker: gotc_docker
     memory: mem_in + "GiB"
-    cpu: num_cpu
     disks: "local-disk " + disk_size + " HDD"
   }
   output {
@@ -97,6 +95,7 @@ task MergeBamAlignment {
     Float mem_size_gb = 4
     String gatk_docker
     String gatk_path
+    In mem_in = 32
   }
    # calculate the disk size required?
    Float unmapped_bam_size = size(unmapped_bam, "GiB") + size(aligned_bam, "GiB")
@@ -139,8 +138,7 @@ task MergeBamAlignment {
   runtime {
     docker: gatk_docker
     preemptible: preemptible_tries
-    memory: "14 GiB"
-    cpu: "16"
+    memory: mem_in + "GiB"
     disks: "local-disk " + disk_size + " HDD"
   }
   output {
