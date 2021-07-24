@@ -232,26 +232,31 @@ task ConvertToBam {
     File ref_fasta
     File ref_fasta_index
     String output_basename
+    Int preemptible_tries
   }
+
+  Float ref_size = size(ref_fasta, "GiB") + size(ref_fasta_index, "GiB")
+  Int disk_size = ceil(6 * size(input_cram, "GiB") + ref_size) + 20
 
   command <<<
     set -e
     set -o pipefail
 
     samtools view -b -o ~{output_basename}.bam -T ~{ref_fasta} ~{input_cram}
-
     samtools index ~{output_basename}.bam
+    md5sum ~{output_basename}.bam >  ~{output_basename}.bam.md5
   >>>
   runtime {
     docker: "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.7-1603303710"
-    preemptible: 3
+    preemptible: preemptible_tries
     memory: "3 GiB"
     cpu: "1"
-    disks: "local-disk 200 HDD"
+    disks: "local-disk " + disk_size + " HDD"
   }
   output {
     File output_bam = "~{output_basename}.bam"
     File output_bam_index = "~{output_basename}.bam.bai"
+    File md5_bam = "~{output_basename}.bam.md5"
   }
 }
 
