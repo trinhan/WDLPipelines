@@ -1,2 +1,3 @@
 # wgsAlignment
-files required to run alignment pipeline
+
+files required to run WGS alignment pipeline adapted from GATK
