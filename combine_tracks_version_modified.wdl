@@ -66,8 +66,11 @@ workflow CombineTracksWorkflow {
     File ref_fasta_fai
     File centromere_tracks_seg
     File gistic_blacklist_tracks_seg
-    File? gatk4_jar_override
-    Array[String] columns_of_interest
+    Array[String] columns_of_interest =(["NUM_POINTS_COPY_RATIO", "NUM_POINTS_ALLELE_FRACTION",
+     "LOG2_COPY_RATIO_POSTERIOR_10", "LOG2_COPY_RATIO_POSTERIOR_50", "LOG2_COPY_RATIO_POSTERIOR_90",
+     "MINOR_ALLELE_FRACTION_POSTERIOR_10", "MINOR_ALLELE_FRACTION_POSTERIOR_50", "MINOR_ALLELE_FRACTION_POSTERIOR_90",
+     "CALL", "NUM_POINTS_COPY_RATIO", "MEAN_LOG2_COPY_RATIO", "POSSIBLE_GERMLINE", "ID", "type"])
+    Array[String] columns_of_int_called =(["NUM_POINTS_COPY_RATIO",   "MEAN_LOG2_COPY_RATIO",    "CALL", "type"])
     Int? germline_tagging_padding
     String group_id
     String gatk_docker
@@ -86,13 +89,12 @@ workflow CombineTracksWorkflow {
             tumor_called_seg = tumor_called_seg,
             matched_normal_called_seg = matched_normal_called_seg,
             centromere_tracks_seg = centromere_tracks_seg,
-            columns_of_interest = columns_of_interest,
+            columns_of_interest = columns_of_int_called,
             ref_fasta = ref_fasta,
             ref_fasta_dict = ref_fasta_dict,
             ref_fasta_fai = ref_fasta_fai,
             germline_tagging_padding = germline_tagging_padding,
-            gistic_blacklist_tracks_seg = gistic_blacklist_tracks_seg,
-            gatk4_jar_override = gatk4_jar_override,
+            gistic_blacklist_tracks_seg = gistic_blacklist_tracks_seg,            
             gatk_docker = gatk_docker
     }
 
@@ -103,7 +105,6 @@ workflow CombineTracksWorkflow {
             ref_fasta = ref_fasta,
             ref_fasta_dict = ref_fasta_dict,
             ref_fasta_fai = ref_fasta_fai,
-            gatk4_jar_override = gatk4_jar_override,
             gatk_docker = gatk_docker
     }
 
@@ -122,7 +123,6 @@ workflow CombineTracksWorkflow {
             ref_fasta_dict = ref_fasta_dict,
             ref_fasta_fai = ref_fasta_fai,
             gatk_docker = gatk_docker,
-            gatk4_jar_override = gatk4_jar_override,
             max_merge_distance = max_merge_distance
     }
 
@@ -158,8 +158,6 @@ task CombineTracks {
     File centromere_tracks_seg
     File gistic_blacklist_tracks_seg
     Array[String] columns_of_interest
-
-    File? gatk4_jar_override
     
     String output_name = basename(tumor_called_seg)
 
@@ -185,8 +183,6 @@ task CombineTracks {
     command {
         
         set -e
-        export GATK_LOCAL_JAR=${default="/root/gatk.jar" gatk4_jar_override}
-
         echo "======= Germline Tagging "
         gatk --java-options "-Xmx${command_mem}m" \
             TagGermlineEvents \
@@ -199,6 +195,7 @@ task CombineTracks {
              CombineSegmentBreakpoints \
             --segments ${output_name}.germline_tagged.seg --segments ${centromere_tracks_seg}  \
             --columns-of-interest ${sep=" --columns-of-interest " columns_of_interest} \
+            --columns-of-interest "POSSIBLE_GERMLINE" \
             -O ${output_name}.centro.seg -R ${ref_fasta}
 
         echo "======= GISTIC blacklist "
@@ -206,6 +203,7 @@ task CombineTracks {
              CombineSegmentBreakpoints \
             --segments ${output_name}.centro.seg --segments ${gistic_blacklist_tracks_seg}  \
             --columns-of-interest ${sep=" --columns-of-interest " columns_of_interest} \
+            --columns-of-interest "POSSIBLE_GERMLINE" \
             --columns-of-interest ID \
             -O ${output_name}.final.seg -R ${ref_fasta}
     }
@@ -273,8 +271,6 @@ task MergeSegmentByAnnotation {
     File ref_fasta_dict
     File ref_fasta_fai
 
-    File? gatk4_jar_override
-
     String output_name = basename(seg_file)
 
     Int? max_merge_distance
@@ -299,7 +295,6 @@ task MergeSegmentByAnnotation {
 
     command {
         set -e
-        export GATK_LOCAL_JAR=${default="/root/gatk.jar" gatk4_jar_override}
 
         echo "======= Merging "
         gatk --java-options "-Xmx${command_mem}m" \
@@ -335,7 +330,7 @@ task PrototypeACSConversion {
     String docker
     Float? maf90_threshold
     String output_filename = basename(model_seg) + ".acs.seg"
-    String output_skew_filename = output_filename + ".skew"
+    String output_skew_filename = basename(model_seg) + ".acs.seg.skew"
     Int? min_hets_acs_results
     Int min_hets_acs_results_final = select_first([min_hets_acs_results, 0])
     }
@@ -453,12 +448,13 @@ def convert_model_segments_to_alleliccapseg(model_segments_seg_pd,
     # If a row has less than X (set by user) hets, then assume zero
     filter_rows = alleliccapseg_seg_pd['n_hets'] < ${min_hets_acs_results_final}
     # mu.minor  sigma.minor  mu.major  sigma.major
-    alleliccapseg_seg_pd.ix[filter_rows, 'n_hets'] = 0
-    alleliccapseg_seg_pd.ix[filter_rows, 'f'] = np.NaN
-    alleliccapseg_seg_pd.ix[filter_rows, 'mu.minor'] = np.NaN
-    alleliccapseg_seg_pd.ix[filter_rows, 'sigma.minor'] = np.NaN
-    alleliccapseg_seg_pd.ix[filter_rows, 'mu.major'] = np.NaN
-    alleliccapseg_seg_pd.ix[filter_rows, 'sigma.major'] = np.NaN
+    if (sum(filter_rows)>0):
+        alleliccapseg_seg_pd.ix[filter_rows, 'n_hets'] = 0
+        alleliccapseg_seg_pd.ix[filter_rows, 'f'] = np.NaN
+        alleliccapseg_seg_pd.ix[filter_rows, 'mu.minor'] = np.NaN
+        alleliccapseg_seg_pd.ix[filter_rows, 'sigma.minor'] = np.NaN
+        alleliccapseg_seg_pd.ix[filter_rows, 'mu.major'] = np.NaN
+        alleliccapseg_seg_pd.ix[filter_rows, 'sigma.major'] = np.NaN
 
 
     return alleliccapseg_seg_pd, alleliccapseg_skew
@@ -507,8 +503,6 @@ task PrepareForACSConversion {
      "CALL", "NUM_POINTS_COPY_RATIO", "MEAN_LOG2_COPY_RATIO", "POSSIBLE_GERMLINE", "type", "ID"
     ]
 
-    File? gatk4_jar_override
-
     String output_name = basename(modeled_seg)
 
     # Runtime parameters
@@ -532,7 +526,6 @@ task PrepareForACSConversion {
     command {
 
         set -e
-        export GATK_LOCAL_JAR=${default="/root/gatk.jar" gatk4_jar_override}
 
         echo "======= Merging GATK Model Seg and GATK Segment caller file "
         gatk --java-options "-Xmx${command_mem}m" \
