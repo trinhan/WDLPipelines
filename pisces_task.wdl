@@ -114,9 +114,9 @@ task runpisces {
         
         if [[ -f ${normalBam} ]];
         then 
-            dotnet /app/VennVcf_5.2.10.49/VennVcf.dll -if somatic_${pairName}/${tumPrefix}.recal.phased.vcf,somatic_${pairName}/${normPrefix}.recal.vcf -o venn
+            dotnet /app/VennVcf_5.2.10.49/VennVcf.dll -if somatic_${pairName}/${tumPrefix}.recal.vcf,somatic_${pairName}/${normPrefix}.recal.vcf -o venn
             tar -zvcf ~{pairName}_venn_pisces.tar.gz venn
-            mv venn/${tumPrefix}.recal.phased_not_${normPrefix}.recal.vcf ${tumPrefix}.somatic.unique.recal.vcf
+            mv venn/${tumPrefix}.recal_not_${normPrefix}.recal.vcf ${tumPrefix}.somatic.unique.recal.vcf
         else 
             mv somatic_${pairName}/${tumPrefix}.recal.vcf ${tumPrefix}.somatic.unique.recal.vcf
         fi 
