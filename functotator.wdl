@@ -39,7 +39,7 @@ workflow Funcotator_workflow {
     File ref_fasta_index
     File ref_dict
     File variant_vcf_to_funcotate
-    File variant_vcf_to_funcotate_index
+    File? variant_vcf_to_funcotate_index
     String reference_version
     String output_file_base_name
     String output_format
@@ -97,7 +97,7 @@ task Funcotate {
     File ref_dict
 
     File input_vcf
-    File input_vcf_idx
+    File? input_vcf_idx
 
     String reference_version
 
@@ -172,7 +172,7 @@ task Funcotate {
 
     # Calculate disk size:
     Float ref_size_gb = size(ref_fasta, "GiB") + size(ref_fasta_index, "GiB") + size(ref_dict, "GiB")
-    Float vcf_size_gb = size(input_vcf, "GiB") + size(input_vcf_idx, "GiB")
+    Float vcf_size_gb = size(input_vcf, "GiB")
     Float ds_size_gb = size(data_sources_tar_gz, "GiB")
 
     Int default_disk_space_gb = ceil( ref_size_gb + (ds_size_gb * 2) + (vcf_size_gb * 10) ) + 20
