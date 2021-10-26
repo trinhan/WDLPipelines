@@ -181,7 +181,7 @@ task Funcotate {
     String dollar = "$"
 
 
-    command <<<
+   command <<<
         set -e
 
         # =======================================
@@ -189,7 +189,7 @@ task Funcotate {
         #
         # NOTE: This happens here so that we don't waste time copying down the data sources if there's an error.
 
-        if [[ "${output_format}" != "MAF" ]] && [[ "${output_format}" != "VCF" ]] ; then
+        if [[ "~{output_format}" != "MAF" ]] && [[ "~{output_format}" != "VCF" ]] ; then
             echo "ERROR: Output format must be MAF or VCF."
         fi
 
@@ -199,19 +199,19 @@ task Funcotate {
         # Extract the tar.gz:
         echo "Extracting data sources tar/gzip file..."
         mkdir datasources_dir
-        tar zxvf ${data_sources_tar_gz} -C datasources_dir --strip-components 1
+        tar zxvf ~{data_sources_tar_gz} -C datasources_dir --strip-components 1
         DATA_SOURCES_FOLDER="$PWD/datasources_dir"
 
         # Handle gnomAD:
-        if ${use_gnomad} ; then
+        if ~{use_gnomad} ; then
             echo "Enabling gnomAD..."
             for potential_gnomad_gz in gnomAD_exome.tar.gz gnomAD_genome.tar.gz ; do
-                if [[ -f ${dollar}{DATA_SOURCES_FOLDER}/${dollar}{potential_gnomad_gz} ]] ; then
-                    cd ${dollar}{DATA_SOURCES_FOLDER}
-                    tar -zvxf ${dollar}{potential_gnomad_gz}
+                if [[ -f ~{dollar}{DATA_SOURCES_FOLDER}/~{dollar}{potential_gnomad_gz} ]] ; then
+                    cd ~{dollar}{DATA_SOURCES_FOLDER}
+                    tar -zvxf ~{dollar}{potential_gnomad_gz}
                     cd -
                 else
-                    echo "ERROR: Cannot find gnomAD folder: ${dollar}{potential_gnomad_gz}" 1>&2
+                    echo "ERROR: Cannot find gnomAD folder: ~{dollar}{potential_gnomad_gz}" 1>&2
                     false
                 fi
             done
@@ -219,31 +219,31 @@ task Funcotate {
 
         # =======================================
         # Run Funcotator:
-        gatk --java-options "-Xmx${command_mem}m" Funcotator \
+        gatk --java-options "-Xmx~{command_mem}m" Funcotator \
             --data-sources-path $DATA_SOURCES_FOLDER \
-            --ref-version ${reference_version} \
-            --output-file-format ${output_format} \
-            -R ${ref_fasta} \
-            -V ${input_vcf} \
-            -O ${output_file} \
-            ${interval_list_arg} ${default="" interval_list} \
-            --annotation-default normal_barcode:${default="Unknown" control_id} \
-            --annotation-default tumor_barcode:${default="Unknown" case_id} \
-            --annotation-default Center:${default="Unknown" sequencing_center} \
-            --annotation-default source:${default="Unknown" sequence_source} \
-            ${"--transcript-selection-mode " + transcript_selection_mode} \
-            ${transcript_selection_arg}${default="" sep=" --transcript-list " transcript_selection_list} \
-            ${annotation_def_arg}${default="" sep=" --annotation-default " annotation_defaults} \
-            ${annotation_over_arg}${default="" sep=" --annotation-override " annotation_overrides} \
-            ${excluded_fields_args}${default="" sep=" --exclude-field " funcotator_excluded_fields} \
-            ${filter_funcotations_args} \
-            ${extra_args_arg} \
-            ${requester_pays_arg}${default="" gcs_project_for_requester_pays}
+            --ref-version ~{reference_version} \
+            --output-file-format ~{output_format} \
+            -R ~{ref_fasta} \
+            -V ~{input_vcf} \
+            -O ~{output_file} \
+            ~{interval_list_arg} ~{default="" interval_list} \
+            --annotation-default normal_barcode:~{default="Unknown" control_id} \
+            --annotation-default tumor_barcode:~{default="Unknown" case_id} \
+            --annotation-default Center:~{default="Unknown" sequencing_center} \
+            --annotation-default source:~{default="Unknown" sequence_source} \
+            ~{"--transcript-selection-mode " + transcript_selection_mode} \
+            ~{transcript_selection_arg}~{default="" sep=" --transcript-list " transcript_selection_list} \
+            ~{annotation_def_arg}~{default="" sep=" --annotation-default " annotation_defaults} \
+            ~{annotation_over_arg}~{default="" sep=" --annotation-override " annotation_overrides} \
+            ~{excluded_fields_args}~{default="" sep=" --exclude-field " funcotator_excluded_fields} \
+            ~{filter_funcotations_args} \
+            ~{extra_args_arg} \
+            ~{requester_pays_arg}~{default="" gcs_project_for_requester_pays}
 
         # =======================================
         # Make sure we have a placeholder index for MAF files so this workflow doesn't fail:
-        if [[ "${output_format}" == "MAF" ]] ; then
-            touch ${output_maf_index}
+        if [[ "~{output_format}" == "MAF" ]] ; then
+            touch ~{output_maf_index}
         fi
     >>>
 
@@ -258,7 +258,6 @@ task Funcotate {
     }
 
     output {
-        File funcotated_output_file = "${output_file}"
-        File funcotated_output_file_index = "${output_file_index}"
+        File funcotated_output_file = "~{output_file}"
+        File funcotated_output_file_index = "~{output_file_index}"
     }
-}
