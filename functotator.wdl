@@ -261,3 +261,4 @@ task Funcotate {
         File funcotated_output_file = "~{output_file}"
         File funcotated_output_file_index = "~{output_file_index}"
     }
+    }
