@@ -4,9 +4,10 @@ workflow pisces_workflow {
   input {
     File? refFasta
     File? refFastaFai
+    File? refFastaDict
     File? pisces_reference
-    File tumorBam
-    File tumorBai
+    File? tumorBam
+    File? tumorBai
     File? normalBam
     File? normalBai
     String pairName
@@ -17,6 +18,7 @@ workflow pisces_workflow {
         input:
             refFasta=refFasta,
             refFastaFai=refFastaFai,
+            refFastaDict=refFastaDict,
             tumorBam=tumorBam,
             normalBam=normalBam,
             normalBai=normalBai,
@@ -39,6 +41,7 @@ task runpisces {
     input {
     File? refFasta
     File? refFastaFai
+    File? refFastaDict
     File? pisces_reference
     File tumorBam
     File tumorBai
@@ -51,6 +54,7 @@ task runpisces {
     Int? nthreads =2
     String mem =8
     Int preemptible =3
+    String saveDict = "1"
     }
 
     Int disk_size=2*ceil(size(tumorBam, "GB")+3)
@@ -58,6 +62,8 @@ task runpisces {
 
     String tumPrefix=basename(sub(tumorBam,"\\.bam$", ""))
     String normPrefix= if (normP!="") then basename(sub(normP,"\\.bam$", "")) else ""
+    
+    String buildRef = if defined(pisces_reference) then "0" else "1"
    
     command <<<
         set -e
@@ -66,17 +72,25 @@ task runpisces {
         echo ~{normPrefix}
         sname=~{pisces_reference}
 
-        if [[ -f "~{refFasta}" ]];
+        if [ ~{buildRef} -eq "1" ];
         then
         echo 'create the reference'
         sname=`basename ~{refFasta}`
         sname=$(echo $sname| cut -f 1 -d '.')
         echo $sname
         mkdir $sname
-        mv ~{refFasta} $sname
-        mv ~{refFastaFai} $sname
+        cp ~{refFasta} $sname
+        cp ~{refFastaFai} $sname
+        cp ~{refFastaDict} $sname
         dotnet /app/CreateGenomeSizeFile_5.2.10.49/CreateGenomeSizeFile.dll -g $sname -s "Homo sapien $sname" -o $sname
         fi 
+        
+        if [ ~{buildRef} -eq "0" ];
+        then
+        tar xvzf ~{pisces_reference}
+        sname=`basename ~{pisces_reference}`
+        sname=$(echo $sname| cut -f 1 -d '.')
+        fi
 
         ## run the variant calling: this works
         dotnet /app/Pisces_5.2.10.49/Pisces.dll -g $sname -b ~{tumorBam} -CallMNVs ~{MNVcall} -gVCF false --threadbychr ~{scatterchr} --collapse true -c 5 \
@@ -140,6 +154,12 @@ task runpisces {
 
         # perform phasing here
         dotnet /app/Scylla_5.2.10.49/Scylla.dll -g $sname --vcf ~{tumPrefix}.somatic.unique.recal.vcf --bam ~{tumorBam}
+        
+        if [ ~{saveDict} -eq "1" ];
+        then
+            tar -zvcf ref_Genome_pisces.tar.gz $sname
+        fi
+        
     >>>
 
     output {
@@ -148,6 +168,8 @@ task runpisces {
         File normal_variants_same_site="variant2_${pairName}/${normPrefix}.genome.recal.vcf"
         File? normal_variants = "somatic_${pairName}/${normPrefix}.recal.vcf"
         File? venn_zip="~{pairName}_venn_pisces.tar.gz"
+        File? refzip="ref_Genome_pisces.tar.gz"
+
     }
 
     runtime {
