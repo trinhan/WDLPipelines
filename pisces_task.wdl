@@ -59,7 +59,7 @@ task runpisces {
 
     Int disk_size=2*ceil(size(tumorBam, "GB")+3)
     String normP = select_first([ normalBam ,""])
-    String tumP = select_first([ normalBam ,""])
+    String tumP = select_first([ tumorBam ,""])
 
     String tumPrefix=if (tumP!="") then basename(sub(tumorBam,"\\.bam$", "")) else ""
     String normPrefix= if (normP!="") then basename(sub(normP,"\\.bam$", "")) else ""
