@@ -43,8 +43,8 @@ task runpisces {
     File? refFastaFai
     File? refFastaDict
     File? pisces_reference
-    File tumorBam
-    File tumorBai
+    File? tumorBam
+    File? tumorBai
     File? normalBam
     File? normalBai
     String pairName
