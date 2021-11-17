@@ -29,11 +29,14 @@ workflow pisces_workflow {
         }
 
     output {
-        File pisces_tum_phased=runpisces.tumor_variants_phased
-        File pisces_tum_recal=runpisces.tumor_variants_unique
-        File pisces_norm_same_site=runpisces.normal_variants_same_site
-        File? pisces_norm_recal=runpisces.normal_variants
-        File? tumour_only=runpisces.venn_zip
+        File? tumor_unique_variants_phased=runpisces.tumor_unique_variants_phased
+        File? tumor_unique_variants=runpisces.tumor_unique_variants
+        File? normal_variants_same_site=runpisces.normal_variants_same_site
+        File? normal_variants=runpisces.normal_variants
+        File? tumor_variants=runpisces.tumor_variants
+        File? venn_zip=runpisces.venn_zip
+        File? refzip=runpisces.refzip
+
     }
 }
 
@@ -55,23 +58,27 @@ task runpisces {
     String mem =8
     Int preemptible =3
     String saveDict = "1"
+    String runMode
     }
 
     Int disk_size=2*ceil(size(tumorBam, "GB")+3)
     String normP = select_first([ normalBam ,""])
     String tumP = select_first([ tumorBam ,""])
-
-    String tumPrefix=if (tumP!="") then basename(sub(tumorBam,"\\.bam$", "")) else ""
+    String tumPrefix=if (tumP!="") then basename(sub(tumP,"\\.bam$", "")) else ""
     String normPrefix= if (normP!="") then basename(sub(normP,"\\.bam$", "")) else ""
-    
     String buildRef = if defined(pisces_reference) then "0" else "1"
+
+    String runTum = if (runMode!="Germline") then "1" else "0"
+    String runGerm = if (runMode!="TumOnly") then "1" else "0"
+    String matchPair = if (runMode=="Paired") then "1" else "0"
    
     command <<<
         set -e
 
         mkdir somatic_~{pairName}
-        echo ~{normPrefix}
         sname=~{pisces_reference}
+
+        ## Build the reference libraries here if they do not exist
 
         if [ ~{buildRef} -eq "1" ];
         then
@@ -93,6 +100,10 @@ task runpisces {
         sname=$(echo $sname| cut -f 1 -d '.')
         fi
 
+        ## Run the tumor based calling of variants
+
+        if [ ~{runTum} -eq "1" ];
+        then        
         ## run the variant calling: this works
         dotnet /app/Pisces_5.2.10.49/Pisces.dll -g $sname -b ~{tumorBam} -CallMNVs ~{MNVcall} -gVCF false --threadbychr ~{scatterchr} --collapse true -c 5 \
         --filterduplicates true --maxthreads ~{nthreads} -o somatic_~{pairName} ~{"-i " + interval}
@@ -100,18 +111,19 @@ task runpisces {
          ## VSQR
         dotnet /app/VariantQualityRecalibration_5.2.10.49/VariantQualityRecalibration.dll --vcf somatic_~{pairName}/~{tumPrefix}.vcf --out somatic_~{pairName}
 
-        if [[ -f somatic_~{pairName}/~{tumPrefix}.vcf.recal ]];
-            then 
-            mv somatic_~{pairName}/~{tumPrefix}.vcf.recal somatic_~{pairName}/~{tumPrefix}.recal.vcf 
-            else 
-            cp somatic_~{pairName}/~{tumPrefix}.vcf somatic_~{pairName}/~{tumPrefix}.recal.vcf
+        ## check that this is for
+
+            if [[ -f somatic_~{pairName}/~{tumPrefix}.vcf.recal ]];
+                then 
+                mv somatic_~{pairName}/~{tumPrefix}.vcf.recal somatic_~{pairName}/~{tumPrefix}.recal.vcf 
+                else 
+                cp somatic_~{pairName}/~{tumPrefix}.vcf somatic_~{pairName}/~{tumPrefix}.recal.vcf
+            fi
         fi
         
-        ## phasing
-        ## dotnet /app/Scylla_5.2.10.49/Scylla.dll -g $sname --vcf somatic_${pairName}/${tumPrefix}.recal.vcf --bam ${tumorBam} --filterduplicates true
-        ## If germline is present, do an intersection 
+        ## Run germline based calling
 
-        if [[ -f ~{normalBam} ]];
+        if [ ~{runGerm} -eq "1" ];
         then
         dotnet /app/Pisces_5.2.10.49/Pisces.dll -g $sname -b ~{normalBam} -CallMNVs ~{MNVcall} -gVCF false --threadbychr ~{scatterchr} --collapse true -ploidy diploid \
         --filterduplicates true --maxthreads ~{nthreads} -o somatic_~{pairName} ~{"-i " + interval}
@@ -124,11 +136,10 @@ task runpisces {
             else
               cp somatic_~{pairName}/~{normPrefix}.vcf somatic_~{pairName}/~{normPrefix}.recal.vcf
         fi
-        
         ## dotnet /app/Scylla_5.2.10.49/Scylla.dll -g $sname --vcf somatic_~{pairName}/~{normPrefix}.recal.vcf --bam ~{normalBam}
         fi
         
-        if [[ -f ~{normalBam} ]];
+        if [ ~{matchPair} -eq "1" ];
         then 
             dotnet /app/VennVcf_5.2.10.49/VennVcf.dll -if somatic_~{pairName}/~{tumPrefix}.recal.vcf,somatic_~{pairName}/~{normPrefix}.recal.vcf -o venn
 
@@ -164,10 +175,11 @@ task runpisces {
     >>>
 
     output {
-        File tumor_variants_unique="${tumPrefix}.somatic.unique.recal.vcf"
-        File tumor_variants_phased="${tumPrefix}.somatic.unique.recal.phased.vcf"
-        File normal_variants_same_site="variant2_${pairName}/${normPrefix}.genome.recal.vcf"
-        File? normal_variants = "somatic_${pairName}/${normPrefix}.recal.vcf"
+        File? tumor_unique_variants="~{tumPrefix}.somatic.unique.recal.vcf"
+        File? tumor_unique_variants_phased="~{tumPrefix}.somatic.unique.recal.phased.vcf"
+        File? normal_variants_same_site="variant2_~{pairName}/~{normPrefix}.genome.recal.vcf"
+        File? normal_variants = "somatic_${pairName}/~{normPrefix}.recal.vcf"
+        File? tumor_variants = "somatic_${pairName}/~{tumPrefix}.recal.vcf"
         File? venn_zip="~{pairName}_venn_pisces.tar.gz"
         File? refzip="ref_Genome_pisces.tar.gz"
 
@@ -182,4 +194,3 @@ task runpisces {
     }
 
 }
-
