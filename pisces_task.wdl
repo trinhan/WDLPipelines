@@ -116,8 +116,8 @@ task runpisces {
             if [[ -f somatic_~{pairName}/~{tumPrefix}.vcf.recal ]];
                 then 
                 mv somatic_~{pairName}/~{tumPrefix}.vcf.recal somatic_~{pairName}/~{tumPrefix}.recal.vcf 
-                else 
-                cp somatic_~{pairName}/~{tumPrefix}.vcf somatic_~{pairName}/~{tumPrefix}.recal.vcf
+            #    else 
+            #    cp somatic_~{pairName}/~{tumPrefix}.vcf somatic_~{pairName}/~{tumPrefix}.recal.vcf
             fi
         fi
         
@@ -178,7 +178,8 @@ task runpisces {
         File? tumor_unique_variants="~{tumPrefix}.somatic.unique.recal.vcf"
         File? tumor_unique_variants_phased="~{tumPrefix}.somatic.unique.recal.phased.vcf"
         File? normal_variants_same_site="variant2_~{pairName}/~{normPrefix}.genome.recal.vcf"
-        File? normal_variants = "somatic_${pairName}/~{normPrefix}.recal.vcf"
+        File? normal_variants_recal = "somatic_${pairName}/~{normPrefix}.recal.vcf"
+        File? normal_variants = "somatic_~{pairName}/~{tumPrefix}.vcf"
         File? tumor_variants = "somatic_${pairName}/~{tumPrefix}.recal.vcf"
         File? venn_zip="~{pairName}_venn_pisces.tar.gz"
         File? refzip="ref_Genome_pisces.tar.gz"
