@@ -12,6 +12,7 @@ workflow pisces_workflow {
     File? normalBai
     String pairName
     File? interval
+    String runMode
    }
 
      call runpisces {
@@ -25,7 +26,8 @@ workflow pisces_workflow {
             tumorBai=tumorBai,
             pairName=pairName,
             pisces_reference=pisces_reference,
-            interval=interval
+            interval=interval,
+            runMode="Germline"
         }
 
     output {
@@ -57,7 +59,7 @@ task runpisces {
     Int? nthreads =2
     String mem =8
     Int preemptible =3
-    String saveDict = "1"
+    String saveDict = "0"
     String runMode
     }
 
@@ -69,8 +71,8 @@ task runpisces {
     String buildRef = if defined(pisces_reference) then "0" else "1"
 
     String runTum = if (runMode!="Germline") then "1" else "0"
-    String runGerm = if (runMode!="TumOnly") then "1" else "0"
-    String matchPair = if (runMode=="Paired") then "1" else "0"
+    String runGerm = if (runMode!="TumOnly" ||  defined(normalBam)) then "1" else "0"
+    String matchPair = if (runMode=="Paired" ||  defined(normalBam)) then "1" else "0"
    
     command <<<
         set -e
@@ -115,7 +117,7 @@ task runpisces {
 
             if [[ -f somatic_~{pairName}/~{tumPrefix}.vcf.recal ]];
                 then 
-                mv somatic_~{pairName}/~{tumPrefix}.vcf.recal somatic_~{pairName}/~{tumPrefix}.recal.vcf 
+                cp somatic_~{pairName}/~{tumPrefix}.vcf.recal somatic_~{pairName}/~{tumPrefix}.recal.vcf 
             #    else 
             #    cp somatic_~{pairName}/~{tumPrefix}.vcf somatic_~{pairName}/~{tumPrefix}.recal.vcf
             fi
@@ -132,7 +134,7 @@ task runpisces {
 
         if [[ -f somatic_~{pairName}/~{normPrefix}.vcf.recal ]];
             then
-              mv somatic_~{pairName}/~{normPrefix}.vcf.recal somatic_~{pairName}/~{normPrefix}.recal.vcf
+              cp somatic_~{pairName}/~{normPrefix}.vcf.recal somatic_~{pairName}/~{normPrefix}.recal.vcf
             else
               cp somatic_~{pairName}/~{normPrefix}.vcf somatic_~{pairName}/~{normPrefix}.recal.vcf
         fi
@@ -175,14 +177,14 @@ task runpisces {
     >>>
 
     output {
-        File? tumor_unique_variants="~{tumPrefix}.somatic.unique.recal.vcf"
-        File? tumor_unique_variants_phased="~{tumPrefix}.somatic.unique.recal.phased.vcf"
-        File? normal_variants_same_site="variant2_~{pairName}/~{normPrefix}.genome.recal.vcf"
-        File? normal_variants_recal = "somatic_${pairName}/~{normPrefix}.recal.vcf"
-        File? normal_variants = "somatic_~{pairName}/~{normPrefix}.vcf"
-        File? tumor_variants = "somatic_${pairName}/~{tumPrefix}.recal.vcf"
-        File? venn_zip="~{pairName}_venn_pisces.tar.gz"
-        File? refzip="refPisces.tar.gz"
+        File? tumor_unique_variants=select_first(["~{tumPrefix}.somatic.unique.recal.vcf", "null"])
+        File? tumor_unique_variants_phased=select_first(["~{tumPrefix}.somatic.unique.recal.phased.vcf", "null"])
+        File? normal_variants_same_site=select_first(["variant2_~{pairName}/~{normPrefix}.genome.recal.vcf", "null"])
+        File? normal_variants_recal = select_first(["somatic_${pairName}/~{normPrefix}.recal.vcf", "null"])
+        File? normal_variants = select_first(["somatic_~{pairName}/~{normPrefix}.vcf", "null"])
+        File? tumor_variants = select_first(["somatic_${pairName}/~{tumPrefix}.recal.vcf", "null"])
+        File? venn_zip=select_first(["~{pairName}_venn_pisces.tar.gz", "null"])
+        File? refzip=select_first(["refPisces.tar.gz", "null"])
 
     }
 
