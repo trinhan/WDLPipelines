@@ -169,7 +169,7 @@ task runpisces {
         
         if [ ~{saveDict} -eq "1" ];
         then
-            tar -zvcf ref_Genome_pisces.tar.gz $sname
+            tar -zvcf $sname.tar.gz $sname
         fi
         
     >>>
@@ -182,7 +182,7 @@ task runpisces {
         File? normal_variants = "somatic_~{pairName}/~{tumPrefix}.vcf"
         File? tumor_variants = "somatic_${pairName}/~{tumPrefix}.recal.vcf"
         File? venn_zip="~{pairName}_venn_pisces.tar.gz"
-        File? refzip="ref_Genome_pisces.tar.gz"
+        File? refzip="$sname.tar.gz"
 
     }
 
