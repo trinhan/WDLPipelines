@@ -179,7 +179,7 @@ task runpisces {
         File? tumor_unique_variants_phased="~{tumPrefix}.somatic.unique.recal.phased.vcf"
         File? normal_variants_same_site="variant2_~{pairName}/~{normPrefix}.genome.recal.vcf"
         File? normal_variants_recal = "somatic_${pairName}/~{normPrefix}.recal.vcf"
-        File? normal_variants = "somatic_~{pairName}/~{tumPrefix}.vcf"
+        File? normal_variants = "somatic_~{pairName}/~{normPrefix}.vcf"
         File? tumor_variants = "somatic_${pairName}/~{tumPrefix}.recal.vcf"
         File? venn_zip="~{pairName}_venn_pisces.tar.gz"
         File? refzip="refPisces.tar.gz"
