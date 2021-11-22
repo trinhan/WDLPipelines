@@ -72,7 +72,7 @@ task runpisces {
 
     String runTum = if (runMode!="Germline") then "1" else "0"
     String runGerm = if (runMode!="TumOnly" ||  defined(normalBam)) then "1" else "0"
-    String matchPair = if (runMode=="Paired" ||  ( defined(normalBam) && defined(tumorBam)) then "1" else "0"
+    String matchPair = if (runMode=="Paired" ||  ( defined(normalBam) && defined(tumorBam))) then "1" else "0"
    
     command <<<
         set -e
