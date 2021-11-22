@@ -162,7 +162,7 @@ task runpisces {
             fi
             
             mv venn/~{tumPrefix}.recal_not_~{normPrefix}.recal.vcf ~{tumPrefix}.somatic.unique.recal.vcf
-        else 
+        else if [ ~{runTum} -eq "1" ]
             mv somatic_~{pairName}/~{tumPrefix}.recal.vcf ~{tumPrefix}.somatic.unique.recal.vcf
         fi 
 
