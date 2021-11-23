@@ -98,7 +98,10 @@ task runpisces {
         
         if [ ~{buildRef} -eq "0" ];
         then
+        ## to unpack the tar file
         tar xvzf ~{pisces_reference}
+        ## use this when using a reference file
+        ## cp -r ~{pisces_reference} . 
         sname=`basename ~{pisces_reference}`
         sname=$(echo $sname| cut -f 1 -d '.')
         fi
@@ -119,7 +122,8 @@ task runpisces {
             if [[ -f somatic_~{pairName}/~{tumPrefix}.vcf.recal ]];
                 then 
                 cp somatic_~{pairName}/~{tumPrefix}.vcf.recal somatic_~{pairName}/~{tumPrefix}.recal.vcf 
-                else 
+                elif [[ -f somatic_~{pairName}/~{tumPrefix}.vcf ]];
+                then
                 cp somatic_~{pairName}/~{tumPrefix}.vcf somatic_~{pairName}/~{tumPrefix}.recal.vcf
             fi
         fi
@@ -136,7 +140,8 @@ task runpisces {
         if [[ -f somatic_~{pairName}/~{normPrefix}.vcf.recal ]];
             then
               cp somatic_~{pairName}/~{normPrefix}.vcf.recal somatic_~{pairName}/~{normPrefix}.recal.vcf
-            else
+            elif [[ -f somatic_~{pairName}/~{normPrefix}.vcf ]];
+            then
               cp somatic_~{pairName}/~{normPrefix}.vcf somatic_~{pairName}/~{normPrefix}.recal.vcf
         fi
         ## dotnet /app/Scylla_5.2.10.49/Scylla.dll -g $sname --vcf somatic_~{pairName}/~{normPrefix}.recal.vcf --bam ~{normalBam}
@@ -158,7 +163,8 @@ task runpisces {
             if [[ -f variant2_~{pairName}/~{normPrefix}.genome.vcf.recal ]];
             then 
             mv variant2_~{pairName}/~{normPrefix}.genome.vcf.recal variant2_~{pairName}/~{normPrefix}.genome.recal.vcf
-            else 
+            elif [[ -f variant2_~{pairName}/~{normPrefix}.genome.vcf ]];
+            then
             cp variant2_~{pairName}/~{normPrefix}.genome.vcf variant2_~{pairName}/~{normPrefix}.genome.recal.vcf
             fi
             
@@ -182,14 +188,14 @@ task runpisces {
     >>>
 
     output {
-        File? tumor_unique_variants=select_first(["~{tumPrefix}.somatic.unique.recal.vcf", "null"])
-        File? tumor_unique_variants_phased=select_first(["~{tumPrefix}.somatic.unique.recal.phased.vcf", "null"])
-        File? normal_variants_same_site=select_first(["variant2_~{pairName}/~{normPrefix}.genome.recal.vcf", "null"])
-        File? normal_variants_recal = select_first(["somatic_${pairName}/~{normPrefix}.recal.vcf", "null"])
-        File? normal_variants = select_first(["somatic_~{pairName}/~{normPrefix}.vcf", "null"])
-        File? tumor_variants = select_first(["somatic_${pairName}/~{tumPrefix}.recal.vcf", "null"])
-        File? venn_zip=select_first(["~{pairName}_venn_pisces.tar.gz", "null"])
-        File? refzip=select_first(["refPisces.tar.gz", "null"])
+        File? tumor_unique_variants= "~{tumPrefix}.somatic.unique.recal.vcf" 
+        File? tumor_unique_variants_phased= "~{tumPrefix}.somatic.unique.recal.phased.vcf" 
+        File? normal_variants_same_site= "variant2_~{pairName}/~{normPrefix}.genome.recal.vcf" 
+        File? normal_variants_recal =  "somatic_${pairName}/~{normPrefix}.recal.vcf" 
+        File? normal_variants =  "somatic_~{pairName}/~{normPrefix}.vcf" 
+        File? tumor_variants =  "somatic_${pairName}/~{tumPrefix}.recal.vcf" 
+        File? venn_zip="~{pairName}_venn_pisces.tar.gz"
+        File? refzip="refPisces.tar.gz"
 
     }
 
