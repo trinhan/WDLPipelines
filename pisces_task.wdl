@@ -27,7 +27,7 @@ workflow pisces_workflow {
             pairName=pairName,
             pisces_reference=pisces_reference,
             interval=interval,
-            runMode="Germline"
+            runMode=runMode
         }
 
     output {
@@ -73,6 +73,7 @@ task runpisces {
     String runTum = if (runMode!="Germline") then "1" else "0"
     String runGerm = if (runMode!="TumOnly" ||  defined(normalBam)) then "1" else "0"
     String matchPair = if (runMode=="Paired" ||  ( defined(normalBam) && defined(tumorBam))) then "1" else "0"
+    String tOnly = if (runMode=="TumOnly" ||  ( !defined(normalBam) && defined(tumorBam))) then "1" else "0"
    
     command <<<
         set -e
@@ -118,8 +119,8 @@ task runpisces {
             if [[ -f somatic_~{pairName}/~{tumPrefix}.vcf.recal ]];
                 then 
                 cp somatic_~{pairName}/~{tumPrefix}.vcf.recal somatic_~{pairName}/~{tumPrefix}.recal.vcf 
-            #    else 
-            #    cp somatic_~{pairName}/~{tumPrefix}.vcf somatic_~{pairName}/~{tumPrefix}.recal.vcf
+                else 
+                cp somatic_~{pairName}/~{tumPrefix}.vcf somatic_~{pairName}/~{tumPrefix}.recal.vcf
             fi
         fi
         
@@ -162,9 +163,10 @@ task runpisces {
             fi
             
             mv venn/~{tumPrefix}.recal_not_~{normPrefix}.recal.vcf ~{tumPrefix}.somatic.unique.recal.vcf
-        else if [ ~{runTum} -eq "1" ]
+        elif [ ~{tOnly} -eq "1" ];
+        then
             mv somatic_~{pairName}/~{tumPrefix}.recal.vcf ~{tumPrefix}.somatic.unique.recal.vcf
-        fi 
+        fi; 
 
         # perform phasing here
         dotnet /app/Scylla_5.2.10.49/Scylla.dll -g $sname --vcf ~{tumPrefix}.somatic.unique.recal.vcf --bam ~{tumorBam}
