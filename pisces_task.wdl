@@ -168,9 +168,12 @@ task runpisces {
             mv somatic_~{pairName}/~{tumPrefix}.recal.vcf ~{tumPrefix}.somatic.unique.recal.vcf
         fi; 
 
+        if [ ~{runTum} -eq "1" ];
+        then  
         # perform phasing here
         dotnet /app/Scylla_5.2.10.49/Scylla.dll -g $sname --vcf ~{tumPrefix}.somatic.unique.recal.vcf --bam ~{tumorBam}
-        
+        fi
+
         if [ ~{saveDict} -eq "1" ];
         then
             tar -zvcf refPisces.tar.gz $sname
