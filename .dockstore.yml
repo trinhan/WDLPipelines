@@ -1,0 +1,5 @@
+version: 1.0
+workflows:
+  - name: abra2Realigner
+    subclass: WDL
+    primaryDescriptorPath: /abra2.wdl
