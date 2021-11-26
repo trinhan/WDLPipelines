@@ -40,6 +40,8 @@ workflow variantJudgement {
 	File? DB_SNP_VCF
 	File? DB_SNP_VCF_IDX
 	File? cosmicVCF
+	File? knownSVs
+	File? knownSVsidx
 
 	Float fracContam
 	String runMode
@@ -68,8 +70,8 @@ workflow variantJudgement {
         	tumorBam=tumorBam,
         	tumorIdx=tumorBamIdx,
         	refFasta=refFasta,
-        	vcf=vcf,
-        	vcfidx=vcfidx,
+        	vcf=knownSVs,
+        	vcfidx=knownSVsidx,
         	sample_name=pairName,
         	refFastaIdx=refFastaIdx,
         	targets=indeltargets

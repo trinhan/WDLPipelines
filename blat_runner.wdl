@@ -22,7 +22,7 @@ task blat {
     String machine_memoryGB = "10"
     String cpu ="1"
     ## can also be saved as /opt/hg38.2bit
-    String savPath = "/opt/hg19.2bit" 
+    String savPath = "/opt/hg38.2bit" 
 }
 
     # COMPUTE DISK SIZE
