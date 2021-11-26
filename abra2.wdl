@@ -2,6 +2,7 @@
 
 version 1.0
 
+#### some text
 
 workflow abra2 {
     input {
