@@ -204,6 +204,7 @@ workflow runVariantCallers{
     }
 
      output {
+        
        File? strelka2SomaticSNVs = Strelka2Somatic_Task.strelka2SomaticSNVs
        File? strelka2SomaticIndels = Strelka2Somatic_Task.strelka2SomaticIndels
        # pisces outputs
@@ -217,7 +218,10 @@ workflow runVariantCallers{
        File M2_filtered_vcf=M2WF.filtered_vcf
        File M2_filtered_vcf_idx=M2WF.filtered_vcf_idx
       #  merged output haplotypecaller
-       File Combined_raw_variants=select_first([PairedCall.MergedVcf, TumCall.MergedVcf])
+       File Combined_raw_variants_gz=select_first([PairedCall.MergedVcfGz, TumCall.MergedVcfGz])
+       File Combined_raw_variants_tbi=select_first([PairedCall.MergedVcfIdx, TumCall.MergedVcfIdx])
+       File Combined_raw_variants_maf=select_first([PairedCall.MergedMaf, TumCall.MergedMaf])
+       File VariantSitesBed=select_first([PairedCall.LocBed, TumCall.LocBed])
         }
 }
 

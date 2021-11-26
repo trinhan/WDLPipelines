@@ -44,7 +44,7 @@ workflow QCChecks {
     Boolean forceComputePicardMetrics_tumor = true
     Boolean run_CNQC = false
     Boolean run_CrossCheck = true
-
+    Boolean forceComputePicardMetrics_normal = if defined (normalBam) then true else false
     }
 
     Int tumorBam_size   = ceil(size(tumorBam,   "G") + size(tumorBamIdx,    "G")) 
@@ -58,7 +58,7 @@ workflow QCChecks {
 
     Boolean override_CNQC = if defined (normalBam) then run_CNQC else false
     Boolean runContEst = if defined (normalBam) then true else false
-    Boolean forceComputePicardMetrics_normal = if defined (normalBam) then true else false
+
 
     if (override_CNQC){
         call CopyNumberReportQC_Task {
@@ -168,47 +168,8 @@ workflow QCChecks {
         File? copy_number_qc_report_png=CopyNumberReportQC_Task.CopyNumQCReportPNG
         Int? copy_number_qc_mix_ups=CopyNumberReportQC_Task.CopyNumQCMixUps
         # Picard Multiple Metrics Task - NORMAL BAM
-        File? normal_bam_bam_validation=normalMM_Task.bam_validation
-        File? normal_bam_alignment_summary_metrics=normalMM_Task.alignment_summary_metrics
-        File? normal_bam_bait_bias_detail_metrics=normalMM_Task.bait_bias_detail_metrics
-        File? normal_bam_bait_bias_summary_metrics=normalMM_Task.bait_bias_summary_metrics
-        File? normal_bam_base_distribution_by_cycle=normalMM_Task.base_distribution_by_cycle
-        File? normal_bam_base_distribution_by_cycle_metrics=normalMM_Task.base_distribution_by_cycle_metrics
-        File? normal_bam_gc_bias_detail_metrics=normalMM_Task.gc_bias_detail_metrics
-        File? normal_bam_gc_bias=normalMM_Task.gc_bias
-        File? normal_bam_gc_bias_summary_metrics=normalMM_Task.gc_bias_summary_metrics
-        File? normal_bam_insert_size_histogram=normalMM_Task.insert_size_histogram
-        File? normal_bam_insert_size_metrics=normalMM_Task.insert_size_metrics
-        File? normal_bam_pre_adapter_detail_metrics=normalMM_Task.pre_adapter_detail_metrics
-        File? normal_bam_pre_adapter_summary_metrics=normalMM_Task.pre_adapter_summary_metrics
-        File? normal_bam_quality_by_cycle=normalMM_Task.quality_by_cycle
-        File? normal_bam_quality_by_cycle_metrics=normalMM_Task.quality_by_cycle_metrics
-        File? normal_bam_quality_distribution=normalMM_Task.quality_distribution
-        File? normal_bam_quality_distribution_metrics=normalMM_Task.quality_distribution_metrics
-        File? normal_bam_quality_yield_metrics=normalMM_Task.quality_yield_metrics
-        File? normal_bam_converted_oxog_metrics=normalMM_Task.converted_oxog_metrics
-        File? normal_bam_hybrid_selection_metrics=normalMM_Task.hsMetrics
-        # Picard Multiple Metrics Task - TUMOR BAM
-        File? tumor_bam_bam_validation=tumorMM_Task.bam_validation
-        File? tumor_bam_alignment_summary_metrics=tumorMM_Task.alignment_summary_metrics
-        File? tumor_bam_bait_bias_detail_metrics=tumorMM_Task.bait_bias_detail_metrics
-        File? tumor_bam_bait_bias_summary_metrics=tumorMM_Task.bait_bias_summary_metrics
-        File? tumor_bam_base_distribution_by_cycle=tumorMM_Task.base_distribution_by_cycle
-        File? tumor_bam_base_distribution_by_cycle_metrics=tumorMM_Task.base_distribution_by_cycle_metrics
-        File? tumor_bam_gc_bias_detail_metrics=tumorMM_Task.gc_bias_detail_metrics
-        File? tumor_bam_gc_bias=tumorMM_Task.gc_bias
-        File? tumor_bam_gc_bias_summary_metrics=tumorMM_Task.gc_bias_summary_metrics
-        File? tumor_bam_insert_size_histogram=tumorMM_Task.insert_size_histogram
-        File? tumor_bam_insert_size_metrics=tumorMM_Task.insert_size_metrics        
-        File? tumor_bam_pre_adapter_detail_metrics=tumorMM_Task.pre_adapter_detail_metrics
-        File? tumor_bam_pre_adapter_summary_metrics=tumorMM_Task.pre_adapter_summary_metrics
-        File? tumor_bam_quality_by_cycle=tumorMM_Task.quality_by_cycle
-        File? tumor_bam_quality_by_cycle_metrics=tumorMM_Task.quality_by_cycle_metrics
-        File? tumor_bam_quality_distribution=tumorMM_Task.quality_distribution
-        File? tumor_bam_quality_distribution_metrics=tumorMM_Task.quality_distribution_metrics
-        File? tumor_bam_quality_yield_metrics=tumorMM_Task.quality_yield_metrics
-        File? tumor_bam_converted_oxog_metrics=tumorMM_Task.converted_oxog_metrics
-        File? tumor_bam_hybrid_selection_metrics=tumorMM_Task.hsMetrics
+        Array[File]? normal_bam_picard=normalMM_Task.picard_files
+        Array[File]? tumor_bam_picard=tumorMM_Task.picard_files
         # Cross-Sample Contamination Task
         File contamination_table=select_first([ContEST_Task.contamTable, "null"])
         File normalTable=select_first([ContEST_Task.normTable, "null"])
@@ -458,27 +419,28 @@ task PicardMultipleMetrics_Task {
     }
 
     output {
-        File bam_validation="${sampleName}.bam_validation"
-        File metricsReportsZip="${sampleName}.picard_multiple_metrics.zip"
-        File alignment_summary_metrics="${sampleName}.multiple_metrics.alignment_summary_metrics"
-        File bait_bias_detail_metrics="${sampleName}.multiple_metrics.bait_bias_detail_metrics"
-        File bait_bias_summary_metrics="${sampleName}.multiple_metrics.bait_bias_summary_metrics"
-        File base_distribution_by_cycle="${sampleName}.multiple_metrics.base_distribution_by_cycle.pdf"
-        File base_distribution_by_cycle_metrics="${sampleName}.multiple_metrics.base_distribution_by_cycle_metrics"
-        File gc_bias_detail_metrics="${sampleName}.multiple_metrics.gc_bias.detail_metrics"
-        File gc_bias="${sampleName}.multiple_metrics.gc_bias.pdf"
-        File gc_bias_summary_metrics="${sampleName}.multiple_metrics.gc_bias.summary_metrics"
-        File insert_size_histogram="${sampleName}.multiple_metrics.insert_size_histogram.pdf"
-        File insert_size_metrics="${sampleName}.multiple_metrics.insert_size_metrics"        
-        File pre_adapter_detail_metrics="${sampleName}.multiple_metrics.pre_adapter_detail_metrics"
-        File pre_adapter_summary_metrics="${sampleName}.multiple_metrics.pre_adapter_summary_metrics"
-        File quality_by_cycle="${sampleName}.multiple_metrics.quality_by_cycle.pdf"
-        File quality_by_cycle_metrics="${sampleName}.multiple_metrics.quality_by_cycle_metrics"
-        File quality_distribution="${sampleName}.multiple_metrics.quality_distribution.pdf"
-        File quality_distribution_metrics="${sampleName}.multiple_metrics.quality_distribution_metrics"
-        File quality_yield_metrics="${sampleName}.multiple_metrics.quality_yield_metrics"
-        File converted_oxog_metrics="${sampleName}.multiple_metrics.converted.oxog_metrics"
-        File hsMetrics="${sampleName}.HSMetrics.txt"
+        Array[File] picard_files=glob("${sampleName}.*")
+        #File bam_validation="${sampleName}.bam_validation"
+        #File metricsReportsZip="${sampleName}.picard_multiple_metrics.zip"
+        #File alignment_summary_metrics="${sampleName}.multiple_metrics.alignment_summary_metrics"
+        #File bait_bias_detail_metrics="${sampleName}.multiple_metrics.bait_bias_detail_metrics"
+        #File bait_bias_summary_metrics="${sampleName}.multiple_metrics.bait_bias_summary_metrics"
+        #File base_distribution_by_cycle="${sampleName}.multiple_metrics.base_distribution_by_cycle.pdf"
+        #File base_distribution_by_cycle_metrics="${sampleName}.multiple_metrics.base_distribution_by_cycle_metrics"
+        #File gc_bias_detail_metrics="${sampleName}.multiple_metrics.gc_bias.detail_metrics"
+        #File gc_bias="${sampleName}.multiple_metrics.gc_bias.pdf"
+        #File gc_bias_summary_metrics="${sampleName}.multiple_metrics.gc_bias.summary_metrics"
+        #File insert_size_histogram="${sampleName}.multiple_metrics.insert_size_histogram.pdf"
+        #File insert_size_metrics="${sampleName}.multiple_metrics.insert_size_metrics"        
+        #File pre_adapter_detail_metrics="${sampleName}.multiple_metrics.pre_adapter_detail_metrics"
+        #File pre_adapter_summary_metrics="${sampleName}.multiple_metrics.pre_adapter_summary_metrics"
+        #File quality_by_cycle="${sampleName}.multiple_metrics.quality_by_cycle.pdf"
+        #File quality_by_cycle_metrics="${sampleName}.multiple_metrics.quality_by_cycle_metrics"
+        #File quality_distribution="${sampleName}.multiple_metrics.quality_distribution.pdf"
+        #File quality_distribution_metrics="${sampleName}.multiple_metrics.quality_distribution_metrics"
+        #File quality_yield_metrics="${sampleName}.multiple_metrics.quality_yield_metrics"
+        #File converted_oxog_metrics="${sampleName}.multiple_metrics.converted.oxog_metrics"
+        #File hsMetrics="${sampleName}.HSMetrics.txt"
     }
 }
 

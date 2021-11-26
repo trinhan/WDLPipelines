@@ -24,11 +24,13 @@
 version 1.0
 
 import "blat_runner.wdl" as blat
-import "SNVMultiCaller" as SomaticVC
+import "SNV-MultiCaller.wdl" as SomaticVC
 import "abra2.wdl" as abra2
 import "run_QC_checks.wdl" as runQC
 import "cnv_wdl/somatic/cnv_somatic_pair_workflow.wdl" as GATKCNVWorkflow
 import "combine_tracks_version_modified.wdl" as CombineTracks
+import "titan_workflow.wdl" as titan_workflow
+import "VEP104.wdl" as VEP
 
 workflow WGS_SNV_CNV_Workflow {
     input {
@@ -69,6 +71,15 @@ workflow WGS_SNV_CNV_Workflow {
         File gistic_blacklist_tracks_seg
         File cnv_pon
         File common_snps
+        ## VEP input
+        File vep_cache
+        File? caddSnv
+        File? caddSnvTbi
+        File? caddIndel
+        File? caddIndelTbi
+        File? revel
+        File? clinvar
+        File? clinvarTbi
         ##Other things required
         String gatk_docker
         String runMode
@@ -81,7 +92,10 @@ workflow WGS_SNV_CNV_Workflow {
         Boolean hasPicardMetrics_tumor
         Boolean forceComputePicardMetrics_normal
         Boolean run_functotar_cnv
+        Boolean run_absolute
     }
+
+        String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
 
 
 ## Run the QC checks step here if specified
@@ -112,7 +126,9 @@ workflow WGS_SNV_CNV_Workflow {
             hasPicardMetrics_normal=hasPicardMetrics_normal,
             forceComputePicardMetrics_tumor=forceComputePicardMetrics_tumor,
             forceComputePicardMetrics_normal=forceComputePicardMetrics_normal,
-            normalBam=normalBam
+            normalBam=normalBam,
+            normalBamIdx=normalBamIdx,
+            ctrlName=ctrlName
     }
 
 ## File picardMetrics=select_first([ QCChecks.tumor_bam_pre_adapter_detail_metrics, PicardMetrics_tumor])
@@ -178,6 +194,149 @@ workflow WGS_SNV_CNV_Workflow {
             gistic_blacklist_tracks_seg =gistic_blacklist_tracks_seg,
             group_id=pairName
         }
+
+    if (run_absolute){
+    # Estimate purity/ploidy, and from that compute absolute copy-number and mutation multiplicities.
+        call absolute {
+        input:
+            maf=somaticVC.Combined_raw_variants_maf,
+            seg_file=CombineTracksWorkflow.cnv_postprocessing_tumor_acs_seg,
+            skew=CombineTracksWorkflow.cnv_postprocessing_tumor_acs_skew,
+            pairName=pairName
+        }
+    }        
     }
 
+      call titan_workflow.runtitan as runtitan {
+            input:
+            tumor_hets = GATK4CNV.het_allelic_counts_tumor,
+            denoised_CR = GATK4CNV.denoised_copy_ratios_tumor,
+            pairName = pairName
+        }
+
+    call VEP.variant_effect_predictor as vep{
+        input:
+          inputFile =somaticVC.Combined_raw_variants_gz,
+          sample_name = pairName,
+          assembly=assembly,
+          species = "homo_sapiens",
+          input_format = "vcf",
+          cache=vep_cache,
+          caddSnv=caddSnv,
+          caddSnvTbi=caddSnvTbi,
+          caddIndel=caddIndel,
+          caddIndelTbi=caddIndelTbi,
+          revelPlugin=revel,
+          refFasta = refFasta,
+          refFastaFai = refFastaIdx,
+          clinvar=clinvar,
+          clinvarTbi=clinvarTbi,
+          gnomad=gnomad,
+          gnomadIdx=gnomadidx
+
+    }
+
+    output {
+        ####### Copy Number - GATK4 CNV #######
+        Float ContEst_contam = QCChecks.fracContam
+        File? cross_check_fingprt_metrics=QCChecks.cross_check_fingprt_metrics
+        File? copy_number_qc_report=QCChecks.copy_number_qc_report
+        Array[File]? normal_picard_metrics=QCChecks.normal_bam_picard
+        Array[File]? tumor_picard_metrics=QCChecks.tumor_bam_picard
+        ####### SNV outputs ##########
+        File? strelka2SomaticSNVs = somaticVC.strelka2SomaticSNVs
+        File? strelka2SomaticIndels = somaticVC.strelka2SomaticIndels
+       # pisces outputs
+       File? pisces_tum_phased=somaticVC.pisces_tum_phased
+       File? pisces_tum_unique=somaticVC.pisces_tum_unique
+       File? pisces_venn=somaticVC.pisces_venn
+       File? pisces_norm_same_site=somaticVC.pisces_norm_same_site
+       File? pisces_tumor_variants=somaticVC.pisces_tumor_variants
+      #  M2 workflow2 outputs
+       File M2_filtered_vcf=somaticVC.M2_filtered_vcf
+       File M2_filtered_vcf_idx=somaticVC.M2_filtered_vcf_idx
+      #  merged output haplotypecaller
+       File Combined_raw_variants_gz=somaticVC.Combined_raw_variants_gz
+       File Combined_raw_variants_tbi=somaticVC.Combined_raw_variants_tbi
+       File Combined_raw_variants_maf=somaticVC.Combined_raw_variants_maf
+       File VariantSitesBed=somaticVC.VariantSitesBed
+
+        ####### Copy Number - GATK4 CNV #######
+        File? gatk4_het_allelic_counts_tumor = GATK4CNV.het_allelic_counts_tumor
+        File? gatk4_normal_het_allelic_counts_tumor = GATK4CNV.het_allelic_counts_normal
+        File? gatk4_copy_ratio_only_segments_tumor = GATK4CNV.copy_ratio_only_segments_tumor
+        File? gatk4_modeled_segments_tumor = GATK4CNV.modeled_segments_tumor
+        File? gatk4_denoised_copy_ratios_plot_tumor = GATK4CNV.denoised_copy_ratios_plot_tumor
+        File? gatk4_modeled_segments_plot_tumor = GATK4CNV.modeled_segments_plot_tumor
+        File? gatk4_called_copy_ratio_segments_tumor = GATK4CNV.called_copy_ratio_segments_tumor
+        File gatk4_oncotated_called_file_tumor = select_first([GATK4CNV.oncotated_called_file_tumor, "null"])
+        File gatk4_oncotated_called_gene_list_file_tumor = select_first([GATK4CNV.oncotated_called_gene_list_file_tumor, "null"])
+        File gatk4_funcotated_called_file_tumor = select_first([GATK4CNV.funcotated_called_file_tumor, "null"])
+        File gark4_funcotated_called_gene_list_file_tumor = select_first([GATK4CNV.funcotated_called_gene_list_file_tumor, "null"])
+    }
 }
+
+task absolute{
+    input {
+    # TASK INPUT PARAMS
+    File seg_file
+    File maf
+    String skew
+    String pairName
+
+    # RUNTIME INPUT PARAMS
+    String preemptible ="3"
+    String diskGB_boot ="14"
+    String diskGB_buffer ="20"
+    String machine_memoryGB = "7"
+    String cpu ="1"
+    }
+
+    # COMPUTE DISK SIZE
+    Int diskGB = ceil(size(seg_file, "G") + size(maf, "G") + diskGB_buffer)
+
+    parameter_meta {
+        seg_file : "filename pointing to the input - either a HAPSEG file or a segmentation file"
+        maf : "filename pointing to a mutation annotation format (MAF) file. This specifies the data for somatic point mutations to be used by ABSOLUTE."
+        skew : ""
+        pairName : "a string for the name of the pair under analysis used for naming output files"
+    }
+
+    command {
+
+        set -euxo pipefail
+
+        SNV_MAF="${pairName}.snv.maf"
+        INDEL_MAF="${pairName}.indel.maf"
+        python /usr/local/bin/split_maf_indel_snp.py -i ${maf} -o $SNV_MAF -f Variant_Type -v "SNP|DNP|TNP|MNP"
+        python /usr/local/bin/split_maf_indel_snp.py -i ${maf} -o $INDEL_MAF -f Variant_Type -v "INS|DEL"
+        
+        grep -v "NA" ${seg_file} > no_nan_segs.tsv
+
+        Rscript /xchip/tcga/Tools/absolute/releases/v1.5/run/ABSOLUTE_cli_start.R \
+        --seg_dat_fn no_nan_segs.tsv \
+        --maf_fn $SNV_MAF \
+        --indelmaf_fn $INDEL_MAF \
+        --sample_name ${pairName} \
+        --results_dir . \
+        --ssnv_skew ${skew} \
+        --abs_lib_dir /xchip/tcga/Tools/absolute/releases/v1.5/
+    }
+
+    runtime {
+        docker         : "gcr.io/broad-getzlab-workflows/cga_production_pipeline:v0.2"
+        bootDiskSizeGb : diskGB_boot
+        preemptible    : preemptible
+        cpu            : cpu
+        disks          : "local-disk ${diskGB} HDD"
+        memory         : machine_memoryGB + "GB"
+    }
+
+    output {
+        # Plot showing the Purity/Ploidy values and the solutions
+        File absolute_highres_plot="${pairName}.ABSOLUTE_plot.pdf"
+        # An R file containing an object seg.dat which provides all of the information used to generate the plot.
+        File absolute_rdata="${pairName}.PP-modes.data.RData"
+    }
+}
+
