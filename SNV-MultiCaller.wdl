@@ -221,6 +221,7 @@ workflow runVariantCallers{
        File Combined_raw_variants_gz=select_first([PairedCall.MergedVcfGz, TumCall.MergedVcfGz])
        File Combined_raw_variants_tbi=select_first([PairedCall.MergedVcfIdx, TumCall.MergedVcfIdx])
        File Combined_raw_variants_maf=select_first([PairedCall.MergedMaf, TumCall.MergedMaf])
+       File Combined_raw_variants=select_first([PairedCall.MergedVcf, TumCall.MergedVcf])
        File VariantSitesBed=select_first([PairedCall.LocBed, TumCall.LocBed])
         }
 }
