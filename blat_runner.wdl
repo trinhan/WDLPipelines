@@ -39,7 +39,7 @@ task blat {
 
         set -euxo pipefail
 
-        cp -v ${genome_bit} savPath
+        cp -v ${genome_bit} ${savPath}
         python /opt/realign.py ${tumorBam} ${MAF} ${pairName}
 
         # Count number of passed and rejected mutations
