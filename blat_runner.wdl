@@ -22,7 +22,7 @@ task blat {
     String machine_memoryGB = "10"
     String cpu ="1"
     ## can also be saved as /opt/hg38.2bit
-    String savPath = "/opt/hg38.2bit" 
+    String refGenome = "hg19" 
 }
 
     # COMPUTE DISK SIZE
@@ -38,8 +38,10 @@ task blat {
     command {
 
         set -euxo pipefail
+	
+	savPath="/opt/${refGenome}.2bit"
 
-        cp -v ${genome_bit} ${savPath}
+        cp -v ${genome_bit} $savPath
         python /opt/realign.py ${tumorBam} ${MAF} ${pairName}
 
         # Count number of passed and rejected mutations
