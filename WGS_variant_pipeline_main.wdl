@@ -27,115 +27,126 @@ import "blat_runner.wdl" as blat
 import "SNVMultiCaller" as SomaticVC
 import "abra2.wdl" as abra2
 import "run_QC_checks.wdl" as runQC
-import "https://github.com/broadinstitute/gatk/blob/4.1.7.0/scripts/cnv_wdl/somatic/cnv_somatic_pair_workflow.wdl" as GATKCNVWorkflow
+import "cnv_wdl/somatic/cnv_somatic_pair_workflow.wdl" as GATKCNVWorkflow
 import "combine_tracks_version_modified.wdl" as CombineTracks
 
 workflow WGS_SNV_CNV_Workflow {
-	input {
-		# Bam files
-		File tumorBam
- 	    File normalBam
- 	    File? tumorBamIdx
-	    File? normalBamIdx
-	    String pairName
-		String? ctrlName
-		String caseName
-		# Ref Genome
-		File refFasta
-		File refFastaIdx
-		File refFastaDict
-		File targetIntervals
-    	String ctrlName
-    	## Annotation Files
-		File genome_bit
-		File gnomad
-		File gnomadidx
-		File PoN
-		File PoNidx	
-		File? pisces_reference
-		File? variants_for_contamination
-		File? variants_for_contamination_idx
-		File? DB_SNP_VCF
-		File? DB_SNP_VCF_IDX
-		File? cosmicVCF
-		## Annotation for CNV
-
-		# CNV files required
-    	File centromere_tracks_seg
-    	File gistic_blacklist_tracks_seg
-    	# Other things required
-    	String gatk_docker
-    	String runMode
-    	# Boolean optains
-
-	}
+    input {
+        # Bam files
+        File tumorBam
+        File? normalBam
+        File tumorBamIdx
+        File? normalBamIdx
+        String pairName
+        String? ctrlName
+        String caseName
+        # Ref Genome
+        File refFasta
+        File refFastaIdx
+        File refFastaDict
+        File targetIntervals
+        ## Annotation Files
+        File genome_bit
+        File gnomad
+        File gnomadidx
+        File PoN
+        File PoNidx    
+        File? pisces_reference
+        File? variants_for_contamination
+        File? variants_for_contamination_idx
+        File DB_SNP_VCF
+        File DB_SNP_VCF_IDX
+        File? cosmicVCF
+        File strelka_config
+        ## QC Checkfiles
+        File? regionFile
+        File? captureNormalsDBRCLZip
+        File? readGroupBlackList
+        File HaplotypeDBForCrossCheck
+        File? PicardMetrics_tumor
+        ##CNV files required
+        File centromere_tracks_seg
+        File gistic_blacklist_tracks_seg
+        File cnv_pon
+        File common_snps
+        ##Other things required
+        String gatk_docker
+        String runMode
+        String refGenome
+        # Boolean optains
+        Boolean run_CNQC
+        Boolean forceComputePicardMetrics_tumor
+        Boolean run_CrossCheck
+        Boolean hasPicardMetrics_normal
+        Boolean hasPicardMetrics_tumor
+        Boolean forceComputePicardMetrics_normal
+        Boolean run_functotar_cnv
+    }
 
 
 ## Run the QC checks step here if specified
-	call runQC.QCChecks as QCChecks{
-		input:
-    		normalBam=normalBam,
-        	normalBamIdx=normalBamIdx,
-        	tumorBam=tumorBam,
-        	tumorBamIdx=tumorBamIdx,
-        	refFasta=refFasta,
-    		pairName=pairName,
- 			caseName=caseName,
- 			ctrlName=ctrlName,
-    		refFastaIdx=refFastaIdx,
-    		refFastaDict=refFastaDict,
-			targetIntervals=targetIntervals,
-			baitIntervals=targetIntervals,
-    		gatk_docker=gatk_docker,
-    		refGenome=refGenome,
-    		DB_SNP_VCF=DB_SNP_VCF,
-  			DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
-    		gnomad=gnomad,
-    		gnomad_idx=gnomadidx,
-    		captureNormalsDBRCLZip=captureNormalsDBRCLZip,
-    		regionFile=regionFile,
-    		readGroupBlackList=readGroupBlackList,
-    		HaplotypeDBForCrossCheck=HaplotypeDBForCrossCheck, 
-    		run_CNQC=run_CNQC,
-    		run_CrossCheck=run_CrossCheck,
-    		hasPicardMetrics_tumor=hasPicardMetrics_tumor,
-    		hasPicardMetrics_normal=hasPicardMetrics_normal,
-    		forceComputePicardMetrics_tumor=forceComputePicardMetrics_tumor,
-    		forceComputePicardMetrics_normal=forceComputePicardMetrics_normal
+    call runQC.QCChecks as QCChecks {
+        input:
+            tumorBam=tumorBam,
+            tumorBamIdx=tumorBamIdx,
+            refFasta=refFasta,
+            pairName=pairName,
+            caseName=caseName,
+            refFastaIdx=refFastaIdx,
+            refFastaDict=refFastaDict,
+            targetIntervals=targetIntervals,
+            baitIntervals=targetIntervals,
+            gatk_docker=gatk_docker,
+            refGenome=refGenome,
+            DB_SNP_VCF=DB_SNP_VCF,
+            DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
+            gnomad=gnomad,
+            gnomad_idx=gnomadidx,
+            captureNormalsDBRCLZip=captureNormalsDBRCLZip,
+            regionFile=regionFile,
+            readGroupBlackList=readGroupBlackList,
+            HaplotypeDBForCrossCheck=HaplotypeDBForCrossCheck, 
+            run_CNQC=run_CNQC,
+            run_CrossCheck=run_CrossCheck,
+            hasPicardMetrics_tumor=hasPicardMetrics_tumor,
+            hasPicardMetrics_normal=hasPicardMetrics_normal,
+            forceComputePicardMetrics_tumor=forceComputePicardMetrics_tumor,
+            forceComputePicardMetrics_normal=forceComputePicardMetrics_normal,
+            normalBam=normalBam
     }
 
- File picardMetrics=select_first([ tumorMM_Task.pre_adapter_detail_metrics, PicardMetrics_tumor])
+## File picardMetrics=select_first([ QCChecks.tumor_bam_pre_adapter_detail_metrics, PicardMetrics_tumor])
 
 # Call somatic variant calling
     call SomaticVC.runVariantCallers as somaticVC {
-    	input:
-    		normalBam=normalBam,
-        	normalBamIdx=normalBamIdx,
-        	tumorBam=tumorBam,
-        	tumorBamIdx=tumorBamIdx,
-        	refFasta=refFasta,
-    		pairName=pairName,
- 			caseName=caseName,
- 			ctrlName=ctrlName,
-    		refFastaIdx=refFastaIdx,
-    		refFastaDict=refFastaDict,
-			targetIntervals=targetIntervals,
-    		gnomad=gnomad,
-    		gnomad_idx=gnomadidx,
-    		m2_pon=PoN,
-    	 	m2_pon_idx=PoNidx,
-    		pisces_reference=pisces_reference,
-    		variants_for_contamination=variants_for_contamination,
-    		variants_for_contamination_idx=variants_for_contamination_idx,
-    		DB_SNP_VCF=DB_SNP_VCF,
-  			DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
-    		cosmicVCF=cosmicVCF, # can this be updated?
-    		fracContam= QCChecks.fracContam,
-		    runMode=runMode,
-    		gatk_docker=gatk_docker,
-    		strelka_config=strelka_config
+        input:
+            normalBam=normalBam,
+            normalBamIdx=normalBamIdx,
+            tumorBam=tumorBam,
+            tumorBamIdx=tumorBamIdx,
+            refFasta=refFasta,
+            pairName=pairName,
+            caseName=caseName,
+            ctrlName=ctrlName,
+            refFastaIdx=refFastaIdx,
+            refFastaDict=refFastaDict,
+            targetIntervals=targetIntervals,
+            gnomad=gnomad,
+            gnomad_idx=gnomadidx,
+            m2_pon=PoN,
+            m2_pon_idx=PoNidx,
+            pisces_reference=pisces_reference,
+            variants_for_contamination=variants_for_contamination,
+            variants_for_contamination_idx=variants_for_contamination_idx,
+            DB_SNP_VCF=DB_SNP_VCF,
+            DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
+            cosmicVCF=cosmicVCF, # can this be updated?
+            fracContam= QCChecks.fracContam,
+            runMode=runMode,
+            gatk_docker=gatk_docker,
+            strelka_config=strelka_config
     }
-	
+    
 # Call CNV 
        call GATKCNVWorkflow.CNVSomaticPairWorkflow as GATK4CNV {
         input:
@@ -165,7 +176,6 @@ workflow WGS_SNV_CNV_Workflow {
             ref_fasta_dict=refFastaDict,
             centromere_tracks_seg=centromere_tracks_seg,
             gistic_blacklist_tracks_seg =gistic_blacklist_tracks_seg,
-            columns_of_interest = columns_of_interest,
             group_id=pairName
         }
     }
