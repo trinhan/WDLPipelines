@@ -38,8 +38,8 @@ task blat {
     command {
 
         set -euxo pipefail
-	
-	savPath="/opt/${refGenome}.2bit"
+    
+    savPath="/opt/${refGenome}.2bit"
 
         cp -v ${genome_bit} $savPath
         python /opt/realign.py ${tumorBam} ${MAF} ${pairName}
@@ -94,7 +94,7 @@ workflow runBlat{
     String cpu
 }
 
-	call blat {
+    call blat {
         input:
             tumorBam=tumorBam,
             tumorBamIdx=tumorBamIdx,
