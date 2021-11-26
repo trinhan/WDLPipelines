@@ -40,8 +40,8 @@ workflow variantJudgement {
 	File? DB_SNP_VCF
 	File? DB_SNP_VCF_IDX
 	File? cosmicVCF
-	File? knownSVs
-	File? knownSVsidx
+	File knownSVs
+	File knownSVsidx
 
 	Float fracContam
 	String runMode
