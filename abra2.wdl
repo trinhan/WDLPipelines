@@ -66,15 +66,13 @@ task runabra2 {
         then
         echo 'normal exists'
                 java -Xmx${command_mem}g -jar /usr/local/bin/abra2.jar --in ${normalBam},${tumorBam} --out ${sample_name}.N.abra2.bam,${sample_name}.T.abra2.bam \
-                --ref ${refFasta} --threads ${cpu} --in-vcf ${vcf} ${"--targets " + targets} --tmpdir tmp > ${sample_name}.log
+                --ref ${refFasta} --threads ${cpu} --in-vcf ${vcf} ${"--targets " + targets} --index --tmpdir tmp > ${sample_name}.log
 
-                cp "${sample_name}.N.abra2.bai" "${sample_name}.N.abra2.bam.bai" 
         else
         echo 'no normal'
                 java -Xmx${command_mem}g -jar /usr/local/bin/abra2.jar --in ${tumorBam} --out ${sample_name}.T.abra2.bam \
-                --ref ${refFasta} --threads ${cpu} --in-vcf ${vcf} ${"--targets " + targets} --tmpdir tmp > ${sample_name}.log
+                --ref ${refFasta} --threads ${cpu} --in-vcf ${vcf} ${"--targets " + targets} --index --tmpdir tmp > ${sample_name}.log
 
-                cp "${sample_name}.T.abra2.bai" "${sample_name}.T.abra2.bam.bai" 
         fi
        
     }
