@@ -1,6 +1,6 @@
 version 1.0
 
-import "https://raw.githubusercontent.com/broadinstitute/gatk/4.1.7.0/scripts/mutect2_wdl/mutect2.wdl" as Mutect2WF
+import "https://raw.githubusercontent.com/trinhan/gatk/master/scripts/mutect2_wdl/mutect2.wdl" as Mutect2WF
 import "pisces_task.wdl" as pisces
 
 workflow runVariantCallers{
