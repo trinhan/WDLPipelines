@@ -26,7 +26,7 @@ task blat {
 }
 
     # COMPUTE DISK SIZE
-    Int diskGB = ceil(tumorBam_size + size(MAF, "G") + size(genome_bit, "G") + diskGB_buffer)
+    Int diskGB = 2*ceil(tumorBam_size + size(MAF, "G") + size(genome_bit, "G") + diskGB_buffer)
 
     parameter_meta {
         tumorBam : "sample tumor BAM file"
