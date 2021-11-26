@@ -1,7 +1,7 @@
 version 1.0
 
-import "abra2_realigner.wdl" as abra2
-import "SNVMultiCaller.wdl" as SomaticVC
+import "abra2.wdl" as abra2
+import "SNV-MultiCaller.wdl" as SomaticVC
 import "blat_runner.wdl" as blat
 
 workflow variantJudgement {
