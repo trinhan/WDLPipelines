@@ -48,11 +48,11 @@ task blat {
         python /usr/local/bin/count_variants.py "${pairName}.blat.maf" "${pairName}.count_passed_mutations.txt"
         python /usr/local/bin/count_variants.py "${pairName}.blat.rejected.maf" "${pairName}.count_rejected_mutations.txt"
 
-        python /usr/local/bin/add_judgement_column.py \
-        --input "${pairName}.blat.all.maf" \
-        --output "${pairName}.blat.all.with_judgement_annotations.maf" \
-        --column "realign_judgment" \
-        --pass_flag "KEEP"
+       # python /usr/local/bin/add_judgement_column.py \
+       # --input "${pairName}.blat.all.maf" \
+       # --output "${pairName}.blat.all.with_judgement_annotations.maf" \
+       # --column "realign_judgment" \
+       # --pass_flag "KEEP"
 
     }
 
@@ -69,8 +69,8 @@ task blat {
         Int num_rejected_mutations=read_int("${pairName}.count_rejected_mutations.txt")
         Int num_passed_mutations=read_int("${pairName}.count_passed_mutations.txt")
         File passMaf="${pairName}.blat.maf"
-        File debug_results="${pairName}.blat.rejected.maf"
-        File allMaf="${pairName}.blat.all.with_judgement_annotations.maf"
+        File rejectMaf="${pairName}.blat.rejected.maf"
+        #File allMaf="${pairName}.blat.all.with_judgement_annotations.maf"
     }
 }
 
