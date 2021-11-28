@@ -70,7 +70,7 @@ task runabra2 {
                 
                 cp "${sample_name}.T.abra2.bai" "${sample_name}.T.abra2.bam.bai" 
 
-                cp "${sample_name}.N.abra2.bai" "${sample_name}.T.abra2.bam.bai" 
+                cp "${sample_name}.N.abra2.bai" "${sample_name}.N.abra2.bam.bai" 
         else
         echo 'no normal'
                 java -Xmx${command_mem}g -jar /usr/local/bin/abra2.jar --in ${tumorBam} --out ${sample_name}.T.abra2.bam \
