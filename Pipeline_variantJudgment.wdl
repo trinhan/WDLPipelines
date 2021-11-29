@@ -116,7 +116,8 @@ workflow variantJudgement {
 			vcf=vcf,
     		gnomad=gnomad,
     		m2_pon=PoN,
-    		pairName=pairName
+    		pairName=pairName,
+    		runMode=runMode
 	}
 
 	 output {
