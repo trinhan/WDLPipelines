@@ -6,3 +6,6 @@ workflows:
   - name: SNVJudgementFilter
     subclass: WDL
     primaryDescriptorPath: /Pipeline_variantJudgment.wdl
+  - name: WGSVariantPipeline
+    subclass: WDL
+    primaryDescriptorPath: /WGS_variant_pipeline_main.wdl
