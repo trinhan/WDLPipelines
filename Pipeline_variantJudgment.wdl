@@ -128,6 +128,7 @@ workflow variantJudgement {
         File? abra2_norm_bam_idx=runabra2.Abra2NormalIdx
         File? merged_abra2_calls=somaticVC.Combined_raw_variants
         File judgement_vcf=PassJudgement.pass_judgement
+        File judgement_maf=PassJudgement.pass_maf
     }
 }
 
@@ -137,9 +138,11 @@ task PassJudgement {
 		File? blat_reject
 		File? abra2_calls
 		File vcf
-    	File gnomad
-    	File m2_pon
+    	File? gnomad
+    	File? m2_pon
     	String pairName
+    	String refGenome
+    	String runMode
 
     	# RUNTIME INPUT PARAMS
     	String? preemptible = "2"
@@ -158,11 +161,8 @@ task PassJudgement {
 		# change blat to vcf file
 		# bcftools isec for PoN
 		
-		Rscript /app/MergeVCFRecall.R --vcffile ${vcf} \
-			--outputstr ${pairName} \
-			--blat ${blat_reject} \ 
-			--pon ${m2_pon} \
-			${"--abra2 " + abra2_calls}
+		Rscript /app/MergeVCFRecall.R --vcffile ${vcf} --outputstr ${pairName} --genome ${refGenome} --runMode ${runMode} ${"--blat " + blat_reject} ${"--pon " + m2_pon} ${"--gnomad " + gnomad} ${"--abra2 " + abra2_calls} 
+
 	}
 
 	runtime {
@@ -176,5 +176,6 @@ task PassJudgement {
 
     output {
     File pass_judgement="${pairName}.judgement.vcf.gz"
+    File pass_maf="${pairName}.judgement.maf"
     }
 }
