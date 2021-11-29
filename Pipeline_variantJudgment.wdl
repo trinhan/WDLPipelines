@@ -48,10 +48,11 @@ workflow variantJudgement {
 	String gatk_docker
 	Int tumorBam_size
 	File strelka_config
+	String refGenome
 	}
 
 
-
+	if (refGenome == "hg19"){
     call blat.blat as blat {
         input:
             tumorBam=tumorBam,
@@ -59,8 +60,10 @@ workflow variantJudgement {
             MAF=merged_maf, 
             pairName=pairName,
             genome_bit=genome_bit,
-            tumorBam_size=tumorBam_size
+            tumorBam_size=tumorBam_size,
+            refGenome=refGenome
     }
+	}
 
     if (runRealign) {
     call abra2.runabra2 as runabra2 {
@@ -119,8 +122,8 @@ workflow variantJudgement {
 	}
 
 	 output {
-        File blat_maf=blat.passMaf
-        File blat_reject=blat.rejectMaf
+        File? blat_maf=blat.passMaf
+        File? blat_reject=blat.rejectMaf
         File? abra2_tum_bam=runabra2.Abra2Tumour
         File? abra2_tum_bam_idx=runabra2.Abra2TumourIdx
         File? abra2_norm_bam=runabra2.Abra2Normal
@@ -134,7 +137,7 @@ workflow variantJudgement {
 
 task PassJudgement {
 	input {
-		File blat_reject
+		File? blat_reject
 		File? abra2_calls
 		File vcf
     	File gnomad

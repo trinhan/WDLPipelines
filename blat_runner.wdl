@@ -92,6 +92,7 @@ workflow runBlat{
     String diskGB_buffer
     String memoryGB
     String cpu
+    String refGenome
 }
 
     call blat {
