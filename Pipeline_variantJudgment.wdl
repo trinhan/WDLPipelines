@@ -5,7 +5,6 @@ import "SNV-MultiCaller.wdl" as SomaticVC
 import "blat_runner.wdl" as blat
 
 workflow variantJudgement {
-
 	input {
 	# Required variant list
 	File merged_maf
@@ -110,15 +109,14 @@ workflow variantJudgement {
     }
 	}
 
-
 	call PassJudgement {
 		input:
-		blat_reject=blat.rejectMaf,
-		abra2_calls=somaticVC.Combined_raw_variants,
-		vcf=vcf,
-    	gnomad=gnomad,
-    	m2_pon=PoN,
-    	pairName=pairName
+			blat_reject=blat.rejectMaf,
+			abra2_calls=somaticVC.Combined_raw_variants,
+			vcf=vcf,
+    		gnomad=gnomad,
+    		m2_pon=PoN,
+    		pairName=pairName
 	}
 
 	 output {
@@ -131,7 +129,6 @@ workflow variantJudgement {
         File? merged_abra2_calls=somaticVC.Combined_raw_variants
         File judgement_vcf=PassJudgement.pass_judgement
     }
-
 }
 
 

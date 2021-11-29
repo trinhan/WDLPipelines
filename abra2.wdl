@@ -64,10 +64,11 @@ task runabra2 {
         vcftemp="indelslist.vcf"
 
         IS_GZ=`echo ${vcf}|grep -Pic '\.gz$'` ;
+        echo $IS_GZ
         if [ "$IS_GZ" -eq "1" ] ;
         then
             #tar ball
-            gunzip -c ${vcf} > vcftemp
+            gunzip -c ${vcf} > $vcftemp
         else
             cp ${vcf} $vcftemp
         fi ;
