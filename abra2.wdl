@@ -64,7 +64,7 @@ task runabra2 {
         EXTENSION=$(echo "~{vcf}")   
         if [[ $EXTENSION == *"gz"* ]];
         then 
-            gunzip -c ${vcf} > $vcfPath
+            gunzip -c ~{vcf} > $vcfPath
         else
             cp ~{vcf} $vcfPath
         fi;
@@ -87,7 +87,7 @@ task runabra2 {
    >>>
 
     runtime {
-          docker: "trinhanne/sambcfhts:v1.13.3"
+          docker: "mskaccess/abra2:2.22"
           preemptible: select_first([preemptible_tries, 1])
           maxRetries: select_first([max_retries, 0])
           memory: machine_mem_gb + " GB"
