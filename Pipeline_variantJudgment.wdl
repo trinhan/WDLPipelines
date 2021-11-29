@@ -117,7 +117,8 @@ workflow variantJudgement {
     		gnomad=gnomad,
     		m2_pon=PoN,
     		pairName=pairName,
-    		runMode=runMode
+    		runMode=runMode,
+    		refGenome=refGenome
 	}
 
 	 output {
