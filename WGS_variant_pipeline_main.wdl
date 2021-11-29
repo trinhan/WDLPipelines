@@ -232,6 +232,7 @@ workflow WGS_SNV_CNV_Workflow {
             ref_fasta_dict=refFastaDict,
             centromere_tracks_seg=centromere_tracks_seg,
             gistic_blacklist_tracks_seg =gistic_blacklist_tracks_seg,
+            gatk_docker=gatk_docker,
             group_id=pairName
         }
     # Estimate purity/ploidy, and from that compute absolute copy-number and mutation multiplicities.

@@ -95,7 +95,7 @@ task runabra2 {
     runtime {
           docker: "mskaccess/abra2:2.22"
           preemptible: select_first([preemptible_tries, 1])
-          maxRetries: select_first([max_retries, 1])
+          maxRetries: select_first([max_retries, 0])
           memory: machine_mem_gb + " GB"
           disks: "local-disk " + disk_space_gb + " HDD"
           cpu: cpu
