@@ -61,9 +61,8 @@ task runabra2 {
         mkdir tmp
         vcfPath="indelist.vcf"
 
-        EXTENSION=`echo "~{vcf}" | cut -d '.' -f3` ;
-
-        if [ $EXTENSION == "gz" ];
+        EXTENSION=$(echo "~{vcf}")   
+        if [[ $EXTENSION == *"gz"* ]];
         then 
             gunzip -c ${vcf} > $vcfPath
         else
@@ -88,7 +87,7 @@ task runabra2 {
    >>>
 
     runtime {
-          docker: "mskaccess/abra2:2.22"
+          docker: "trinhanne/sambcfhts:v1.13.3"
           preemptible: select_first([preemptible_tries, 1])
           maxRetries: select_first([max_retries, 0])
           memory: machine_mem_gb + " GB"
