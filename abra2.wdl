@@ -52,45 +52,40 @@ task runabra2 {
      }
 
         Int command_mem=machine_mem_gb-1
-        Int disk_space_gb=4*ceil(size(tumorBam, "GB")+size(normalBam, "GB")+size(refFasta, "GB")+size(vcf, "GB"))
+        Int disk_space_gb=5*ceil(size(tumorBam, "GB")+size(normalBam, "GB")+size(refFasta, "GB")+size(vcf, "GB"))
         String existBam= if defined(normalBam) then "1" else "0"
 
-    command {
+    command <<<
 
         set -e
-
         mkdir tmp
+        vcfPath="indelist.vcf"
 
-        vcftemp="indelslist.vcf"
+        EXTENSION=`echo "~{vcf}" | cut -d '.' -f3` ;
 
-        IS_GZ=`echo ${vcf}|grep -Pic '\.gz$'` ;
-        echo $IS_GZ
-        if [ "$IS_GZ" -eq "1" ] ;
-        then
-            #tar ball
-            gunzip -c ${vcf} > $vcftemp
+        if [ $EXTENSION == "gz" ];
+        then 
+            gunzip -c ${vcf} > $vcfPath
         else
-            cp ${vcf} $vcftemp
-        fi ;
+            cp ~{vcf} $vcfPath
+        fi;
 
-        if [ ${existBam} -eq "1" ];
+        if [ ~{existBam} -eq "1" ];
         then
-        echo 'normal exists'
-                java -Xmx${command_mem}g -jar /usr/local/bin/abra2.jar --in ${normalBam},${tumorBam} --out ${sample_name}.N.abra2.bam,${sample_name}.T.abra2.bam \
-                --ref ${refFasta} --threads ${cpu} --in-vcf $vcftemp ${"--targets " + targets} --index --tmpdir tmp > ${sample_name}.log
-                
-                cp "${sample_name}.T.abra2.bai" "${sample_name}.T.abra2.bam.bai" 
-
-                cp "${sample_name}.N.abra2.bai" "${sample_name}.N.abra2.bam.bai" 
+            echo 'normal exists'
+                java -Xmx~{command_mem}g -jar /usr/local/bin/abra2.jar --in ~{normalBam},~{tumorBam} --out ~{sample_name}.N.abra2.bam,~{sample_name}.T.abra2.bam \
+                --ref ~{refFasta} --threads ~{cpu} --in-vcf $vcfPath ~{"--targets " + targets} --index --tmpdir tmp > ~{sample_name}.log
+            cp "~{sample_name}.T.abra2.bai" "~{sample_name}.T.abra2.bam.bai" 
+            cp "~{sample_name}.N.abra2.bai" "~{sample_name}.T.abra2.bam.bai" 
         else
-        echo 'no normal'
-                java -Xmx${command_mem}g -jar /usr/local/bin/abra2.jar --in ${tumorBam} --out ${sample_name}.T.abra2.bam \
-                --ref ${refFasta} --threads ${cpu} --in-vcf $vcftemp ${"--targets " + targets} --index --tmpdir tmp > ${sample_name}.log
-                
-                cp "${sample_name}.T.abra2.bai" "${sample_name}.T.abra2.bam.bai" 
-        fi
+            echo 'no normal'
+                java -Xmx~{command_mem}g -jar /usr/local/bin/abra2.jar --in ~{tumorBam} --out ~{sample_name}.T.abra2.bam \
+                --ref ~{refFasta} --threads ~{cpu} --in-vcf $vcfPath ~{"--targets " + targets} --index --tmpdir tmp > ~{sample_name}.log
+
+                cp "~{sample_name}.T.abra2.bai" "~{sample_name}.T.abra2.bam.bai" 
+        fi;
        
-    }
+   >>>
 
     runtime {
           docker: "mskaccess/abra2:2.22"
