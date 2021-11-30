@@ -71,6 +71,7 @@ workflow WGS_SNV_CNV_Workflow {
         File gistic_blacklist_tracks_seg
         File cnv_pon
         File common_snps
+        File cnv_intervals
         ## VEP input
         File vep_cache
         File? caddSnv
@@ -213,7 +214,7 @@ workflow WGS_SNV_CNV_Workflow {
             ref_fasta=refFasta,
             ref_fasta_fai=refFastaIdx,
             ref_fasta_dict=refFastaDict,
-            intervals=targetIntervals,
+            intervals=cnv_intervals,
             common_sites=common_snps,
             read_count_pon=cnv_pon,
             is_run_funcotator=run_functotar_cnv,
@@ -244,7 +245,6 @@ workflow WGS_SNV_CNV_Workflow {
             pairName=pairName  
         }
     }    
-
 
     call titan_workflow.runtitan as runtitan {
     input:

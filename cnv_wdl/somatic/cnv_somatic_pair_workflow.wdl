@@ -171,7 +171,7 @@ workflow CNVSomaticPairWorkflow {
       Int? funcotator_cpu
     }
 
-    Int ref_size = ceil(size(ref_fasta, "GB") + size(ref_fasta_dict, "GB") + size(ref_fasta_fai, "GB"))
+    Int ref_size = ceil(size(ref_fasta, "GB") + size(ref_fasta_dict, "GB") + size(ref_fasta_fai, "GB")+size(common_sites, "GB"))
     Int read_count_pon_size = ceil(size(read_count_pon, "GB"))
     Int tumor_bam_size = ceil(size(tumor_bam, "GB") + size(tumor_bam_idx, "GB"))
     Int normal_bam_size = if defined(normal_bam) then ceil(size(normal_bam, "GB") + size(normal_bam_idx, "GB")) else 0
@@ -219,7 +219,7 @@ workflow CNVSomaticPairWorkflow {
             gcs_project_for_requester_pays = gcs_project_for_requester_pays
     }
 
-    Int collect_allelic_counts_tumor_disk = tumor_bam_size + ref_size + disk_pad
+    Int collect_allelic_counts_tumor_disk = tumor_bam_size + ref_size + disk_pad 
     call CNVTasks.CollectAllelicCounts as CollectAllelicCountsTumor {
         input:
             common_sites = common_sites,
