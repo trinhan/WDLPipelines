@@ -114,7 +114,6 @@ workflow variantJudgement {
 			blat_reject=blat.rejectMaf,
 			abra2_calls=somaticVC.Combined_raw_variants,
 			vcf=vcf,
-    		gnomad=gnomad,
     		m2_pon=PoN,
     		pairName=pairName,
     		runMode=runMode,
