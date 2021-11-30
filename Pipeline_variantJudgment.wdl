@@ -150,13 +150,13 @@ task PassJudgement {
     	String? preemptible = "2"
     	String? diskGB_boot = "10"
     	String? diskGB_buffer ="5"
-    	String? memoryGB ="4"
+    	String? memoryGB ="6"
     	String? cpu ="1"
 	}
 
 	# DEFAULT VALUES
        
-    Int diskGB = ceil(size(m2_pon, "G")+size(gnomad, "G"))*2  +  diskGB_buffer
+    Int diskGB = ceil(size(m2_pon, "G")+size(gnomad, "G")+size(vcf, "G"))*3 +  diskGB_buffer
 
 	command {
 		# Use an R script for this?
