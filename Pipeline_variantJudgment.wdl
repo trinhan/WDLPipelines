@@ -156,7 +156,7 @@ task PassJudgement {
 
 	# DEFAULT VALUES
        
-    Int diskGB = ceil(size(m2_pon, "G")+size(gnomad, "G")+size(vcf, "G"))*3 +  diskGB_buffer
+    Int diskGB = ceil(size(m2_pon, "G")+size(gnomad, "G")+size(vcf, "G"))*4 +  diskGB_buffer
 
 	command {
 		# Use an R script for this?
