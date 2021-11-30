@@ -150,7 +150,7 @@ task PassJudgement {
     	String? preemptible = "2"
     	String? diskGB_boot = "10"
     	String? diskGB_buffer ="5"
-    	String? memoryGB ="6"
+    	String? memoryGB ="10"
     	String? cpu ="1"
 	}
 
