@@ -142,8 +142,8 @@ task variant_effect_predictor {
     ## runtime
     String docker_image = "ensemblorg/ensembl-vep:release_104.3"
     String VepDIR = "/opt/vep/src/ensembl-vep/vep"
-    String VEP_DATA="/cromwell_root/data/vep/.vep/"
-    String VEP_DATA_PLUGINS="/cromwell_root/data/vep/.vep/Plugins"
+    String VEP_DATA="/opt/vep/.vep/"
+    String VEP_DATA_PLUGINS="/opt/vep/.vep/Plugins"
     
     Int cpu =select_first([fork, 4])
     Int machine_mem_gb = 4
@@ -163,6 +163,8 @@ task variant_effect_predictor {
         #delete the existing directory first to make a successful link
         rm -rf ~/.vep
         ln -vs `pwd`/vep_data_dir ~/.vep
+
+        tar xvzf ${cache} -C vep_data_dir
 
         plugins=""
         mkdir -v vep_data_dir/Plugins
@@ -228,7 +230,7 @@ task variant_effect_predictor {
         ## --plugin dbscSNV,/cromwell_root/data/vep/.vep/dbscSNV/dbscSNV1.1_GRCh37.txt.gz
         ## "--plugin CADD --plugin REVEL"
 
-        tar xvzf ${cache} -C vep_data_dir
+
 
 
         ## Running Section
