@@ -310,6 +310,7 @@ task variant_effect_predictor {
         ${"--buffer_size " + buffer_size} \
         ${OTHER_VEP_OPTS} \
         --compress_output bgzip \
+        --vcf \
         --output_file ${sample_name}.${assembly}_vep.vcf.gz
     }
     runtime {
