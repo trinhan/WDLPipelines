@@ -9,3 +9,6 @@ workflows:
   - name: WGSVariantPipeline
     subclass: WDL
     primaryDescriptorPath: /WGS_variant_pipeline_main.wdl
+  - name: Svaba
+    subclass: WDL
+    primaryDescriptorPath: /SvABA.wdl
