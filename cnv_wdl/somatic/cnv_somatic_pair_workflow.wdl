@@ -219,7 +219,7 @@ workflow CNVSomaticPairWorkflow {
             gcs_project_for_requester_pays = gcs_project_for_requester_pays
     }
 
-    Int collect_allelic_counts_tumor_disk = tumor_bam_size + ref_size + disk_pad 
+    Int collect_allelic_counts_tumor_disk = 2*(tumor_bam_size + ref_size + disk_pad)
     call CNVTasks.CollectAllelicCounts as CollectAllelicCountsTumor {
         input:
             common_sites = common_sites,
@@ -490,7 +490,7 @@ workflow CNVSomaticPairWorkflow {
         call CNVFuncotateSegments.CNVFuncotateSegmentsWorkflow as CNVFuncotateSegmentsWorkflow {
             input:
                  input_seg_file = CallCopyRatioSegmentsTumor.called_copy_ratio_segments,
-                 funcotator_ref_version = select_first([funcotator_ref_version, "hg19"]),
+                 funcotator_ref_version = select_first([funcotator_ref_version, "hg38"]),
                  extra_args = additional_args_for_funcotator,
                  ref_fasta = ref_fasta,
                  ref_fasta_fai = ref_fasta_fai,
