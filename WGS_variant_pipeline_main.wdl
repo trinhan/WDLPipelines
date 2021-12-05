@@ -376,7 +376,7 @@ task absolute {
         bootDiskSizeGb : diskGB_boot
         preemptible    : preemptible
         cpu            : cpu
-        disks          : "local-disk ${diskGB} HDD"
+        disks          : "local-disk " + diskGB + " HDD"
         memory         : machine_memoryGB + "GB"
     }
 
