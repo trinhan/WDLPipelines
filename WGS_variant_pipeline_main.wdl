@@ -341,7 +341,7 @@ task absolute {
     }
 
     # COMPUTE DISK SIZE
-    Int diskGB = ceil(size(seg_file, "G") + size(maf, "G") + diskGB_buffer)
+    Int diskGB = ceil(size(seg_file, "G")) + ceil(size(maf, "G")) + select_first([diskGB_buffer, 10])
 
     parameter_meta {
         seg_file : "filename pointing to the input - either a HAPSEG file or a segmentation file"
