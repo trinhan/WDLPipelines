@@ -12,3 +12,6 @@ workflows:
   - name: Svaba
     subclass: WDL
     primaryDescriptorPath: /SvABA.wdl
+  - name: MultiSNVCaller
+    subclass: WDL
+    primaryDescriptorPath: /SNV-MultiCaller.wdl
