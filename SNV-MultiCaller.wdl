@@ -1,5 +1,7 @@
 version 1.0
 
+# this runs mutect1 mutect2 strelka2 and pisces
+
 import "mutect2_wdl/mutect2.wdl" as Mutect2WF
 import "pisces_task.wdl" as pisces
 
