@@ -689,7 +689,7 @@ CODE
 
         tabix -p vcf  $RENAME_MERGED_VCF
         # extract the variant locations for mutect2
-        python3 /usr/local/bin/vcf2mafbed.py $RENAME_MERGED_VCF_decomp "~{pairName}.M1_M2_S2_pisces.passed.merged2.maf" "~{pairName}.intervals.bed" 150
+        python3 /usr/local/bin/vcf2mafbed.py $RENAME_MERGED_VCF_decomp "~{pairName}.M1_M2_S2_pisces.passed.merged2.maf" "~{pairName}.intervals.bed" 150 ~{runMode}
 
         # run picard to change the input 
         java -jar /tmp/picard.jar BedToIntervalList -I "~{pairName}.intervals.bed" -O "~{pairName}.variantList.interval_list" -SD ~{refFastaDict}

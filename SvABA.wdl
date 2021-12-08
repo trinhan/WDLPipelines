@@ -3,8 +3,8 @@ version 1.0
 task svabaCall{
 
     input {
-    File? tumorBAM
-    File? tumorIndex
+    File tumorBAM
+    File tumorIndex
     File? normalBAM
     File? normalIndex
     File reference
@@ -44,7 +44,7 @@ task svabaCall{
         echo $germline_mode
 
         svaba run -p ${threads} \
-            -G ${reference} -a ${id} ~{"-n " + normalBAM}  ~{"-t " + tumorBAM} ~{"-k " + regions}  ~{"-D " + dbSNPVCF} --hp $germline_mode
+            -G ${reference} -a ${id} ~{"-n " + normalBAM} ~{"-t " + tumorBAM} ~{"-k " + regions}  ~{"-D " + dbSNPVCF} --hp $germline_mode
 
         ls 
           

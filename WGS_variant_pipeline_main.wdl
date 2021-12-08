@@ -272,7 +272,20 @@ workflow WGS_SNV_CNV_Workflow {
           clinvar=clinvar,
           clinvarTbi=clinvarTbi,
           gnomad=gnomad,
-          gnomadIdx=gnomadidx
+          gnomadIdx=gnomadidx,
+          canonical=true,
+          hgvs=true,
+          protein=true,
+          polyphen="b",
+          af_1kg=true,
+          af_gnomad=true,
+          ccds=true,
+          domains=true,
+          pubmed=true,
+          regulatory=true,
+          symbol=true,
+          uniprot=true,
+          biotype=true
      }
 
     output {
