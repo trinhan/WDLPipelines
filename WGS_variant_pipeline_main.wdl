@@ -95,6 +95,7 @@ workflow WGS_SNV_CNV_Workflow {
         Boolean run_functotar_cnv
         Boolean run_absolute
         Boolean run_VC_check
+        Boolean run_indel_realign
     }
     String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
     Int tumorBam_size=ceil(size(tumorBam, "G")+size(tumorBamIdx, "G"))
@@ -196,7 +197,8 @@ workflow WGS_SNV_CNV_Workflow {
                 gatk_docker=gatk_docker,
                 strelka_config=strelka_config,
                 refGenome=refGenome,
-                tumorBam_size=tumorBam_size
+                tumorBam_size=tumorBam_size,
+                runRealign=run_indel_realign
         }
      }
 
