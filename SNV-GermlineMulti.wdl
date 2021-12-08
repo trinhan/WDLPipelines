@@ -1,7 +1,17 @@
 version 1.0
 
+## Pipeline for running mutation calling from germline samples
+## Steps:
+## 1. Strelka2
+## 2. Pisces
+## 3. HaplotypeCaller
+## 3b. CNN variant filer on haplotype caller 
+## 4. VEP
+
 import "https://raw.githubusercontent.com/gatk-workflows/gatk4-germline-snps-indels/master/haplotypecaller-gvcf-gatk4.wdl" as HaplotypeCaller
-import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/pisces_task.wdl" as pisces
+import "cnn_variant_wdl/cnn_score_variants.wdl" as CNNFilter
+import "pisces_task.wdl" as pisces
+import "VEP104.wdl" as VEP
 
 workflow runGermlineVariants{
     input {
@@ -23,7 +33,27 @@ workflow runGermlineVariants{
     File? pisces_reference
     Float fracContam 
     String gatk_docker
+    ## VEP input
+    File vep_cache
+    File? caddSnv
+    File? caddSnvTbi
+    File? caddIndel
+    File? caddIndelTbi
+    File? revel
+    File? clinvar
+    File? clinvarTbi
+    String refGenome
+    Boolean runCNNFilter
+
+    ## jointdiscovery inputs
+    Array[File] HC_resources
+    Array[File] HC_resources_index
+    File gnomad
+    File gnomadidx
+
     }
+
+    String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
 
     String targName=basename(sub(targetIntervals,"\\.interval_list", ""))
 
@@ -97,6 +127,29 @@ workflow runGermlineVariants{
             samtools_path = "samtools"
     }    
 
+    if (runCNNFilter){
+    call CNNFilter.CNNScoreVariantsWorkflow as CNNScoreVariantsWorkflow {
+        input: 
+            output_prefix = pairName,
+            input_vcf = HaplotypeCaller.output_vcf,     
+            input_vcf_index = HaplotypeCaller.output_vcf_index,     
+            reference_dict=refFastaDict,
+            reference_fasta=refFasta,
+            reference_fasta_index=refFastaIdx,
+            resources = HC_resources,
+            resources_index =HC_resources_index,
+            bam_file=normalBam,                  # Bam (or HaplotypeCaller-generated "bamout") file from which input_vcf was called, required by read-level architectures
+            bam_file_index=normalBamIdx,
+            tensor_type="reference",             # Keyword indicating the shape of the input tensor (e.g. read_tensor, reference)
+            info_key="CNN_1D",                 # The score key for the INFO field of the vcf (e.g. CNN_1D, CNN_2D)
+            snp_tranches=" --snp-tranche 99.9 ",             # Filtering threshold(s) for SNPs in terms of sensitivity to overlapping known variants in resources
+            indel_tranches=" --indel-tranche 99.5 " ,          # Filtering threshold(s) for INDELs in terms of sensitivity to overlapping known variants in resources
+            gatk_docker=gatk_docker,
+            calling_intervals=targetIntervals
+    }}   
+
+    File HaplotypeOutput=select_first([CNNScoreVariantsWorkflow.cnn_filtered_vcf, HaplotypeCaller.output_vcf])
+
     call Merge_Variants_Germline {
         input:
             ctrlName=ctrlName,
@@ -104,6 +157,40 @@ workflow runGermlineVariants{
             STRELKA2=Strelka2Germline_Task.strelka2GermlineVCF,
             PISCES_NORMAL=runpisces.normal_variants      
     }
+
+    call VEP.variant_effect_predictor as vep {
+        input:
+          inputFile =Merge_Variants_Germline.MergedGermlineVcf,
+          sample_name = pairName,
+          assembly=assembly,
+          species = "homo_sapiens",
+          input_format = "vcf",
+          cache=vep_cache,
+          caddSnv=caddSnv,
+          caddSnvTbi=caddSnvTbi,
+          caddIndel=caddIndel,
+          caddIndelTbi=caddIndelTbi,
+          revelPlugin=revel,
+          refFasta = refFasta,
+          refFastaFai = refFastaIdx,
+          clinvar=clinvar,
+          clinvarTbi=clinvarTbi,
+          gnomad=gnomad,
+          gnomadIdx=gnomadidx,
+          canonical=true,
+          hgvs=true,
+          protein=true,
+          polyphen="b",
+          af_1kg=true,
+          af_gnomad=true,
+          ccds=true,
+          domains=true,
+          pubmed=true,
+          regulatory=true,
+          symbol=true,
+          uniprot=true,
+          biotype=true
+    }    
 
     output {
         # Strelka2Germline
@@ -115,6 +202,11 @@ workflow runGermlineVariants{
       # merged germline output
        File Merged_germline=Merge_Variants_Germline.MergedGermlineVcf
        File Merged_germlineIdx=Merge_Variants_Germline.MergedGermlineVcfIdx
+       ## CNN
+        File? cnn_filtered_vcf = CNNScoreVariantsWorkflow.cnn_filtered_vcf
+        File? cnn_filtered_vcf_index = CNNScoreVariantsWorkflow.cnn_filtered_vcf_index
+       File vep_annot = vep.annotatedFile
+       File? vep_summary_html=vep.summary_html
 
      }
 }
