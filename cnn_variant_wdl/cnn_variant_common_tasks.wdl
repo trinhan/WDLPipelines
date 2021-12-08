@@ -40,27 +40,27 @@ task CNNScoreVariants {
 command <<<
 
         set -e
-        export GATK_LOCAL_JAR=${default="/root/gatk.jar" gatk_override}
+        export GATK_LOCAL_JAR=~{default="/root/gatk.jar" gatk_override}
 
-        gatk --java-options "-Xmx${command_mem}m" \
+        gatk --java-options "-Xmx~{command_mem}m" \
         CNNScoreVariants \
-        ${"-I " + bam_file} \
-        ${"--read-index " + bam_file_index} \
-        -R ${reference_fasta} \
-        -V ${input_vcf} \
-        -O ${output_prefix}_cnn_annotated.vcf.gz \
-        -L ${interval_list} \
-        ${"--architecture " + architecture_json} \
-        ${"--tensor-type " + tensor_type} \
-        ${"--inference-batch-size " + inference_batch_size} \
-        ${"--transfer-batch-size " + transfer_batch_size} \
-        ${"--intra-op-threads " + intra_op_threads} \
-        ${"--inter-op-threads " + inter_op_threads}
+        ~{"-I " + bam_file} \
+        ~{"--read-index " + bam_file_index} \
+        -R ~{reference_fasta} \
+        -V ~{input_vcf} \
+        -O ~{output_prefix}_cnn_annotated.vcf.gz \
+        -L ~{interval_list} \
+        ~{"--architecture " + architecture_json} \
+        ~{"--tensor-type " + tensor_type} \
+        ~{"--inference-batch-size " + inference_batch_size} \
+        ~{"--transfer-batch-size " + transfer_batch_size} \
+        ~{"--intra-op-threads " + intra_op_threads} \
+        ~{"--inter-op-threads " + inter_op_threads}
 
 >>>
 
   runtime {
-    docker: "${gatk_docker}"
+    docker: "~{gatk_docker}"
     memory: machine_mem + " MB"
     disks: "local-disk " + select_first([disk_space_gb, default_disk_space_gb]) + " HDD"
     preemptible: select_first([preemptible_attempts, 3])
@@ -71,8 +71,8 @@ command <<<
 
   output {
     Array[File] log = glob("gatkStreamingProcessJournal*")
-    File cnn_annotated_vcf = "${output_prefix}_cnn_annotated.vcf.gz"
-    File cnn_annotated_vcf_index = "${output_prefix}_cnn_annotated.vcf.gz.tbi"
+    File cnn_annotated_vcf = "~{output_prefix}_cnn_annotated.vcf.gz"
+    File cnn_annotated_vcf_index = "~{output_prefix}_cnn_annotated.vcf.gz.tbi"
   }
 }
 
@@ -105,27 +105,27 @@ task RunHC4 {
 
     command {
         set -e
-        export GATK_LOCAL_JAR=${default="/root/gatk.jar" gatk_override}
+        export GATK_LOCAL_JAR=~{default="/root/gatk.jar" gatk_override}
 
-        gatk --java-options "-Xmx${command_mem}m" \
+        gatk --java-options "-Xmx~{command_mem}m" \
         HaplotypeCaller \
-        -R ${reference_fasta} \
-        -I ${input_bam} \
-        --read-index ${input_bam_index} \
-        -O ${output_prefix}_hc4.vcf.gz \
-        -L ${interval_list} \
-        -bamout ${output_prefix}_bamout.bam \
-        ${extra_args}
+        -R ~{reference_fasta} \
+        -I ~{input_bam} \
+        --read-index ~{input_bam_index} \
+        -O ~{output_prefix}_hc4.vcf.gz \
+        -L ~{interval_list} \
+        -bamout ~{output_prefix}_bamout.bam \
+        ~{extra_args}
     }
 
     output {
-        File bamout = "${output_prefix}_bamout.bam"
-        File bamout_index = "${output_prefix}_bamout.bai"
-        File raw_vcf = "${output_prefix}_hc4.vcf.gz"
-        File raw_vcf_index = "${output_prefix}_hc4.vcf.gz.tbi"
+        File bamout = "~{output_prefix}_bamout.bam"
+        File bamout_index = "~{output_prefix}_bamout.bai"
+        File raw_vcf = "~{output_prefix}_hc4.vcf.gz"
+        File raw_vcf_index = "~{output_prefix}_hc4.vcf.gz.tbi"
     }
     runtime {
-        docker: "${gatk_docker}"
+        docker: "~{gatk_docker}"
         memory: machine_mem + " MB"
         # Note that the space before SSD and HDD should be included.
         disks: "local-disk " + disk_space_gb + " HDD"
@@ -156,7 +156,7 @@ task FilterVariantTranches {
     Int? disk_space_gb
     Int? cpu
     }
-    String output_vcf = "${output_prefix}_cnn_filtered.vcf.gz"
+    String output_vcf = "~{output_prefix}_cnn_filtered.vcf.gz"
 
     # You may have to change the following two parameter values depending on the task requirements
     Int default_ram_mb = 16000
@@ -169,21 +169,21 @@ task FilterVariantTranches {
 
 command <<<
         set -e
-        export GATK_LOCAL_JAR=${default="/root/gatk.jar" gatk_override}
+        export GATK_LOCAL_JAR=~{default="/root/gatk.jar" gatk_override}
 
-        gatk --java-options "-Xmx${command_mem}m" \
+        gatk --java-options "-Xmx~{command_mem}m" \
         FilterVariantTranches \
-        -V ${input_vcf} \
-        --output ${output_vcf} \
-        -resource ${sep=" -resource " resources} \
-        -info-key ${info_key} \
-        ${snp_tranches} \
-        ${indel_tranches} \
-        ${extra_args}
+        -V ~{input_vcf} \
+        --output ~{output_vcf} \
+        -resource ~{sep=" -resource " resources} \
+        -info-key ~{info_key} \
+        ~{snp_tranches} \
+        ~{indel_tranches} \
+        ~{extra_args}
 >>>
 
   runtime {
-    docker: "${gatk_docker}"
+    docker: "~{gatk_docker}"
     memory: machine_mem + " MB"
     # Note that the space before HDD and HDD should be included.
     disks: "local-disk " + select_first([disk_space_gb, default_disk_space_gb]) + " HDD"
@@ -193,8 +193,8 @@ command <<<
   }
 
   output {
-    File cnn_filtered_vcf = "${output_vcf}"
-    File cnn_filtered_vcf_index = "${output_vcf}.tbi"
+    File cnn_filtered_vcf = "~{output_vcf}"
+    File cnn_filtered_vcf_index = "~{output_vcf}.tbi"
   }
 }
 
@@ -318,18 +318,18 @@ task CramToBam {
     Int command_mem = machine_mem - 1000
 
 command <<<
-  ls -ltr ${cram_file} ${reference_fasta} &&
+  ls -ltr ~{cram_file} ~{reference_fasta} &&
   echo "ls (1): complete" &&
-  samtools view -h -T ${reference_fasta} ${cram_file} |
-  samtools view -b -o ${output_prefix}.bam - &&
+  samtools view -h -T ~{reference_fasta} ~{cram_file} |
+  samtools view -b -o ~{output_prefix}.bam - &&
   echo "samtools view: complete" &&
   ls -ltr . &&
   echo "ls (2): complete" &&
-  samtools index -b ${output_prefix}.bam &&
+  samtools index -b ~{output_prefix}.bam &&
   echo "samtools index: complete" &&
   ls -ltr . &&
   echo "ls (3): complete" &&
-  mv ${output_prefix}.bam.bai ${output_prefix}.bai &&
+  mv ~{output_prefix}.bam.bai ~{output_prefix}.bai &&
   echo "mv: complete" &&
   ls -ltr . &&
   echo "ls (4): complete"
@@ -345,8 +345,8 @@ command <<<
   }
 
   output {
-    File output_bam = "${output_prefix}.bam"
-    File output_bam_index = "${output_prefix}.bai"
+    File output_bam = "~{output_prefix}.bam"
+    File output_bam_index = "~{output_prefix}.bai"
   }
 }
 
