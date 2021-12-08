@@ -177,6 +177,7 @@ workflow WGS_SNV_CNV_Workflow {
                 refFasta=refFasta,
                 pairName=pairName,
                 caseName=caseName,
+                ctrlName=ctrlName,
                 refFastaIdx=refFastaIdx,
                 refFasta=refFasta,
                 refFastaDict=refFastaDict,
