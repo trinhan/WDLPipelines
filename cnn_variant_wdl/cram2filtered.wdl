@@ -10,9 +10,11 @@
 # (https://github.com/gatk-workflows/gatk4-data-processing/blob/master/processing-for-variant-discovery-gatk4.wdl)
 # Also accepts a BAM as the input file in which case a BAM index is required as well.
 
+version 1.0
 import "cnn_variant_common_tasks.wdl" as CNNTasks
 
 workflow Cram2FilteredVcf {
+    input {
     File input_file                  # Aligned CRAM file or Aligned BAM files
     File? input_file_index           # Index for an aligned BAM file if that is the input, unneeded if input is a CRAM
     File reference_fasta 
@@ -42,8 +44,8 @@ workflow Cram2FilteredVcf {
     Int? preemptible_attempts
     Float? disk_space_gb
     Int? cpu
-
     Int? increase_disk_size
+    }
     Int additional_disk = select_first([increase_disk_size, 20])
     Float ref_size = size(reference_fasta, "GB") + size(reference_fasta_index, "GB") + size(reference_dict, "GB")
 
@@ -153,6 +155,7 @@ workflow Cram2FilteredVcf {
     }
 
     output {
-        FilterVariantTranches.*
+        File cnn_filtered_vcf = FilterVariantTranches.cnn_filtered_vcf
+        File cnn_filtered_vcf_index = FilterVariantTranches.cnn_filtered_vcf_index
     }
 }
