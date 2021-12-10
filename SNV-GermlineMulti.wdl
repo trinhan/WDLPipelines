@@ -50,6 +50,7 @@ workflow runGermlineVariants{
     Array[File] HC_resources_index
     File gnomad
     File gnomadidx
+    String info_key
 
     }
 
@@ -141,7 +142,7 @@ workflow runGermlineVariants{
             bam_file=normalBam,                  # Bam (or HaplotypeCaller-generated "bamout") file from which input_vcf was called, required by read-level architectures
             bam_file_index=normalBamIdx,
             tensor_type="reference",             # Keyword indicating the shape of the input tensor (e.g. read_tensor, reference)
-            info_key="CNN_1D",                 # The score key for the INFO field of the vcf (e.g. CNN_1D, CNN_2D)
+            info_key=info_key,                 # The score key for the INFO field of the vcf (e.g. CNN_1D, CNN_2D)
             snp_tranches=" --snp-tranche 99.9 ",             # Filtering threshold(s) for SNPs in terms of sensitivity to overlapping known variants in resources
             indel_tranches=" --indel-tranche 99.5 " ,          # Filtering threshold(s) for INDELs in terms of sensitivity to overlapping known variants in resources
             gatk_docker=gatk_docker,
