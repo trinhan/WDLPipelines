@@ -4,12 +4,11 @@ version 1.0
 ## Steps:
 ## 1. Strelka2
 ## 2. Pisces
-## 3. HaplotypeCaller
-## 3b. CNN variant filer on haplotype caller 
+## 3. CNN variant filer on haplotype caller 
 ## 4. VEP
 
-import "https://raw.githubusercontent.com/gatk-workflows/gatk4-germline-snps-indels/master/haplotypecaller-gvcf-gatk4.wdl" as HaplotypeCaller
-import "cnn_variant_wdl/cnn_score_variants.wdl" as CNNFilter
+#import "https://raw.githubusercontent.com/gatk-workflows/gatk4-germline-snps-indels/master/haplotypecaller-gvcf-gatk4.wdl" as HaplotypeCaller
+import "cnn_variant_wdl/cram2filtered.wdl" as CNNFilter
 import "pisces_task.wdl" as pisces
 import "VEP104.wdl" as VEP
 
@@ -51,6 +50,7 @@ workflow runGermlineVariants{
     File gnomad
     File gnomadidx
     String info_key
+    String tensor_type = "reference"
 
     }
 
@@ -112,49 +112,29 @@ workflow runGermlineVariants{
             runMode="Germline"   
     }
 
-    call HaplotypeCaller.HaplotypeCallerGvcf_GATK4 as HaplotypeCaller {
+    call CNNFilter.Cram2FilteredVcf as CNNScoreVariantsWorkflow {
         input: 
-            input_bam=normalBam,
-            input_bam_index=normalBamIdx,
-            ref_dict=refFastaDict,
-            ref_fasta=refFasta,
-            ref_fasta_index=refFastaIdx,
-            scattered_calling_intervals_list=CreateFoFN.fofn_list,
-            make_gvcf = true,
-            make_bamout = false,
-            gatk_docker = gatk_docker,
-            gatk_path = "/gatk/gatk",
-            gitc_docker = "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.7-1603303710",
-            samtools_path = "samtools"
-    }    
-
-    if (runCNNFilter){
-    call CNNFilter.CNNScoreVariantsWorkflow as CNNScoreVariantsWorkflow {
-        input: 
-            output_prefix = pairName,
-            input_vcf = HaplotypeCaller.output_vcf,     
-            input_vcf_index = HaplotypeCaller.output_vcf_index,     
+            input_file=normalBam,                  # Aligned CRAM file or Aligned BAM files
+            input_file_index=normalBamIdx,           # Index for an aligned BAM file if that is the input, unneeded if input is a CRAM
+            reference_fasta =refFasta,
             reference_dict=refFastaDict,
-            reference_fasta=refFasta,
             reference_fasta_index=refFastaIdx,
             resources = HC_resources,
             resources_index =HC_resources_index,
-            bam_file=normalBam,                  # Bam (or HaplotypeCaller-generated "bamout") file from which input_vcf was called, required by read-level architectures
-            bam_file_index=normalBamIdx,
-            tensor_type="reference",             # Keyword indicating the shape of the input tensor (e.g. read_tensor, reference)
+            output_prefix = pairName,
             info_key=info_key,                 # The score key for the INFO field of the vcf (e.g. CNN_1D, CNN_2D)
+            tensor_type=tensor_type,              # What kind of tensors the Neural Net expects (e.g. reference, read_tensor)
+            scatter_count =4,               # Number of shards for parallelization of HaplotypeCaller and CNNScoreVariants
             snp_tranches=" --snp-tranche 99.9 ",             # Filtering threshold(s) for SNPs in terms of sensitivity to overlapping known variants in resources
             indel_tranches=" --indel-tranche 99.5 " ,          # Filtering threshold(s) for INDELs in terms of sensitivity to overlapping known variants in resources
             gatk_docker=gatk_docker,
             calling_intervals=targetIntervals
-    }}   
-
-    File HaplotypeOutput=select_first([CNNScoreVariantsWorkflow.cnn_filtered_vcf, HaplotypeCaller.output_vcf])
+    }
 
     call Merge_Variants_Germline {
         input:
             ctrlName=ctrlName,
-            Haplotype=HaplotypeCaller.output_vcf,
+            Haplotype=CNNScoreVariantsWorkflow.cnn_filtered_vcf,
             STRELKA2=Strelka2Germline_Task.strelka2GermlineVCF,
             PISCES_NORMAL=runpisces.normal_variants      
     }
@@ -198,14 +178,12 @@ workflow runGermlineVariants{
        File strelka2GermlineVCF=Strelka2Germline_Task.strelka2GermlineVCF
        # pisces outputs
        File? pisces_normal_variants=runpisces.normal_variants
-       File HaplotypeVcf=HaplotypeCaller.output_vcf
-       File HaplotypeVcfTbi=HaplotypeCaller.output_vcf_index
+       File HaplotypeVcf=CNNScoreVariantsWorkflow.cnn_filtered_vcf
+       File HaplotypeVcfTbi=CNNScoreVariantsWorkflow.cnn_filtered_vcf_index
       # merged germline output
        File Merged_germline=Merge_Variants_Germline.MergedGermlineVcf
        File Merged_germlineIdx=Merge_Variants_Germline.MergedGermlineVcfIdx
        ## CNN
-        File? cnn_filtered_vcf = CNNScoreVariantsWorkflow.cnn_filtered_vcf
-        File? cnn_filtered_vcf_index = CNNScoreVariantsWorkflow.cnn_filtered_vcf_index
        File vep_annot = vep.annotatedFile
        File? vep_summary_html=vep.summary_html
 
