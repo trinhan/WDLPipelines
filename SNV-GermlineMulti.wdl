@@ -380,25 +380,24 @@ task Merge_Variants_Germline {
 
     command {
         PISCES_pass="~{ctrlName}.Pisces.pass.vcf"
-        STRELKA_pass="~{ctrlName}.S2.PASS.vcf.gz"
-        HP_unzip="~{ctrlName}.haplo.vcf"
+        STRELKA_pass="~{ctrlName}.S2.PASS.vcf"
         HP_pass="~{ctrlName}.haplo.pass.vcf"
-
         MERGED_VCF="~{ctrlName}.P_S2_HP.merged.vcf.gz"
         RENAME_MERGED_VCF="~{ctrlName}.P_S2_HP.mergedGermline.vcf.gz"
- 
+
         ## filter out passed germline variants
         bcftools view -f PASS ${STRELKA2} > $STRELKA_pass
         bcftools view -f PASS ${PISCES_NORMAL} > $PISCES_pass
+        bcftools view -f PASS ${Haplotype} > $HP_pass
+
+        sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $HP_pass
+
         ##bgzip $STRELKA_pass
         bgzip $PISCES_pass
-        tabix -p vcf $PISCES_pass
-        tabix -p vcf $STRELKA_pass.gz
-
-        ## Do the haplotypecaller
-        gunzip -c ${Haplotype} > $HP_unzip
-        grep -v "0/0"  $HP_unzip > $HP_pass
         bgzip $HP_pass
+        bgzip $STRELKA_pass
+        tabix -p vcf $PISCES_pass.gz
+        tabix -p vcf $STRELKA_pass.gz
         tabix -p vcf $HP_pass.gz
 
         #merge vcfs
