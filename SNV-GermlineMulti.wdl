@@ -51,6 +51,7 @@ workflow runGermlineVariants{
     File gnomadidx
     String info_key
     String tensor_type = "reference"
+    String cnn_extra_args = "-stand-call-conf 0 -A Coverage -A ChromosomeCounts -A BaseQuality -A FragmentLength -A MappingQuality -A ReadPosition "
 
     }
 
@@ -128,7 +129,8 @@ workflow runGermlineVariants{
             snp_tranches=" --snp-tranche 99.9 ",             # Filtering threshold(s) for SNPs in terms of sensitivity to overlapping known variants in resources
             indel_tranches=" --indel-tranche 99.5 " ,          # Filtering threshold(s) for INDELs in terms of sensitivity to overlapping known variants in resources
             gatk_docker=gatk_docker,
-            calling_intervals=targetIntervals
+            calling_intervals=targetIntervals,
+            extra_args=cnn_extra_args
     }
 
     call Merge_Variants_Germline {
