@@ -11,6 +11,7 @@ version 1.0
 import "cnn_variant_wdl/cram2filtered.wdl" as CNNFilter
 import "pisces_task.wdl" as pisces
 import "VEP104.wdl" as VEP
+import "run_QC_checks.wdl" as runQC
 
 workflow runGermlineVariants{
     input {
@@ -30,7 +31,6 @@ workflow runGermlineVariants{
     # an interval list file that contains the locations of the targets
     File targetIntervals
     File? pisces_reference
-    Float fracContam 
     String gatk_docker
     ## VEP input
     File vep_cache
@@ -42,7 +42,11 @@ workflow runGermlineVariants{
     File? clinvar
     File? clinvarTbi
     String refGenome
-    Boolean runCNNFilter
+
+    File DB_SNP_VCF
+    File DB_SNP_VCF_IDX
+
+    Boolean runQC
 
     ## jointdiscovery inputs
     Array[File] HC_resources
@@ -61,7 +65,26 @@ workflow runGermlineVariants{
 
     Int normalBam_size  = ceil(size(normalBam,  "G") + size(normalBamIdx,   "G")) 
     Int refFasta_size   = ceil(size(refFasta,   "G") + size(refFastaDict,   "G") + size(refFastaIdx, "G")) 
+    Int db_snp_vcf_size = ceil(size(DB_SNP_VCF, "G")+size(DB_SNP_VCF_IDX, "G"))
 
+
+    if (runQC){
+        call runQC.PicardMultipleMetrics_Task as normalMM_Task {
+            input:
+                bam=normalBam,
+                bamIndex=normalBamIdx,
+                sampleName=ctrlName,
+                refFasta=refFasta,
+                DB_SNP_VCF=DB_SNP_VCF,
+                DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
+                targetIntervals=targetIntervals,
+                baitIntervals=targetIntervals,
+                gatk_docker=gatk_docker,
+                refFasta_size=refFasta_size,
+                db_snp_vcf_size=db_snp_vcf_size,
+                bam_size=normalBam_size        
+        }
+    }
 
         # PREPARE FOR SCATTER
     call CallSomaticMutations_Prepare_Task {
