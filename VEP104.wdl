@@ -136,7 +136,7 @@ task variant_effect_predictor {
     String? freq_gt_lt
     String? freq_filter
     Boolean? allow_non_variant
-    Int? buffer_size
+    Int? buffer_size =20
     String? OTHER_VEP_OPTS
 
     ## runtime
@@ -146,7 +146,7 @@ task variant_effect_predictor {
     String VEP_DATA_PLUGINS="/opt/vep/.vep/Plugins"
     
     Int cpu =select_first([fork, 4])
-    Int machine_mem_gb = 4
+    Int machine_mem_gb = 6
     Int? preemptible_tries
     Int? max_retries
     }
