@@ -47,6 +47,7 @@ workflow runGermlineVariants{
     File DB_SNP_VCF_IDX
 
     Boolean runQC
+    Boolean targetedRun
 
     ## jointdiscovery inputs
     Array[File] HC_resources
@@ -82,7 +83,9 @@ workflow runGermlineVariants{
                 gatk_docker=gatk_docker,
                 refFasta_size=refFasta_size,
                 db_snp_vcf_size=db_snp_vcf_size,
-                bam_size=normalBam_size        
+                bam_size=normalBam_size,
+                targetedRun=targetedRun
+
         }
     }
 

@@ -63,7 +63,7 @@ task runpisces {
     String runMode
     }
 
-    Int disk_size=2*ceil(size(tumorBam, "GB")+3)
+
     String normP = select_first([ normalBam ,""])
     String tumP = select_first([ tumorBam ,""])
     String tumPrefix=if (tumP!="") then basename(sub(tumP,"\\.bam$", "")) else ""
@@ -74,6 +74,9 @@ task runpisces {
     String runGerm = if (runMode!="TumOnly" ||  defined(normalBam)) then "1" else "0"
     String matchPair = if (runMode=="Paired" ||  ( defined(normalBam) && defined(tumorBam))) then "1" else "0"
     String tOnly = if (runMode=="TumOnly" ||  ( !defined(normalBam) && defined(tumorBam))) then "1" else "0"
+    Int tumBamSize = select_first([ceil(size(tumorBam, "G")+size(tumorBai, "G")), 0])
+    Int normBamSize = select_first([ceil(size(normalBam, "G")+size(normalBai, "G")), 0])
+    Int disk_size=2*(tumBamSize+ normBamSize+3)
    
     command <<<
         set -e

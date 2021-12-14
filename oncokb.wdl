@@ -5,22 +5,28 @@ version 1.0
 workflow oncokbAnnotate {
 # inputs and their types specified here
     input {
-    File maf
+    File vcf
     String oncotree
     String samplename
     String token
     # Options for searchby: "hgvsp", "hgvsp_short", "hgvsg"
-    String searchby = "hgvsp" 
+    String searchby = "hgvsp_short" 
+    File pfam
+    File pirsf
+    File AAlist
     }
 # start listing all the tasks in your workflow here and the required inputs. This example only has one
 
     call oncokb {
         input:
-        maf = maf,
+        vcf = vcf,
         oncotree = oncotree,
         samplename = samplename,
         token = token,
-        searchby = searchby 
+        searchby = searchby,
+        AAlist = AAlist,
+        pfam=pfam,
+        pirsf=pirsf
     }
 # outputs and their types specified here
     output {
@@ -32,26 +38,35 @@ workflow oncokbAnnotate {
 
 task oncokb {
     input {
-    File maf
+    File vcf
     String token
     String samplename
     String searchby
     String oncotree
+    File pfam
+    File pirsf
+    File AAlist
     }
 
     command {
 
-python <<CODE
+python3 <<CODE
 
 with open('clinannot.txt', 'w') as f:
     f.write("SAMPLE_ID\tONCOTREE_CODE\n")
     f.write('${samplename}'+"\t"+'${oncotree}')
-f.close()
+    f.close()
 CODE
 
-echo `head ${maf}`
 
-python /oncokb/MafAnnotator.py -i ${maf} -o "${samplename}_oncokb.maf" -c "clinannot.txt" -b ${token} -q ${searchby}
+    OutputMaf=${samplename}.maf
+
+# Run the Rscript
+
+Rscript /opt/vepVCF2maf4Oncokb.R --vcffile ${vcf} --outputfile $OutputMaf --sampleName ${samplename} --AAlist ${AAlist} --protein TRUE --pfam ${pfam} --pirsf ${pirsf}
+
+python3 /oncokb/MafAnnotator.py -i $OutputMaf -o "${samplename}_oncokb.maf" -c "clinannot.txt" -b ${token} -q ${searchby}
+
     }
 
     output {
@@ -59,7 +74,7 @@ python /oncokb/MafAnnotator.py -i ${maf} -o "${samplename}_oncokb.maf" -c "clina
     }
 
     runtime {
-    docker: "trinhanne/oncokb:3.1.1"
+    docker: "trinhanne/oncokb:3.1.2Renv"
     preemptible: "3"
     memory: "2 GB"
     disks: "local-disk 10 HDD"

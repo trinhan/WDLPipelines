@@ -45,6 +45,8 @@ workflow QCChecks {
     Boolean run_CNQC = false
     Boolean run_CrossCheck = true
     Boolean forceComputePicardMetrics_normal = if defined (normalBam) then true else false
+    # Is the run WGS (false) or a targeted hybrid capture panel (true)
+    Boolean targetedRun
     }
 
     Int tumorBam_size   = ceil(size(tumorBam,   "G") + size(tumorBamIdx,    "G")) 
@@ -133,7 +135,8 @@ workflow QCChecks {
                 gatk_docker=gatk_docker,
                 refFasta_size=refFasta_size,
                 db_snp_vcf_size=db_snp_vcf_size,
-                bam_size=tumorBam_size
+                bam_size=tumorBam_size,
+                targetedRun=targetedRun
         }
     }
 
@@ -152,7 +155,8 @@ workflow QCChecks {
                 gatk_docker=gatk_docker,
                 refFasta_size=refFasta_size,
                 db_snp_vcf_size=db_snp_vcf_size,
-                bam_size=normalBam_size
+                bam_size=normalBam_size,
+                targetedRun=targetedRun
         }
     }
 
@@ -335,6 +339,7 @@ task PicardMultipleMetrics_Task {
     String memoryGB ="10"
     String cpu ="1"
     String gatk_docker
+    Boolean targetedRun = true
     }
     # DEFAULT VALUES
 
@@ -397,16 +402,22 @@ task PicardMultipleMetrics_Task {
         --REFERENCE_SEQUENCE ${refFasta} \
         --VALIDATION_STRINGENCY ${validationStringencyLevel}
 
+        mkdir ${sampleName}.Picard_Multiple_Metrics
+        mv ${sampleName}.multiple_metrics.* ${sampleName}.Picard_Multiple_Metrics
         #zip up reports for QC Nozzle report
-        zip ${sampleName}.picard_multiple_metrics.zip ${sampleName}.multiple_metrics.*
+        tar -czvf ${sampleName}.picard_multiple_metrics.tar.gz ${sampleName}.Picard_Multiple_Metrics/
 
         # Collect WES HS metrics
+    if [ targetedRun ];
+    then
         gatk --java-options "-Xmx~{command_memoryGB}g" CollectHsMetrics \
         --INPUT ${bam} \
         --BAIT_INTERVALS ${targetIntervals} \
         --TARGET_INTERVALS ${baitIntervals} \
         --OUTPUT "${sampleName}.HSMetrics.txt" \
         --VALIDATION_STRINGENCY ${validationStringencyLevel}
+    fi 
+
     }
 
     runtime {
