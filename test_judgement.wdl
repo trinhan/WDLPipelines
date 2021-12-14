@@ -10,6 +10,7 @@ task PassJudgement {
     	String pairName
     	String refGenome
     	String runMode
+    	Boolean runtest
 
     	# RUNTIME INPUT PARAMS
     	String? preemptible = "2"
@@ -22,14 +23,17 @@ task PassJudgement {
 	# DEFAULT VALUES
        
     Int diskGB = ceil(size(m2_pon, "G")+size(gnomad, "G")+size(blat_reject, "G"))*3 +  diskGB_buffer
+    String rTest = if (runtest == true ) then "1" else "0"
 
 	command {
 		# Use an R script for this?
 		# change blat to vcf file
 		# bcftools isec for PoN
-		
-		Rscript /app/MergeVCFRecall.R --vcffile ${vcf} --outputstr ${pairName} --genome ${refGenome} --runMode ${runMode} ${"--blat " + blat_reject} ${"--pon " + m2_pon} ${"--gnomad " + gnomad} ${"--abra2 " + abra2_calls} 
 
+		if [ ${rTest} -eq "1" ];
+		then
+		Rscript /app/MergeVCFRecall.R --vcffile ${vcf} --outputstr ${pairName} --genome ${refGenome} --runMode ${runMode} ${"--blat " + blat_reject} ${"--pon " + m2_pon} ${"--gnomad " + gnomad} ${"--abra2 " + abra2_calls} 
+		fi
 	}
 
 	runtime {
@@ -56,6 +60,7 @@ workflow testJudgement {
     	String pairName
     	String refGenome
     	String runMode
+    	Boolean runtest
 	}
 
 	call PassJudgement {
@@ -67,6 +72,7 @@ workflow testJudgement {
     		m2_pon=m2_pon,
     		pairName=pairName,
     		refGenome=refGenome,
-    		runMode=runMode
+    		runMode=runMode,
+    		runtest=runtest
 	}
 }

@@ -326,7 +326,7 @@ task PicardMultipleMetrics_Task {
     File DB_SNP_VCF_IDX
 
     String validationStringencyLevel ="LENIENT"
-    String run_clean_sam =false
+    String run_clean_sam = false
     # FILE SIZE
     Int bam_size
     Int refFasta_size
@@ -339,7 +339,7 @@ task PicardMultipleMetrics_Task {
     String memoryGB ="10"
     String cpu ="1"
     String gatk_docker
-    Boolean targetedRun = true
+    String targetedRun = true
     }
     # DEFAULT VALUES
 
@@ -348,7 +348,7 @@ task PicardMultipleMetrics_Task {
 
     # COMPUTE DISK SIZE
     Int diskGB = ceil(bam_size + refFasta_size + db_snp_vcf_size + diskGB_buffer)
-
+  
     parameter_meta {
         bam : "sample (normal or tumor) BAM file"
         bamIndex : "sample (normal or tumor) BAI file (BAM indexed)"
@@ -408,7 +408,7 @@ task PicardMultipleMetrics_Task {
         tar -czvf ${sampleName}.picard_multiple_metrics.tar.gz ${sampleName}.Picard_Multiple_Metrics/
 
         # Collect WES HS metrics
-    if [ targetedRun ];
+    if [ "${run_clean_sam}" = true ];
     then
         gatk --java-options "-Xmx~{command_memoryGB}g" CollectHsMetrics \
         --INPUT ${bam} \
