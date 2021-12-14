@@ -210,12 +210,12 @@ task variant_effect_predictor {
 
         if [ ${runclinvar} -eq "1" ];
         then
-        runclinvar="$runclinar --custom ${clinvar},ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN "
+        runclinvar="$runclinvar --custom ${clinvar},ClinVar,vcf,exact,0,CLNSIG,CLNREVSTAT,CLNDN "
         fi
 
         if [ ${rungnomad} -eq "1" ];
         then 
-        runclinvar="$runclinar --custom ${gnomad},gnomADg,vcf,exact,0,AF_AFR,AF_AMR,AF_ASJ,AF_EAS,AF_FIN,AF_NFE,AF_OTH "
+        runclinvar="$runclinvar --custom ${gnomad},gnomADg,vcf,exact,0,AF_AFR,AF_AMR,AF_ASJ,AF_EAS,AF_FIN,AF_NFE,AF_OTH "
         fi
 
         ## gnomad
