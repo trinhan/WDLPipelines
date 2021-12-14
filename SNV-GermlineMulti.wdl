@@ -222,6 +222,7 @@ workflow runGermlineVariants{
 
     output {
         # Strelka2Germline
+        Array[File]? QC_Output=normalMM_Task.picard_files
        File strelka2GermlineVCF=Strelka2Germline_Task.strelka2GermlineVCF
        # pisces outputs
        File? pisces_normal_variants=runpisces.normal_variants
