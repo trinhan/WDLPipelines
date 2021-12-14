@@ -12,6 +12,7 @@ import "cnn_variant_wdl/cram2filtered.wdl" as CNNFilter
 import "pisces_task.wdl" as pisces
 import "VEP104.wdl" as VEP
 import "run_QC_checks.wdl" as runQC
+import "oncokb.wdl" as oncokb
 
 workflow runGermlineVariants{
     input {
@@ -48,6 +49,12 @@ workflow runGermlineVariants{
 
     Boolean runQC
     Boolean targetedRun
+
+    String oncotree
+    File AAlist
+    File pfam
+    File pirsf
+    String OncoKBtoken
 
     ## jointdiscovery inputs
     Array[File] HC_resources
@@ -199,6 +206,18 @@ workflow runGermlineVariants{
           symbol=true,
           uniprot=true,
           biotype=true
+    }
+
+    call oncokb.oncokb as oncokbCalls {
+        input:
+        vcf=vep.annotatedFile,
+        oncotree = oncotree,
+        samplename = ctrlName,
+        token = OncoKBtoken,
+        searchby = "hgsvp_short",
+        AAlist = AAlist,
+        pfam=pfam,
+        pirsf=pirsf
     }    
 
     output {
@@ -214,6 +233,7 @@ workflow runGermlineVariants{
        ## CNN
        File vep_annot = vep.annotatedFile
        File? vep_summary_html=vep.summary_html
+       File oncokbMaf=oncokbCalls.oncokbout
 
      }
 }
