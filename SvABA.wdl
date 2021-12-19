@@ -3,8 +3,8 @@ version 1.0
 task svabaCall{
 
     input {
-    File tumorBAM
-    File tumorIndex
+    File queryBAM
+    File queryIndex
     File? normalBAM
     File? normalIndex
     File reference
@@ -20,8 +20,10 @@ task svabaCall{
     File? dbSNPVCF
     Int sizeAll
     Int memoryin = 32
-    
+    String runMode
     }
+
+    String Germline = if (runMode=="Germline") then "1" else "0"
 
     runtime {
         docker : "quay.io/biocontainers/svaba:1.1.0--h7d7f7ad_2"
@@ -34,19 +36,15 @@ task svabaCall{
 
         set -e
 
-        if [[ -e ${tumorBAM} ]]; 
+        if [ ${Germline} -eq "1" ]; 
         then
-            germline_mode=""
-        else
             germline_mode=" -L 6 -I"
+        else
+            germline_mode=""
         fi
-        
-        echo $germline_mode
 
         svaba run -p ${threads} \
-            -G ${reference} -a ${id} ~{"-n " + normalBAM} ~{"-t " + tumorBAM} ~{"-k " + regions}  ~{"-D " + dbSNPVCF} --hp $germline_mode
-
-        ls 
+            -G ${reference} -a ${id} ~{"-n " + normalBAM} ~{"-t " + queryBAM} ~{"-k " + regions}  ~{"-D " + dbSNPVCF} --hp $germline_mode
           
     }
 
@@ -64,8 +62,8 @@ task svabaCall{
 
 workflow svabaSomatic {
     input {
-    File? tumorBAM
-    File? tumorIndex
+    File queryBAM
+    File queryIndex
 
     File? normalBAM
     File? normalIndex
@@ -82,10 +80,11 @@ workflow svabaSomatic {
     Int threads
     File? regions
     File? dbSNPVCF
+    String runMode = "Germline" ## options: TumOnly, Paired, Germline
     }
 
     Int ref_size = ceil(size(reference, "GB") + size(refPACIndex, "GB") + size(refBWTIndex, "GB") + size(refSAIndex, "GB"))
-    Int tumor_reads_size = ceil(size(tumorBAM, "GB") + size(tumorIndex, "GB"))
+    Int tumor_reads_size = ceil(size(queryBAM, "GB") + size(queryIndex, "GB"))
     Int vcf_size = if defined(dbSNPVCF) then ceil(size(dbSNPVCF, "GB")) else 0
     Int normal_reads_size = if defined(normalBAM) then ceil(size(normalBAM, "GB") + size(normalIndex, "GB")) else 0
 
@@ -94,8 +93,8 @@ workflow svabaSomatic {
 
     call svabaCall {
         input:
-            tumorBAM=tumorBAM,
-            tumorIndex=tumorIndex,
+            queryBAM=queryBAM,
+            queryIndex=queryIndex,
             normalBAM=normalBAM,
             normalIndex=normalIndex,
             reference=reference,
@@ -109,7 +108,8 @@ workflow svabaSomatic {
             threads=threads,
             regions=regions,
             dbSNPVCF=dbSNPVCF,
-            sizeAll=sizeAll
+            sizeAll=sizeAll,
+            runMode=runMode
     }
 
 }
