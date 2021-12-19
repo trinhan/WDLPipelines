@@ -46,7 +46,12 @@ task oncokb {
     File pfam
     File pirsf
     File AAlist
+    String? memoryGB ="5"
+    String? diskGB_buffer = "20"
     }
+
+    Int diskGB = ceil(size(vcf, "G")+size(pfam ,"G")+size(pirsf, "G"))*3 + diskGB_buffer
+
 
     command {
 
@@ -57,7 +62,6 @@ with open('clinannot.txt', 'w') as f:
     f.write('${samplename}'+"\t"+'${oncotree}')
     f.close()
 CODE
-
 
     OutputMaf=${samplename}.maf
 
@@ -76,7 +80,7 @@ python3 /oncokb/MafAnnotator.py -i $OutputMaf -o "${samplename}_oncokb.maf" -c "
     runtime {
     docker: "trinhanne/oncokb:3.1.2Renv"
     preemptible: "3"
-    memory: "2 GB"
-    disks: "local-disk 10 HDD"
+    memory: memoryGB + "GB"
+    disks: "local-disk ${diskGB} HDD"
     }
 }
