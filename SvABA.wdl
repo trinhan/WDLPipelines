@@ -112,4 +112,13 @@ workflow svabaSomatic {
             runMode=runMode
     }
 
+    output {
+        File? SvABA_Somatic_Indel_VCF = svabaCall.SvABA_Somatic_Indel_VCF
+        File? SvABA_Somatic_SV_VCF = svabaCall.SvABA_Somatic_SV_VCF
+        File? SvABA_Somatic_Unfiltered_indel_VCF = svabaCall.SvABA_Somatic_Unfiltered_indel_VCF
+        File? SvABA_Somatic_Unfiltered_SV_VCF = svabaCall.SvABA_Somatic_Unfiltered_SV_VCF
+        File? SvABA_Germline_Indel_VCF = svabaCall.SvABA_Germline_Indel_VCF
+        File? SvABA_Germline_SV_VCF = svabaCall.SvABA_Germline_SV_VCF
+    }
+
 }
