@@ -407,7 +407,7 @@ task IntervalToBed {
 
 task Merge_Variants_Germline {
 
-    input {
+ input {
     # TASK INPUT PARAMS
     File? PISCES_NORMAL
     File? Haplotype
@@ -415,29 +415,37 @@ task Merge_Variants_Germline {
     String ctrlName
     
     # RUNTIME INPUT PARAMS
-    String? preemptible = "2"
-    String? diskGB_boot = "10"
-    String? diskGB_buffer ="5"
-    String? memoryGB ="4"
-    String? cpu ="1"
+    String preemptible = "2"
+    String diskGB_boot = "10"
+    String diskGB_buffer ="5"
+    String memoryGB ="4"
+    String cpu ="1"
+    Int minCallers = 2
+
     }
 
     # DEFAULT VALUES
+    Int minV = minCallers - 1
        
     Int diskGB = ceil(size(Haplotype, "G"))*4  +  diskGB_buffer
     Boolean runS2 =if defined(STRELKA2) then true else false
 
-    command {
+    command <<<
         PISCES_pass="~{ctrlName}.Pisces.pass.vcf"
         STRELKA_pass="~{ctrlName}.S2.PASS.vcf"
+        #STRELKA_unzip="~{ctrlName}.S2.unzip.vcf"
+        #HP_unzip="~{ctrlName}.haplo.vcf"
         HP_pass="~{ctrlName}.haplo.pass.vcf"
         MERGED_VCF="~{ctrlName}.P_S2_HP.merged.vcf.gz"
-        RENAME_MERGED_VCF="~{ctrlName}.P_S2_HP.mergedGermline.vcf.gz"
+        RENAME_MERGED_VCF_ALL="~{ctrlName}.P_S2_HP.mergedGermline.all.vcf.gz"
+        RENAME_MERGED_VCF_ANN="~{ctrlName}.P_S2_HP.mergedGermline.ann.vcf"
+        RENAME_MERGED_VCF_FILT="~{ctrlName}.P_S2_HP.mergedGermline.filt.vcf"
+
 
         ## filter out passed germline variants
-        bcftools view -f PASS ${STRELKA2} > $STRELKA_pass
-        bcftools view -f PASS ${PISCES_NORMAL} > $PISCES_pass
-        bcftools view -f PASS ${Haplotype} > $HP_pass
+        bcftools view -f PASS "~{STRELKA2}" > $STRELKA_pass
+        bcftools view -f PASS "~{PISCES_NORMAL}" > $PISCES_pass
+        bcftools view -f PASS "~{Haplotype}" > $HP_pass
 
         sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $HP_pass
 
@@ -447,14 +455,32 @@ task Merge_Variants_Germline {
         bgzip $STRELKA_pass
         tabix -p vcf $PISCES_pass.gz
         tabix -p vcf $STRELKA_pass.gz
+        #bgzip $HP_pass
         tabix -p vcf $HP_pass.gz
 
         #merge vcfs
         bcftools merge $PISCES_pass.gz $STRELKA_pass.gz $HP_pass.gz -O vcf -o $MERGED_VCF --force-samples
         echo -e "~{ctrlName}.Pisces\n~{ctrlName}.Strelka\n~{ctrlName}.Haplotype\n" > samples.txt
-        bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF
-        tabix -p vcf $RENAME_MERGED_VCF
-    }
+        bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF_ALL
+        tabix -p vcf $RENAME_MERGED_VCF_ALL
+
+        #merge
+        bcftools query --format '%CHROM\t%POS\t%POS\n' $RENAME_MERGED_VCF_ALL > test.output 
+        bcftools query -f '[\t%SAMPLE=%GT]\n' $RENAME_MERGED_VCF_ALL | awk '{print 3-gsub(/.\/\./, "")}' > output
+        paste test.output output > annots.tab 
+        bgzip annots.tab
+        tabix -s1 -b2 -e2 annots.tab.gz
+        echo '##INFO=<ID=NCALLS,Number=1,Type=Integer,Description="Number of callers">' > annots.hdr
+        bcftools annotate -a annots.tab.gz -h annots.hdr -c CHROM,FROM,TO,NCALLS $RENAME_MERGED_VCF_ALL > $RENAME_MERGED_VCF_ANN
+
+        bgzip $RENAME_MERGED_VCF_ANN
+        tabix -p vcf $RENAME_MERGED_VCF_ANN.gz
+        # querybased on the number of callers supporting
+        echo 'filter ino'
+        bcftools filter -i'NCALLS>~{minV}' $RENAME_MERGED_VCF_ANN.gz -o $RENAME_MERGED_VCF_FILT
+        bgzip $RENAME_MERGED_VCF_FILT
+        tabix -p vcf $RENAME_MERGED_VCF_FILT.gz
+    >>>
 
     runtime {
         docker         : "trinhanne/sambcfhts:v1.13.3"       
@@ -466,8 +492,9 @@ task Merge_Variants_Germline {
     }
 
     output {
-        File MergedGermlineVcf="~{ctrlName}.P_S2_HP.mergedGermline.vcf.gz"
-        File MergedGermlineVcfIdx="~{ctrlName}.P_S2_HP.mergedGermline.vcf.gz.tbi"
+        File MergedGermlineVcf="~{ctrlName}.P_S2_HP.mergedGermline.filt.vcf.gz"
+        File MergedGermlineVcfIdx="~{ctrlName}.P_S2_HP.mergedGermline.filt.vcf.gz.tbi"
     }     
+ 
 }
 
