@@ -44,18 +44,19 @@ task svabaCall{
         fi
 
         svaba run -p ${threads} \
-            -G ${reference} -a ${id} ~{"-n " + normalBAM} ~{"-t " + queryBAM} ~{"-k " + regions}  ~{"-D " + dbSNPVCF} --hp $germline_mode
-          
+            -G ${reference} -a ${id} ~{"-n " + normalBAM} ~{"-t " + queryBAM} ~{"-k " + regions} ~{"-D " + dbSNPVCF} --hp $germline_mode
+
+        ls *.vcf
     }
 
     output {
-        File? outputlog = "${id}.log"
-        File? SvABA_Somatic_Indel_VCF = "${id}.svaba.somatic.indel.vcf"
-        File? SvABA_Somatic_SV_VCF = "${id}.svaba.somatic.sv.vcf"
-        File? SvABA_Somatic_Unfiltered_indel_VCF = "${id}.svaba.unfiltered.somatic.indel.vcf"
-        File? SvABA_Somatic_Unfiltered_SV_VCF = "${id}.svaba.unfiltered.somatic.sv.vcf"
-        File? SvABA_Germline_Indel_VCF = "${id}.svaba.germline.indel.vcf"
-        File? SvABA_Germline_SV_VCF = "${id}.svaba.germline.sv.vcf"
+        File? outputlog = "~{id}.log"
+        File? SvABA_Somatic_Indel_VCF = "~{id}.svaba.somatic.indel.vcf"
+        File? SvABA_Somatic_SV_VCF = "~{id}.svaba.somatic.sv.vcf"
+        File? SvABA_Somatic_Unfiltered_indel_VCF = "~{id}.svaba.unfiltered.somatic.indel.vcf"
+        File? SvABA_Somatic_Unfiltered_SV_VCF = "~{id}.svaba.unfiltered.somatic.sv.vcf"
+        File? SvABA_Germline_Indel_VCF = "~{id}.svaba.germline.indel.vcf"
+        File? SvABA_Germline_SV_VCF = "~{id}.svaba.germline.sv.vcf"
     }
 
 }
