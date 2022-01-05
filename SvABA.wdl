@@ -51,12 +51,10 @@ task svabaCall{
 
     output {
         File? outputlog = "~{id}.log"
-        File? SvABA_Somatic_Indel_VCF = "~{id}.svaba.somatic.indel.vcf"
-        File? SvABA_Somatic_SV_VCF = "~{id}.svaba.somatic.sv.vcf"
-        File? SvABA_Somatic_Unfiltered_indel_VCF = "~{id}.svaba.unfiltered.somatic.indel.vcf"
-        File? SvABA_Somatic_Unfiltered_SV_VCF = "~{id}.svaba.unfiltered.somatic.sv.vcf"
-        File? SvABA_Germline_Indel_VCF = "~{id}.svaba.germline.indel.vcf"
-        File? SvABA_Germline_SV_VCF = "~{id}.svaba.germline.sv.vcf"
+        File? SvABA_Indel_VCF = "~{id}.svaba.indel.vcf"
+        File? SvABA_SV_VCF = "~{id}.svaba.sv.vcf"
+        File? SvABA_Unfiltered_indel_VCF = "~{id}.svaba.somatic.indel.vcf"
+        File? SvABA_Unfiltered_SV_VCF = "~{id}.svaba.somatic.sv.vcf"
     }
 
 }
@@ -114,12 +112,11 @@ workflow svabaSomatic {
     }
 
     output {
-        File? SvABA_Somatic_Indel_VCF = svabaCall.SvABA_Somatic_Indel_VCF
-        File? SvABA_Somatic_SV_VCF = svabaCall.SvABA_Somatic_SV_VCF
-        File? SvABA_Somatic_Unfiltered_indel_VCF = svabaCall.SvABA_Somatic_Unfiltered_indel_VCF
-        File? SvABA_Somatic_Unfiltered_SV_VCF = svabaCall.SvABA_Somatic_Unfiltered_SV_VCF
-        File? SvABA_Germline_Indel_VCF = svabaCall.SvABA_Germline_Indel_VCF
-        File? SvABA_Germline_SV_VCF = svabaCall.SvABA_Germline_SV_VCF
+        File? SvABA_Indel_VCF = svabaCall.SvABA_Indel_VCF
+        File? SvABA_SV_VCF = svabaCall.SvABA_SV_VCF
+        File? SvABA_Unfiltered_indel_VCF = svabaCall.SvABA_Unfiltered_indel_VCF
+        File? SvABA_Unfiltered_SV_VCF = svabaCall.SvABA_Unfiltered_SV_VCF
+
     }
 
 }
