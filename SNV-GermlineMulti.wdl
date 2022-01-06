@@ -205,7 +205,8 @@ workflow runGermlineVariants{
           regulatory=true,
           symbol=true,
           uniprot=true,
-          biotype=true
+          biotype=true,
+          pick=true 
     }
 
     call oncokb.oncokb as oncokbCalls {
