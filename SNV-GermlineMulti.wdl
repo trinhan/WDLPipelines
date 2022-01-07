@@ -215,7 +215,7 @@ workflow runGermlineVariants{
         oncotree = oncotree,
         samplename = ctrlName,
         token = OncoKBtoken,
-        searchby = "hgsvp_short",
+        searchby = "HGVSp_Short",
         AAlist = AAlist,
         pfam=pfam,
         pirsf=pirsf
