@@ -15,7 +15,6 @@ workflow oncokbAnnotate {
     File pirsf
     File AAlist
     String? grepRm
-    String runProtein = "TRUE"
     }
 
 # start listing all the tasks in your workflow here and the required inputs. This example only has one
@@ -89,8 +88,6 @@ CODE
 Rscript /opt/vepVCF2maf4Oncokb.R --vcffile $vcfMod --outputfile $OutputMaf --sampleName ${samplename} --AAlist ${AAlist} --protein FALSE
 Rscript /opt/annotateProteins.R --maffile $OutputMaf --outputfile $OutputMaf2 ~{"--pfam " + pfam} ~{"--pirsf " + pirsf}
 # Run the Rscript: step 2 annotate the data file with pfam and pirsf
-
-###${runProtein} ~{"--pfam " + pfam} ~{"--pirsf " + pirsf}
 # Run the Rscript: step 2 annotate the data file with pfam and pirsf
 
 
