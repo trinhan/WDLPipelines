@@ -15,7 +15,9 @@ workflow oncokbAnnotate {
     File pirsf
     File AAlist
     String? grepRm
+    String runProtein = "TRUE"
     }
+
 # start listing all the tasks in your workflow here and the required inputs. This example only has one
 
     call oncokb {
@@ -51,7 +53,7 @@ task oncokb {
     String? grepRm
     }
 
-    Int diskGB = ceil(2*size(vcf, "G")+size(pfam ,"G")+size(pirsf, "G"))*3 + diskGB_buffer
+    Int diskGB = ceil(2*size(vcf, "G")+size(pfam ,"G"))*3 + diskGB_buffer
     String rmSamps = if defined(grepRm) then "1" else "0"
 
 
@@ -66,7 +68,7 @@ with open('clinannot.txt', 'w') as f:
 CODE
 
     OutputMaf=${samplename}.maf
-
+    OutputMaf2=${samplename}.prot.maf
     vcfMod=${samplename}.vcf
     vcfMod2=${samplename}.2.vcf
 
@@ -83,11 +85,16 @@ CODE
     `cat $vcfMod | wc -l` > $nx2
     echo $nx2
 
-# Run the Rscript
+# Run the Rscript: step 1, create the maf
+Rscript /opt/vepVCF2maf4Oncokb.R --vcffile $vcfMod --outputfile $OutputMaf --sampleName ${samplename} --AAlist ${AAlist} --protein FALSE
+Rscript /opt/annotateProteins.R --maffile $OutputMaf --outputfile $OutputMaf2 ~{"--pfam " + pfam} ~{"--pirsf " + pirsf}
+# Run the Rscript: step 2 annotate the data file with pfam and pirsf
 
-Rscript /opt/vepVCF2maf4Oncokb.R --vcffile $vcfMod --outputfile $OutputMaf --sampleName ${samplename} --AAlist ${AAlist} --protein TRUE --pfam ${pfam} --pirsf ${pirsf}
+###${runProtein} ~{"--pfam " + pfam} ~{"--pirsf " + pirsf}
+# Run the Rscript: step 2 annotate the data file with pfam and pirsf
 
-python3 /oncokb/MafAnnotator.py -i $OutputMaf -o "${samplename}_oncokb.maf" -c "clinannot.txt" -b ${token} -q ${searchby}
+
+python3 /oncokb/MafAnnotator.py -i $OutputMaf2 -o "${samplename}_oncokb.maf" -c "clinannot.txt" -b ${token} -q ${searchby}
 
     }
 
