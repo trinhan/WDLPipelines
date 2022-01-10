@@ -51,7 +51,7 @@ task oncokb {
     String? grepRm
     }
 
-    Int diskGB = ceil(size(vcf, "G")+size(pfam ,"G")+size(pirsf, "G"), size(vcf, "GB"))*3 + diskGB_buffer
+    Int diskGB = ceil(2*size(vcf, "G")+size(pfam ,"G")+size(pirsf, "G"))*3 + diskGB_buffer
     String rmSamps = if defined(grepRm) then "1" else "0"
 
 
@@ -82,8 +82,6 @@ CODE
     nx2 = "nrows.out"
     `cat $vcfMod | wc -l` > $nx2
     echo $nx2
-
-    
 
 # Run the Rscript
 
