@@ -60,7 +60,7 @@ task oncokb {
     }
 
     Int diskGB = 3*ceil(size(vcf, "GB") + diskGB_buffer)
-    Int memoryGB = 6*ceil(size(vcf, "GB"))
+    Int memoryGB = 9*ceil(size(vcf, "GB"))
     String rmSamps = if defined(grepRm) then "1" else "0"
 
 
@@ -94,9 +94,10 @@ CODE
     ## parallelise if the number of samples is super long?
 
 # Run the Rscript: step 1, create the maf
-Rscript /opt/vepVCF2maf4Oncokb.R --vcffile $vcfMod --outputfile $OutputMaf --sampleName ${samplename} --canonical "${canonical}"
-Rscript /opt/HGVSMafAnnot.R --maffile $OutputMaf --outputfile $OutputMaf2 --AAlist ${AAlist} 
-Rscript /opt/annotateProteins.R --maffile $OutputMaf2 --outputfile $OutputMaf ~{"--pfam " + pfam} ~{"--pirsf " + pirsf}
+
+    Rscript /opt/vepVCF2maf4Oncokb.R --vcffile $vcfMod --outputfile $OutputMaf --sampleName ${samplename} --canonical "${canonical}" 
+    Rscript /opt/HGVSMafAnnot.R --maffile $OutputMaf --outputfile $OutputMaf2 --AAlist ${AAlist} 
+    Rscript /opt/annotateProteins.R --maffile $OutputMaf2 --outputfile $OutputMaf ~{"--pfam " + pfam} ~{"--pirsf " + pirsf}
 # Run the Rscript: step 2 annotate the data file with pfam and pirsf
 # Run the Rscript: step 2 annotate the data file with pfam and pirsf
 
