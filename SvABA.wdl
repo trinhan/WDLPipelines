@@ -47,14 +47,19 @@ task svabaCall{
             -G ${reference} -a ${id} ~{"-n " + normalBAM} ~{"-t " + queryBAM} ~{"-k " + regions} ~{"-D " + dbSNPVCF} --hp $germline_mode
 
         ls *.vcf
+
+        gzip ~{id}.svaba.indel.vcf
+        gzip ~{id}.svaba.sv.vcf
+        gzip ~{id}.svaba.unfiltered.indel.vcf
+        gzip ~{id}.svaba.unfiltered.sv.vcf
     }
 
     output {
         File? outputlog = "~{id}.log"
-        File? SvABA_Indel_VCF = "~{id}.svaba.indel.vcf"
-        File? SvABA_SV_VCF = "~{id}.svaba.sv.vcf"
-        File? SvABA_Unfiltered_indel_VCF = "~{id}.svaba.somatic.indel.vcf"
-        File? SvABA_Unfiltered_SV_VCF = "~{id}.svaba.somatic.sv.vcf"
+        File? SvABA_Indel_VCF = "~{id}.svaba.indel.vcf.gz"
+        File? SvABA_SV_VCF = "~{id}.svaba.sv.vcf.gz"
+        File? SvABA_Unfiltered_indel_VCF = "~{id}.svaba.unfiltered.indel.vcf.gz"
+        File? SvABA_Unfiltered_SV_VCF = "~{id}.svaba.unfiltered.sv.vcf.gz"
     }
 
 }
