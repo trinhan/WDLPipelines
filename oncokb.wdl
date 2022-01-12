@@ -15,7 +15,7 @@ workflow oncokbAnnotate {
     File pirsf
     File AAlist
     String? grepRm
-    String? FiltOut = "damaging|ncogenic|pathogenic|risk_factor"
+    String? FiltOut = "damaging|ncogenic|pathogenic|risk_factor|protective"
     String? canonical = "FALSE"
     }
 
@@ -104,7 +104,7 @@ CODE
 python3 /oncokb/MafAnnotator.py -i $OutputMaf -o "${samplename}_oncokb.maf" -c "clinannot.txt" -b ${token} -q ${searchby}
 
 # Filter out 
-grep -E "${FiltOut}" ${samplename}_oncokb.maf > $MafFilt
+(head -1 ${samplename}_oncokb.maf; grep -E "${FiltOut}" ${samplename}_oncokb.maf) > $MafFilt
 
 # compress 
 gzip $MafFilt

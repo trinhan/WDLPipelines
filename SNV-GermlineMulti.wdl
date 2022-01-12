@@ -236,6 +236,7 @@ workflow runGermlineVariants{
        File vep_annot = vep.annotatedFile
        File? vep_summary_html=vep.summary_html
        File oncokbMaf=oncokbCalls.oncokbout
+       File OncoMafFilt = oncokbCalls.MafFilt
 
      }
 }
