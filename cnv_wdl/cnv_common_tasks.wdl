@@ -101,7 +101,7 @@ task AnnotateIntervals {
         memory: machine_mem_mb + " MB"
         disks: "local-disk " + select_first([disk_space_gb, ceil(size(ref_fasta, "GB")) + 50]) + if use_ssd then " SSD" else " HDD"
         cpu: select_first([cpu, 1])
-        preemptible: select_first([preemptible_attempts, 5])
+        preemptible: select_first([preemptible_attempts, 2])
     }
 
     output {

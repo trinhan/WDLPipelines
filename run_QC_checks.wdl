@@ -1,5 +1,5 @@
 version 1.0
-
+## quick mod: override cross check lane for hg19 only
 workflow QCChecks {
     input {
     File tumorBam
@@ -94,7 +94,7 @@ workflow QCChecks {
 }
 
     # Program to check that all read groups within the set of BAM files appear to come from the same individual.
-    if (run_CrossCheck && refGenome =="hg19"){
+    if (run_CrossCheck){
         call CrossCheckLaneFingerprints_Task {
             input:
                 tumorBam=tumorBam,
