@@ -64,7 +64,7 @@ task CombineReport {
         tempOut="~{sampleName}_newannot.maf"
         annotM2="~{sampleName}_oncokb_2.maf"
 
-        gunzip -C ~{inputSNV} > $annotMaf
+        gunzip -c ~{inputSNV} > $annotMaf
 
         ##tar -xvzf ~{inputSNV} -C .
 
