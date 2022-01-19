@@ -21,3 +21,6 @@ workflows:
   - name: Oncokb
     subclass: WDL
     primaryDescriptorPath: /oncokb.wdl
+  - name: ClinicalReport
+    subclass: WDL
+    primaryDescriptorPath: /CombinedClinicalReport.wdl
