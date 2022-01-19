@@ -63,7 +63,10 @@ task CombineReport {
         annotMaf="~{sampleName}_oncokb.maf"
         tempOut="~{sampleName}_newannot.maf"
         annotM2="~{sampleName}_oncokb_2.maf"
-        tar -xvzf ~{inputSNV} -C .
+
+        gunzip -C ~{inputSNV} > $annotMaf
+
+        ##tar -xvzf ~{inputSNV} -C .
 
         echo 'annotating SNVs with additional databases'
         Rscript /opt/DBAnnotations.R --maffile $annotMaf --outputfile $tempOut --cosmicMut ~{cosmicMut} --MSigDB ~{MsigDBAnnotation}
