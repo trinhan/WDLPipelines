@@ -11,7 +11,6 @@ workflow ClinicalReport {
         String sampleName
         File cosmicMut
         File MsigDBAnnotation
-        String pwayList ## use Immunotherapy, DNADamage HormoneTherapy 
         String FiltOut = "damaging|ncogen|pathogenic|risk_factor|protective|TSG|drug_response|fusion"
         File inputYaml
         Int memoryGB = 14
@@ -27,7 +26,6 @@ workflow ClinicalReport {
         sampleName = sampleName,
         cosmicMut = cosmicMut,
         MsigDBAnnotation = MsigDBAnnotation,
-        pwayList = pwayList,
         FiltOut=FiltOut,
         inputYaml=inputYaml,
         memoryGB=memoryGB
@@ -49,7 +47,6 @@ task CombineReport {
         String sampleName
         File cosmicMut
         File MsigDBAnnotation
-        String pwayList
         String FiltOut
         File inputYaml
         Int memoryGB
@@ -67,6 +64,8 @@ task CombineReport {
         gunzip -c ~{inputSNV} > $annotMaf
 
         ##tar -xvzf ~{inputSNV} -C .
+        keyWd=`grep "TreatmentKeywords" ~{inputYaml}| cut -d' ' -f2 `
+
 
         echo 'annotating SNVs with additional databases'
         Rscript /opt/DBAnnotations.R --maffile $annotMaf --outputfile $tempOut --cosmicMut ~{cosmicMut} --MSigDB ~{MsigDBAnnotation}
@@ -74,9 +73,8 @@ task CombineReport {
         ## filter out here
         grep -E "~{FiltOut}" $annotM2> ~{sampleName}.prot.onco.filt.maf
         #echo 'summarise SNVs for export'
-        Rscript /opt/SummarizeVariants.R --maffile $annotM2 --outputname ~{sampleName} --pathwayList ~{pwayList}
+        Rscript /opt/SummarizeVariants.R --maffile $annotM2 --outputname ~{sampleName} --pathwayList "$keyWd"
         # compress the original file
-
         tar -cvzf ~{sampleName}_oncokb_2.maf.gz ~{sampleName}_oncokb_2.maf
 
         ## create a yaml file for the outputs
