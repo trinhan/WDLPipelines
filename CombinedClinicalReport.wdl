@@ -71,7 +71,7 @@ task CombineReport {
         Rscript /opt/DBAnnotations.R --maffile $annotMaf --outputfile $tempOut --cosmicMut ~{cosmicMut} --MSigDB ~{MsigDBAnnotation}
         paste $annotMaf $tempOut > $annotM2
         ## filter out here
-        grep -E "~{FiltOut}" $annotM2> ~{sampleName}.prot.onco.filt.maf
+        grep -E "~{FiltOut}" $annotM2> ~{sampleName}.filt.prot.onco.maf
         #echo 'summarise SNVs for export'
         Rscript /opt/SummarizeVariants.R --maffile $annotM2 --outputname ~{sampleName} --pathwayList "$keyWd"
         # compress the original file
@@ -95,6 +95,8 @@ task CombineReport {
         # Now use this yaml and use it in the Rmd
         Rscript -e 'library(rmarkdown);Sys.setenv(RSTUDIO_PANDOC="/usr/local/bin/pandoc"); rmarkdown::render("./~{sampleName}_Germline_Report.Rmd")'
 
+        tar -cvzf ~{sampleName}.filt.prot.onco.maf.gz ~{sampleName}.filt.prot.onco.maf
+
     >>>
 
     output {
@@ -102,6 +104,7 @@ task CombineReport {
         Array[File] SNV = glob("*filt.maf")
         File htmlFile = "~{sampleName}_Germline_Report.html"
         File annotMafGz = "~{sampleName}_oncokb_2.maf.gz"
+        File mafFiltGz = "~{sampleName}.filt.prot.onco.maf.gz"
     }
 
     runtime {
