@@ -35,6 +35,8 @@ workflow ClinicalReport {
 		File yaml=CombineReport.yaml
         Array[File] SNV = CombineReport.SNV
         File htmlFile = CombineReport.htmlFile
+        File FinalannotMafGz = CombineReport.annotMafGz
+        File FilteredOnoMafGz = CombineReport.mafFiltGz
 	}
 
 }
