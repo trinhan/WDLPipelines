@@ -1,3 +1,12 @@
+### This pipeline takes a list of variants and performs:
+## 1. blat realignment and removes failed variants (hg19 only, requires genome_bit file)
+## 2. perform indel realignment using abra2
+## 3. Re-calls variants using strelka2, pisces, mutect1, mutect2 after indel realignment
+##
+## Required inputs:
+## bam files, reference files, 
+
+
 version 1.0
 
 import "abra2.wdl" as abra2
@@ -26,9 +35,10 @@ workflow variantJudgement {
 	File targetIntervals
 	File indeltargets
 	# To run indelrealignment: true or false
-	Boolean runRealign
+	Boolean runAbra2Realign
+	Boolean runBlatRealign
 	# Annotation Files
-	File genome_bit
+	File? genome_bit
 	File gnomad
 	File gnomadidx
 	File PoN
@@ -50,21 +60,23 @@ workflow variantJudgement {
 	String refGenome
 	}
 
+	Boolean runBlat = if ( defined(genome_bit) && refGenome =="hg19" && runBlatRealign == true) then true else false
+	File gene_bit = select_first([genome_bit, "NULL"])
 
-	if (refGenome == "hg19"){
+	if (runBlat){
     call blat.blat as blat {
         input:
             tumorBam=tumorBam,
             tumorBamIdx=tumorBamIdx,
             MAF=merged_maf, 
             pairName=pairName,
-            genome_bit=genome_bit,
+            genome_bit=gene_bit,
             tumorBam_size=tumorBam_size,
             refGenome=refGenome
     }
 	}
 
-    if (runRealign) {
+    if (runAbra2Realign) {
     call abra2.runabra2 as runabra2 {
         input:
         	normalBam=normalBam,

@@ -2,24 +2,34 @@
 ## - QC checks
 ## - SNV calling
 ## - CNV calling
-## - judgement
+## - judgement (Indel realigner)
 ## TITAN and/or ABSOLUTE
-## vep and oncokb of the final outputs
+## vep of the final outputs
 ##
 ## MODIFICATIONS:
-##  1. Allow optional run for absolute and cnv
-##  2. Run Strelka2 somatic and germline
-##  3. Merge VCF from all callers (Mutect 1/2, Strelka 2) prior to Oncotator and VEP. Annotated with INFO ME field: method used
-##  4. Removed existing strelka implementation
-##  5. Include option to run gatk4 and gatk3 
-##  6. Test gatk4 outputs into absolute
-##  7. Run funcotator instead of oncotator
-##  8. include titan
-##  9. consolidate gatk docker files and .jar files
-##  10. allow hg38 compatibility
+##  1. Run Strelka2 somatic and germline
+##  2. Merge VCF from all callers (Mutect 1/2, Strelka 2) prior to Oncotator and VEP. Annotated with INFO ME field: method used
+##  3. Removed existing strelka implementation
+##  4. Include option to run gatk4 and gatk3 
+##  5. Test gatk4 outputs into absolute
+##  6. include titan
+##  7. consolidate gatk docker files and .jar files
+##  8. allow hg38 compatibility
 ##
 ## TODO MODIFICATIONS:
 ##  4. include varscan
+## 
+############################################
+## DEFAULT OPTIONS (In the listed .json file)
+#############################################
+## refGenome = "hg38" (also works with "hg19")
+## runMode = "Paired" (can also be "TumOnly")
+## run_CNQC = false. Run copy number QC in QC step?
+## run_CrossCheck = false. Run Cross Check Fingerprints?
+## run_blat = false. Run blat (hg19 only) or indel realigner (abra2)?
+## run_abra2 = false. Run the indel realigner (abra2)?
+## run_absolute = false. Run Absolute to determine ploidy/purity?
+## run_functotar_cnv = false. Annotae the CNVs with funcotator?
 
 version 1.0
 
@@ -48,7 +58,7 @@ workflow WGS_SNV_CNV_Workflow {
         File refFastaDict
         File targetIntervals
         ## Annotation Files
-        File genome_bit
+        File? genome_bit
         File gnomad
         File gnomadidx
         File PoN
@@ -94,11 +104,12 @@ workflow WGS_SNV_CNV_Workflow {
         Boolean forceComputePicardMetrics_normal
         Boolean run_functotar_cnv
         Boolean run_absolute
-        Boolean run_VC_check
-        Boolean run_indel_realign
+        Boolean run_blat
+        Boolean run_abra2
     }
     String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
     Int tumorBam_size=ceil(size(tumorBam, "G")+size(tumorBamIdx, "G"))
+    Boolean run_VC_check = if (run_blat || run_abra2) then true else false
 
 ## Run the QC checks step here if specified
     call runQC.QCChecks as QCChecks {
@@ -199,7 +210,8 @@ workflow WGS_SNV_CNV_Workflow {
                 strelka_config=strelka_config,
                 refGenome=refGenome,
                 tumorBam_size=tumorBam_size,
-                runRealign=run_indel_realign
+                runAbra2Realign=run_abra2,
+                runBlatRealign=run_blat
         }
      }
 
