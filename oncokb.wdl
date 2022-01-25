@@ -1,3 +1,20 @@
+################
+## Workflow uses oncokb to annotate a vep vcf
+## github: https://github.com/oncokb/oncokb-annotator. Uses v.3.1.2
+## NB: This only works for SNVs right now
+## ############
+## Requirements:
+## vcf: vep annotated vcf
+## oncotree: e.g. MEL. oncotree code. See http://oncotree.mskcc.org/#/home
+## token: token code required. Sign up here to get one for API access: https://www.oncokb.org/apiAccess
+## searchby: options are hgvsp, hgvsp_short, hgvsg
+## pfam: File containing pfam annotations (in .json)
+## pirsf: File containing pirsf annotations (in .json)
+## AAlist: File to convert 3 letter AA to 1 letter (in .json)
+## grepRm (optional): To shorten the search time, remove all rows within the vcf containing these terms. Use grep terminology here. e.g. "synonymous|benign|intergenic"
+## FiltOut (optional): Save a compressed maf file based on these terms .e.g. "damaging|pathogenic"
+## canonical : "TRUE" or "FALSE". VEP run with multiple annotations per variant. Do you want to filter out based on canonical version?
+
 version 1.0
 
 # this workflow annotes a maf file with oncokb

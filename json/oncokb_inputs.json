@@ -1,0 +1,13 @@
+{
+	"oncokbAnnotate.AAlist": "gs://kccg-cb-annotation-files/vep104/protein_annotations/AminoAcid_table.csv",
+	"oncokbAnnotate.FiltOut": "damaging|ncogen|pathogenic|risk_factor|protective|drug_response|fusion|TSG",
+	"oncokbAnnotate.grepRm": "intergenic|synonymous|pseudogene|non_coding_transcript_variant|TR_V_gene|IG_V_gene",
+	"oncokbAnnotate.oncokb.memoryGB": "12",
+	"oncokbAnnotate.oncotree": "MEL",
+	"oncokbAnnotate.pfam": "gs://kccg-cb-annotation-files/vep104/protein_annotations/Pfam-A.clans.35.0.tsv",
+	"oncokbAnnotate.pirsf": "gs://kccg-cb-annotation-files/vep104/protein_annotations/pirsfinfo_22072015.cat",
+	"oncokbAnnotate.samplename": "${this.sample_id}",
+	"oncokbAnnotate.searchby": "HGVSp_Short",
+	"oncokbAnnotate.token": "XXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+	"oncokbAnnotate.vcf": "${this.vep_annot_vcf}"
+}

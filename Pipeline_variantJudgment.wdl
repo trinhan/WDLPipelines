@@ -2,7 +2,7 @@
 ## 1. blat realignment and removes failed variants (hg19 only, requires genome_bit file)
 ## 2. perform indel realignment using abra2
 ## 3. Re-calls variants using strelka2, pisces, mutect1, mutect2 after indel realignment
-##
+## 4. Outputs merged variants file which has been filtered by Panel of Normals and 
 ## Required inputs:
 ## bam files, reference files, 
 
@@ -127,6 +127,7 @@ workflow variantJudgement {
 			abra2_calls=somaticVC.Combined_raw_variants,
 			vcf=vcf,
     		m2_pon=PoN,
+    		gnomad=gnomad,
     		pairName=pairName,
     		runMode=runMode,
     		refGenome=refGenome
