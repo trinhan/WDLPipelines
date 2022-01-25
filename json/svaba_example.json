@@ -1,0 +1,17 @@
+{
+	"svabaSomatic.dbSNPVCF": "${workspace.referenceData_hg38_dbsnp_vcf}",
+	"svabaSomatic.id": "${this.sample_id}",
+	"svabaSomatic.queryBAM": "${this.bam}",
+	"svabaSomatic.queryIndex": "${this.bam_index}",
+	"svabaSomatic.refAMBIndex": "${workspace.referenceData_hg38_ref_amb}",
+	"svabaSomatic.refANNIndex": "${workspace.referenceData_hg38_ref_ann}",
+	"svabaSomatic.refBWTIndex": "${workspace.referenceData_hg38_ref_bwt}",
+	"svabaSomatic.refFAIndex": "${workspace.referenceData_hg38_ref_fasta_index}",
+	"svabaSomatic.refPACIndex": "${workspace.referenceData_hg38_ref_pac}",
+	"svabaSomatic.refSAIndex": "${workspace.referenceData_hg38_ref_sa}",
+	"svabaSomatic.reference": "${workspace.referenceData_hg38_ref_fasta}",
+	"svabaSomatic.regions": "${}",
+	"svabaSomatic.runMode": "Germline",
+	"svabaSomatic.svabaCall.memoryin": "${80}",
+	"svabaSomatic.threads": "${16}"
+}

@@ -1,0 +1,16 @@
+{
+	"abra2.normalBam": "${this.control_sample_id.bam}",
+	"abra2.normalIdx": "${this.control_sample_id.bam_index}",
+	"abra2.refFasta": "${workspace.referenceData_b37Human_ref_fasta}",
+	"abra2.refFastaIdx": "${workspace.referenceData_b37Human_ref_fasta_index}",
+	"abra2.runabra2.cpu": "${}",
+	"abra2.runabra2.machine_mem_gb": "${20}",
+	"abra2.runabra2.max_retries": "${}",
+	"abra2.runabra2.preemptible_tries": "${}",
+	"abra2.sample_name": "${this.pair_id}",
+	"abra2.targets": "gs://fc-f18043a0-a9bd-44c5-9661-1aa0dc9b41f6/ER099_MEL4.bed",
+	"abra2.tumorBam": "${this.case_sample_id.bam}",
+	"abra2.tumorIdx": "${this.case_sample_id.bam_index}",
+	"abra2.vcf": "${workspace.referenceData_b37Human_mills_resource_vcf}",
+	"abra2.vcfidx": "${workspace.referenceData_b37Human_mills_resource_vcf_index}"
+}
