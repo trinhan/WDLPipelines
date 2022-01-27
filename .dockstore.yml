@@ -4,7 +4,7 @@ workflows:
     subclass: WDL
     primaryDescriptorPath: /abra2.wdl
     testParameterFiles: 
-     - /json/example_input_abra2.json
+    - /json/example_input_abra2.json
   - name: SNVJudgementFilter
     subclass: WDL
     primaryDescriptorPath: /Pipeline_variantJudgment.wdl
@@ -12,11 +12,12 @@ workflows:
     subclass: WDL
     primaryDescriptorPath: /WGS_variant_pipeline_main.wdl
     testParameterFiles: 
-      - /json/WGS_SNV_CNV_variant_pipeline.json
+    - /json/WGS_SNV_CNV_variant_pipeline.json
   - name: Svaba
     subclass: WDL
     primaryDescriptorPath: /SvABA.wdl
-    testParameterFiles: /json/svaba_example.json
+    testParameterFiles: 
+    - /json/svaba_example.json
   - name: MultiSNVCaller
     subclass: WDL
     primaryDescriptorPath: /SNV-MultiCaller.wdl
