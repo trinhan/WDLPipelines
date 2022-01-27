@@ -27,7 +27,8 @@ workflows:
   - name: Oncokb
     subclass: WDL
     primaryDescriptorPath: /oncokb.wdl
-    testParameterFiles: /json/oncokb_inputs.json
+    testParameterFiles: 
+    - /json/oncokb_inputs.json
   - name: ClinicalReport
     subclass: WDL
     primaryDescriptorPath: /CombinedClinicalReport.wdl

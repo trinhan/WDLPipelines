@@ -1,0 +1,10 @@
+{
+  "Manta.sample_name": "${this.pair_id}",
+  "Manta.tumor_bam": "${this.case_id.bam}",
+  "Manta.ref_fasta_index": "${workspace.referenceData_hg38_ref_fasta}",
+  "Manta.runMode": "Tumour",
+  "Manta.ref_fasta": "${workspace.referenceData_hg38_ref_fasta_index}",
+  "Manta.tumor_bam_index": "${this.case_id.bam_index}",
+  "Manta.normal_bam": "${this.control_id.bam}",
+  "Manta.normal_bam_index": "${this.control_id.bam_index}",
+}
