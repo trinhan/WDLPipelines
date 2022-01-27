@@ -3,14 +3,16 @@ workflows:
   - name: abra2Realigner
     subclass: WDL
     primaryDescriptorPath: /abra2.wdl
-    testParameterFiles: /json/example_input_abra2.json
+    testParameterFiles: 
+     - /json/example_input_abra2.json
   - name: SNVJudgementFilter
     subclass: WDL
     primaryDescriptorPath: /Pipeline_variantJudgment.wdl
   - name: WGSVariantPipeline
     subclass: WDL
     primaryDescriptorPath: /WGS_variant_pipeline_main.wdl
-    testParameterFiles: /json/WGS_SNV_CNV_variant_pipeline.json
+    testParameterFiles: 
+      - /json/WGS_SNV_CNV_variant_pipeline.json
   - name: Svaba
     subclass: WDL
     primaryDescriptorPath: /SvABA.wdl
