@@ -32,3 +32,8 @@ workflows:
   - name: ClinicalReport
     subclass: WDL
     primaryDescriptorPath: /CombinedClinicalReport.wdl
+  - name: Manta
+    subclass: WDL
+    primaryDescriptorPath: /Manta.1.6.wdl
+    testParameterFiles: 
+    - /json/Manta1.6_inputs.json
