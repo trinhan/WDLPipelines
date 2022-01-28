@@ -49,3 +49,9 @@ workflows:
     primaryDescriptorPath: /run_QC_checks.wdl
     testParameterFiles: 
     - /json/run_QC_checks_inputs.json
+  - name: VEP104
+    subclass: WDL
+    primaryDescriptorPath: /VEP104.wdl
+    testParameterFiles: 
+    - /json/VEP104.hg19.inputs.json
+    - /json/VEP104.hg38.inputs.json
