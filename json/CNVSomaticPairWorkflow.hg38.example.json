@@ -1,0 +1,18 @@
+{
+	"CNVSomaticPairWorkflow.calling_copy_ratio_z_score_threshold": "${3.05}",
+	"CNVSomaticPairWorkflow.common_sites": "gs://kccg-cb-annotation-files/CNVPoN/hg38/common_snps_hg38_liftover.interval_list",
+	"CNVSomaticPairWorkflow.funcotator_data_sources_tar_gz": "gs://broad-public-datasets/funcotator/funcotator_dataSources.v1.7.20200521s.tar.gz",
+	"CNVSomaticPairWorkflow.funcotator_transcript_selection_list": "gs://broad-public-datasets/funcotator/transcriptList.exact_uniprot_matches.AKT1_CRLF2_FGFR1.txt",
+	"CNVSomaticPairWorkflow.gatk_docker": "us.gcr.io/broad-gatk/gatk:4.1.7.0",
+	"CNVSomaticPairWorkflow.intervals": "${}",
+	"CNVSomaticPairWorkflow.is_run_funcotator": "True",
+	"CNVSomaticPairWorkflow.is_run_oncotator": "False",
+	"CNVSomaticPairWorkflow.normal_bam": "${this.control_sample.bam}",
+	"CNVSomaticPairWorkflow.normal_bam_idx": "${this.control_sample.bam_index}",
+	"CNVSomaticPairWorkflow.read_count_pon": "gs://kccg-cb-annotation-files/CNVPoN/hg38/wes-panel-gatk-10samples.pon.hdf5",
+	"CNVSomaticPairWorkflow.ref_fasta": "${workspace.referenceData_hg38_ref_fasta}",
+	"CNVSomaticPairWorkflow.ref_fasta_dict": "${workspace.referenceData_hg38_ref_dict}",
+	"CNVSomaticPairWorkflow.ref_fasta_fai": "${workspace.referenceData_hg38_ref_fasta_index}",
+	"CNVSomaticPairWorkflow.tumor_bam": "${this.case_sample.bam}",
+	"CNVSomaticPairWorkflow.tumor_bam_idx": "${this.case_sample.bam_index}"
+}
