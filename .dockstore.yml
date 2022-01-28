@@ -37,3 +37,13 @@ workflows:
     primaryDescriptorPath: /Manta.1.6.wdl
     testParameterFiles: 
     - /json/Manta1.6_inputs.json
+  - name: Strelka2
+    subclass: WDL
+    primaryDescriptorPath: /Strelka2.wdl
+    testParameterFiles: 
+    - /json/Strelka2_inputs.json
+  - name: QCCheck
+    subclass: WDL
+    primaryDescriptorPath: /run_QC_checks.wdl
+    testParameterFiles: 
+    - /json/run_QC_checks_inputs.json
