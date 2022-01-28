@@ -5,6 +5,7 @@
 ## runGerm: Do you want to run Germline (if in tumor mode?)
 ## strelka_config file: See
 ## bed file (.gz & .gz.tbi) of regions to profile
+## test removal of config file
 
 
 version 1.0
@@ -21,7 +22,7 @@ workflow Strelka2FullWorkflow {
     File? callRegionsBEDTBI
     Int? threads
     String pairName
-    File strelka_config
+    File? strelka_config
     String runMode ="Tumour" ## or "Germline"
     Boolean runGerm = true
     }
@@ -87,7 +88,7 @@ task Strelka2SomaticTask {
     File normalBamIdx
     File refFasta
     File refFastaIdx
-    File config
+    File? config
     File? callRegionsBED
     File? callRegionsBEDTBI
     String name
@@ -109,17 +110,6 @@ task Strelka2SomaticTask {
     }
     # DEFAULT VALUES
     Int diskGB = ceil(tumorBam_size + normalBam_size + refFasta_size + diskGB_buffer)
-
-    parameter_meta {
-        tumorBam : "sample tumor BAM file"
-        tumorBamIdx : "sample tumor BAI file (indexed BAM file)"
-        normalBam : "sample normal BAM file"
-        normalBamIdx : "sample normal BAI file (indexed BAM file)"
-        name : "a string for the name of the pair under analysis used for naming output files"
-        refFasta : "FASTA file for reference genome"
-        refFastaIdx : "FASTA file index for the reference genome"
-        config : "Strelka configuration file"
-    }
 
     command {
 

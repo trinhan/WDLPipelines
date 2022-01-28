@@ -1,0 +1,28 @@
+{
+  "Strelka2FullWorkflow.Strelka2SomaticTask.diskGB_boot": "String (optional, default = \"15\")",
+  "Strelka2FullWorkflow.threads": "Int? (optional)",
+  "Strelka2FullWorkflow.pairName": "String",
+  "Strelka2FullWorkflow.tumorBam": "File? (optional)",
+  "Strelka2FullWorkflow.Strelka2SomaticTask.cpu": "String (optional, default = \"1\")",
+  "Strelka2FullWorkflow.tumorBamIdx": "File? (optional)",
+  "Strelka2FullWorkflow.Strelka2GermlineTask.tmpDIR": "String? (optional)",
+  "Strelka2FullWorkflow.Strelka2GermlineTask.diskGB_boot": "String (optional, default = \"15\")",
+  "Strelka2FullWorkflow.Strelka2GermlineTask.diskGB_buffer": "String (optional, default = \"20\")",
+  "Strelka2FullWorkflow.refFasta": "File",
+  "Strelka2FullWorkflow.callRegionsBEDTBI": "File? (optional)",
+  "Strelka2FullWorkflow.Strelka2SomaticTask.diskGB_buffer": "String (optional, default = \"20\")",
+  "Strelka2FullWorkflow.Strelka2GermlineTask.cpu": "String (optional, default = \"1\")",
+  "Strelka2FullWorkflow.normalBamIdx": "File",
+  "Strelka2FullWorkflow.Strelka2SomaticTask.tmpDIR": "String? (optional)",
+  "Strelka2FullWorkflow.callRegionsBED": "File? (optional)",
+  "Strelka2FullWorkflow.runGerm": "Boolean (optional, default = true)",
+  "Strelka2FullWorkflow.Strelka2SomaticTask.machine_memoryGB": "String (optional, default = \"25\")",
+  "Strelka2FullWorkflow.normalBam": "File",
+  "Strelka2FullWorkflow.refFastaIdx": "File",
+  "Strelka2FullWorkflow.strelka_config": "File",
+  "Strelka2FullWorkflow.Strelka2GermlineTask.machine_memoryGB": "String (optional, default = \"25\")",
+  "Strelka2FullWorkflow.runMode": "String (optional, default = \"Tumour\")",
+  "Strelka2FullWorkflow.Strelka2SomaticTask.preemptible": "String (optional, default = \"1\")",
+  "Strelka2FullWorkflow.Strelka2GermlineTask.preemptible": "String (optional, default = \"1\")"
+}
+

@@ -24,6 +24,8 @@ workflows:
   - name: SNVGermline
     subclass: WDL
     primaryDescriptorPath: /SNV-GermlineMulti.wdl
+    testParameterFiles: 
+    - /json/SNV-Germline_inputs.json   
   - name: Oncokb
     subclass: WDL
     primaryDescriptorPath: /oncokb.wdl
@@ -34,7 +36,7 @@ workflows:
     primaryDescriptorPath: /CombinedClinicalReport.wdl
   - name: Manta
     subclass: WDL
-    primaryDescriptorPath: /Manta.1.6.wdl
+    primaryDescriptorPath: /Manta1.6.wdl
     testParameterFiles: 
     - /json/Manta1.6_inputs.json
   - name: Strelka2
