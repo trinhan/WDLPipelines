@@ -11,6 +11,7 @@ workflow ClinicalReport {
         String sampleName
         File cosmicMut
         File MsigDBAnnotation
+        File AMCG
         String FiltOut = "damaging|ncogen|pathogenic|risk_factor|protective|TSG|drug_response|fusion"
         File inputYaml
         Int memoryGB = 14
@@ -28,7 +29,8 @@ workflow ClinicalReport {
         MsigDBAnnotation = MsigDBAnnotation,
         FiltOut=FiltOut,
         inputYaml=inputYaml,
-        memoryGB=memoryGB
+        memoryGB=memoryGB,
+        AMCG=AMCG
     }
 # outputs and their types specified here
 	output {
@@ -49,6 +51,7 @@ task CombineReport {
         String sampleName
         File cosmicMut
         File MsigDBAnnotation
+        File AMCG
         String FiltOut
         File inputYaml
         Int memoryGB
@@ -75,7 +78,7 @@ task CombineReport {
         ## filter out here
         grep -E "~{FiltOut}" $annotM2> ~{sampleName}.filt.prot.onco.maf
         #echo 'summarise SNVs for export'
-        Rscript /opt/SummarizeVariants.R --maffile $annotM2 --outputname ~{sampleName} --pathwayList "$keyWd"
+        Rscript /opt/SummarizeVariants.R --maffile $annotM2 --outputname ~{sampleName} --pathwayList "$keyWd" --AMCG ~{AMCG}
         # compress the original file
         tar -cvzf ~{sampleName}_oncokb_2.maf.gz ~{sampleName}_oncokb_2.maf
 

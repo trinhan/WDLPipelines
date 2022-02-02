@@ -113,7 +113,7 @@ CODE
 # Run the Rscript: step 1, create the maf
 
     Rscript /opt/vepVCF2maf4Oncokb.R --vcffile $vcfMod --outputfile $OutputMaf --sampleName ${samplename} --canonical "${canonical}" 
-    Rscript /opt/HGVSMafAnnot.R --maffile $OutputMaf --outputfile $OutputMaf2 --AAlist ${AAlist} 
+    Rscript /opt/HGVSMafAnnot.R --maffile $OutputMaf --outputfile $OutputMaf2 --AAlist ${AAlist}
     Rscript /opt/annotateProteins.R --maffile $OutputMaf2 --outputfile $OutputMaf --pfam ${pfam} --pirsf ${pirsf}
 # Run the Rscript: step 2 annotate the data file with pfam and pirsf
 # Run the Rscript: step 2 annotate the data file with pfam and pirsf

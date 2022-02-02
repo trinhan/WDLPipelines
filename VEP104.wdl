@@ -87,6 +87,7 @@ task variant_effect_predictor {
     # identifiers
     Int? shift_hgvs
     Boolean? hgvs
+    Boolean? hgvsg
     Boolean? protein
     Boolean? symbol
     Boolean? ccds
@@ -268,6 +269,7 @@ task variant_effect_predictor {
         ${true="--variant_class" false="" variant_class} \
         ${"--shift_hgvs " + shift_hgvs} \
         ${true="--hgvs" false="" hgvs} \
+        ${true="--hgvsg" false="" hgvsg} \
         ${true="--protein" false="" protein} \
         ${true="--symbol" false="" symbol} \
         ${true="--ccds" false="" ccds} \

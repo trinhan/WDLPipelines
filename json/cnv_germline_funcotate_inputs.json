@@ -1,0 +1,10 @@
+{
+  "CNVFuncotateSegmentsWorkflow.ref_fasta_fai": "/Users/anntri/Documents/wdl_scripts/ref_data/hg19_v0_Homo_sapiens_assembly19.fasta.fai",
+  "CNVFuncotateSegmentsWorkflow.sampleName": "test_ER002_MPM1",
+  "CNVFuncotateSegmentsWorkflow.ref_fasta": "/Users/anntri/Documents/wdl_scripts/ref_data/hg19_v0_Homo_sapiens_assembly19.fasta",
+  "CNVFuncotateSegmentsWorkflow.ref_fasta_dict": "/Users/anntri/Documents/wdl_scripts/ref_data/hg19_v0_Homo_sapiens_assembly19.dict",
+  "CNVFuncotateSegmentsWorkflow.funcotator_ref_version": "1.6",
+  "CNVFuncotateSegmentsWorkflow.gatk_docker": "us.gcr.io/broad-gatk/gatk:4.1.8.1",
+  "CNVFuncotateSegmentsWorkflow.input_file": "/Users/anntri/Downloads/call-PostprocessGermlineCNVCalls_shard-0_genotyped-segments-ER002_MPM1.vcf"
+}
+
