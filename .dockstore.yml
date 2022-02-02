@@ -55,3 +55,8 @@ workflows:
     testParameterFiles: 
     - /json/VEP104.hg19.inputs.json
     - /json/VEP104.hg38.inputs.json
+  - name: FuncotateSegments
+    subclass: WDL
+    primaryDescriptorPath: /cnv_wdl/germline/modified_cnv_somatic_funcotate_seg_workflow.wdl
+    testParameterFiles: 
+    - /json/cnv_germline_funcotate_inputs.json

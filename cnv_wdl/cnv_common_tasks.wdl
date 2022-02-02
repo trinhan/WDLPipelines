@@ -469,7 +469,7 @@ task PostprocessGermlineCNVCalls {
       Int? disk_space_gb
       Boolean use_ssd = false
       Int? cpu
-      Int? preemptible_attempts
+      Int? preemptible_attempts =0
     }
 
     Int machine_mem_mb = select_first([mem_gb, 7]) * 1000
@@ -558,7 +558,7 @@ task PostprocessGermlineCNVCalls {
         memory: machine_mem_mb + " MB"
         disks: "local-disk " + select_first([disk_space_gb, 40]) + if use_ssd then " SSD" else " HDD"
         cpu: select_first([cpu, 1])
-        preemptible: select_first([preemptible_attempts, 5])
+        preemptible: select_first([preemptible_attempts, 3])
     }
 
     output {
