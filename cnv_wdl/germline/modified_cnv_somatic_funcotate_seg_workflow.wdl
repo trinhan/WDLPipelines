@@ -149,7 +149,7 @@ task VCF2Seg{
         -F CHROM -F POS -F END -GF NP -GF CN \
         -O ~{sampleName}.table.txt
 
-        awk -v sampleName=~{sampleName} 'BEGIN {FS=OFS="\t"} {print sampleName, $0}' ~{sampleName}.table.txt &gt; ${i}.seg; head ${i}.seg
+        awk -v sampleName=~{sampleName} 'BEGIN {FS=OFS="\t"} {print sampleName, $0}' ~{sampleName}.table.txt > ~{sampleName}.seg
 
     >>>   
 
@@ -162,7 +162,7 @@ task VCF2Seg{
     }
 
     output {
-    File seg_file = "~{sampleName}.table.txt"
+    File seg_file = "~{sampleName}.seg"
     }
 }
 
