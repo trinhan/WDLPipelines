@@ -149,7 +149,12 @@ task VCF2Seg{
         -F CHROM -F POS -F END -GF NP -GF CN \
         -O ~{sampleName}.table.txt
 
-        awk -v sampleName=~{sampleName} 'BEGIN {FS=OFS="\t"} {print sampleName, $0}' ~{sampleName}.table.txt > ~{sampleName}.seg
+    # modify the names of the columns?
+        awk '{ if($5>2) $6="+"; else if ($5<2) $6="-"; else $6="0"; print $0; } ' ~{sampleName}.table.txt > ~{sampleName}.table2.txt
+        cat ~{sampleName}.table2.txt | sed '1{s/CHROM/CONTIG/; s/POS/START/; s/~{sampleName}.NP/NUM_POINTS/;  s/+/CALL/}' >~{sampleName}.table3.txt
+            # calculation in bash    
+
+        cat ~{sampleName}.table.txt > ~{sampleName}.seg
 
     >>>   
 
