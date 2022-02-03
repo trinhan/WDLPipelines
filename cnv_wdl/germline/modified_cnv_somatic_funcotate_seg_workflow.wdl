@@ -150,7 +150,7 @@ task VCF2Seg{
         -O ~{sampleName}.table.txt
 
     # modify the names of the columns?
-        awk '{ if($5>2) $6="+"; else if ($5<2) $6="-"; else $6="0"; print $0; } ' ~{sampleName}.table.txt > ~{sampleName}.table2.txt
+        awk 'BEGIN{OFS="\t"}{ if($5>2) $6="+"; else if ($5<2) $6="-"; else $6="0"; print $0; } ' ~{sampleName}.table.txt > ~{sampleName}.table2.txt
         cat ~{sampleName}.table2.txt | sed '1{s/CHROM/CONTIG/; s/POS/START/; s/~{sampleName}.NP/NUM_POINTS/;  s/+/CALL/}' >~{sampleName}.table3.txt
             # calculation in bash    
 

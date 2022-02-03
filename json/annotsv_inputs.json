@@ -1,0 +1,8 @@
+{
+  "RunAnnotSV.input_vcf": "/Users/anntri/Downloads/call-GatherBCFs_NA12878_small.delly.vcf",
+  "RunAnnotSV.annotSVtar": "/Users/anntri/Downloads/Annotations_Human_3.1.tar.gz",
+  "RunAnnotSV.genome_build": "GRCh38",
+  "RunAnnotSV.sampleName": "NA12878_small",
+  "RunAnnotSV.caller": "delly"
+}
+

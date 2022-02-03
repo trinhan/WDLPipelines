@@ -13,7 +13,7 @@ version 1.0
 workflow RunAnnotSV{
   input {
     File input_vcf
-    File input_vcf_idx
+    File? input_vcf_idx
     String genome_build ## GRCh37,GRCh38
     File annotSVtar 
     Array[File]? snps_vcf
@@ -32,7 +32,8 @@ workflow RunAnnotSV{
      snps_vcf=snps_vcf,
      snvIndelPASS=snvIndelPASS,
      sampleName=sampleName,
-     typeofAnnotation=typeofAnnotation
+     typeofAnnotation=typeofAnnotation,
+     caller=caller
   }
 
   output {
@@ -46,7 +47,7 @@ task annotsv {
   input {
     String genome_build
     File input_vcf
-    File input_vcf_idx
+    File? input_vcf_idx
     String sampleName 
     String? caller
     Array[File]? snps_vcf
