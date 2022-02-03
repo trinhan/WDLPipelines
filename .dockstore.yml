@@ -60,3 +60,8 @@ workflows:
     primaryDescriptorPath: /cnv_wdl/germline/modified_cnv_somatic_funcotate_seg_workflow.wdl
     testParameterFiles: 
     - /json/cnv_germline_funcotate_inputs.json
+  - name: AnnotSV
+    subclass: WDL
+    primaryDescriptorPath: /RunAnnotSV.wdl
+    testParameterFiles: 
+    - /json/AnnotSV.inputs.json
