@@ -154,7 +154,7 @@ task VCF2Seg{
         cat ~{sampleName}.table2.txt | sed '1{s/CHROM/CONTIG/; s/POS/START/; s/~{sampleName}.NP/NUM_POINTS/;  s/+/CALL/}' >~{sampleName}.table3.txt
             # calculation in bash    
 
-        cat ~{sampleName}.table.txt > ~{sampleName}.seg
+        cat ~{sampleName}.table3.txt > ~{sampleName}.seg
 
     >>>   
 
