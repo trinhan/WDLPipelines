@@ -1,4 +1,4 @@
-### AnnotSV: takes a SV output and annotates this. Does not use information from GeneCards
+### AnnotSV: 3.1: takes a SV output and annotates this. Does not use information from GeneCards
 ### Requirements:
 ### genome Build - GRCh37 or GRCh38
 ### annotation file: saved in kccg-cb-tools
@@ -57,24 +57,22 @@ task annotsv {
     String typeofAnnotation ="full"     
   }
 
-  Int space_needed_gb = 10 + round(size(snps_vcf, "GB") + size(input_vcf, "GB")+ size(annotSVtar, "GB"))
+  Int space_needed_gb = 10 + round( size(input_vcf, "GB")+ size(annotSVtar, "GB"))
 
   runtime {
     memory: "8GB"
-    docker: "trinhanne/annotsv:3/1"
+    docker: "trinhanne/annotsv:3.1"
     disks: "local-disk ~{space_needed_gb} SSD"
   }
 
   command <<<
 
     # untar the file
+    #mkdir AnnotationsFolder
+   tar xvzf ~{annotSVtar} -C AnnotationsFolder
 
-    tar xvzf ${annot} -C "AnnotSV"
-
-    /opt/AnnotSV_3.1/bin/AnnotSV -bedtools /usr/bin/bedtools -outputDir "$PWD" \
-    -genomeBuild ~{genome_build} -annotationDir AnnotSV -typeOfAnnotation ~{typeofAnnotation}\ 
-    -SVinputFile ~{input_vcf} -snvIndelPASS ~{snvIndelPASS} \
-    -outputFile ~{sampleName}.~{caller}.annotSV.tsv 
+    /opt/AnnotSV_3.1/bin/AnnotSV -SVinputFile ~{input_vcf} -bedtools /opt/bedtools2/bin/bedtools -bcftools /opt/bcftools-1.13/bcftools -snvIndelPASS ~{snvIndelPASS} \
+    -genomeBuild ~{genome_build} -annotationsDir ~{annotSVtar} -annotationMode AnnotationsFolder -outputFile ~{sampleName}.~{caller}.annotSV.tsv -outputDir .
     #### -vcfFiles ~{sep="," snps_vcf}
   >>>
 

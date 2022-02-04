@@ -1,8 +1,9 @@
 {
-  "RunAnnotSV.input_vcf": "/Users/anntri/Downloads/call-GatherBCFs_NA12878_small.delly.vcf",
-  "RunAnnotSV.annotSVtar": "/Users/anntri/Downloads/Annotations_Human_3.1.tar.gz",
+  "RunAnnotSV.input_vcf": "/Users/anntri/Downloads/genotyped-segments-ER095N.vcf.gz",
+  "RunAnnotSV.input_vcf_idx": "/Users/anntri/Downloads/genotyped-segments-ER095N.vcf.gz.tbi",
+  "RunAnnotSV.annotSVtar": "/Users/anntri/Documents/AnnotationsFolder",
   "RunAnnotSV.genome_build": "GRCh38",
-  "RunAnnotSV.sampleName": "NA12878_small",
-  "RunAnnotSV.caller": "delly"
+  "RunAnnotSV.sampleName": "ER002_MPM1_subset",
+  "RunAnnotSV.caller": "gCNV"
 }
 
