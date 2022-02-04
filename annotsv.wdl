@@ -68,11 +68,11 @@ task annotsv {
   command <<<
 
     # untar the file
-    #mkdir AnnotationsFolder
+   mkdir AnnotationsFolder
    tar xvzf ~{annotSVtar} -C AnnotationsFolder
 
     /opt/AnnotSV_3.1/bin/AnnotSV -SVinputFile ~{input_vcf} -bedtools /opt/bedtools2/bin/bedtools -bcftools /opt/bcftools-1.13/bcftools -snvIndelPASS ~{snvIndelPASS} \
-    -genomeBuild ~{genome_build} -annotationsDir ~{annotSVtar} -annotationMode AnnotationsFolder -outputFile ~{sampleName}.~{caller}.annotSV.tsv -outputDir .
+    -genomeBuild ~{genome_build} -annotationsDir AnnotationsFolder -annotationMode ~{typeofAnnotation} -outputFile ~{sampleName}.~{caller}.annotSV.tsv -outputDir .
     #### -vcfFiles ~{sep="," snps_vcf}
   >>>
 
