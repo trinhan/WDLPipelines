@@ -62,6 +62,6 @@ workflows:
     - /json/cnv_germline_funcotate_inputs.json
   - name: AnnotSV
     subclass: WDL
-    primaryDescriptorPath: /RunAnnotSV.wdl
+    primaryDescriptorPath: /annotsv.wdl
     testParameterFiles: 
-    - /json/AnnotSV.inputs.json
+    - /json/annotsv.inputs.json
