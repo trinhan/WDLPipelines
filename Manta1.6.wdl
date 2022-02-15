@@ -53,7 +53,7 @@ task MantaSomaticSV {
         fi
         
         if [ ${save_evidence} == true ];then
-        tar -zcvf ${sample_name}evidence.tar.gz folderToCompress results/evidence/
+        tar -zcvf ${sample_name}evidence.tar.gz results/evidence/
         fi 
         
         mv results/variants/candidateSV.vcf.gz ${sample_name}.candidateSV.vcf.gz
@@ -111,7 +111,7 @@ task MantaGermline{
         mv results/variants/diploidSV.vcf.gz ${sample_name}.diploidSV.vcf.gz
 
         if [ ${save_evidence} == true];then
-        tar -zcvf ${sample_name}evidence.tar.gz folderToCompress results/evidence/
+        tar -zcvf ${sample_name}evidence.tar.gz results/evidence/
         fi 
     }
     runtime {
