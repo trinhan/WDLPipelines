@@ -85,6 +85,7 @@ workflow svabaSomatic {
     File refANNIndex
     File refAMBIndex
     File refPACIndex
+    Boolean SaveAlignments = false
 
     String id
     Int threads
@@ -119,7 +120,8 @@ workflow svabaSomatic {
             regions=regions,
             dbSNPVCF=dbSNPVCF,
             sizeAll=sizeAll,
-            runMode=runMode
+            runMode=runMode,
+            SaveAlignments=SaveAlignments
     }
 
     output {
@@ -128,7 +130,6 @@ workflow svabaSomatic {
         File? SvABA_Unfiltered_indel_VCF = svabaCall.SvABA_Unfiltered_indel_VCF
         File? SvABA_Unfiltered_SV_VCF = svabaCall.SvABA_Unfiltered_SV_VCF
         File? Svaba_evidence =svabaCall.Svaba_evidence 
-
     }
 
 }
