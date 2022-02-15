@@ -48,17 +48,17 @@ task svabaCall{
         svaba run -p ${threads} \
             -G ${reference} -a ${id} ~{"-n " + normalBAM} ~{"-t " + queryBAM} ~{"-k " + regions} ~{"-D " + dbSNPVCF} --hp $germline_mode
 
+        gzip ~{id}.svaba.indel.vcf
+        gzip ~{id}.svaba.sv.vcf
+        gzip ~{id}.svaba.unfiltered.indel.vcf
+        gzip ~{id}.svaba.unfiltered.sv.vcf
+
         ls *.vcf
         ls *.txt.gz
 
         if [ ~{SaveAlignments} == true ]; then
             mv ~{id}.alignment.txt.gz ~{id}.evidence.alignment.txt.gz
         fi
-
-        gzip ~{id}.svaba.indel.vcf
-        gzip ~{id}.svaba.sv.vcf
-        gzip ~{id}.svaba.unfiltered.indel.vcf
-        gzip ~{id}.svaba.unfiltered.sv.vcf
     }
 
     output {
