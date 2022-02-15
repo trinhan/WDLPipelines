@@ -51,6 +51,8 @@ task variant_effect_predictor {
     File? clinvarTbi
     File? gnomad
     File? gnomadIdx
+    File? MGRB
+    File? MGRBIdx
     # shortcut for common flags
 
     # output options
@@ -156,6 +158,7 @@ task variant_effect_predictor {
     String runrevel = if defined(revelPlugin) then "1" else "0"
     String runclinvar = if defined(clinvar) then "1" else "0"
     String rungnomad = if defined(gnomad) then "1" else "0"
+    String runMGRB = if defined(MGRB) then "1" else "0"
 
     command {
         set -e
@@ -211,12 +214,17 @@ task variant_effect_predictor {
 
         if [ ${runclinvar} -eq "1" ];
         then
-        runclinvar="$runclinvar --custom ${clinvar},ClinVar,vcf,exact,0,CLNSIG,CLNDN,ORIGIN,CLNREVSTAT "
+        runclinvar="$runclinvar --custom ${clinvar},ClinVar,vcf,exact,0,CLNSIG,CLNDN,CLINDISDB,CLINHGVS,CLNREVSTAT "
         fi
 
         if [ ${rungnomad} -eq "1" ];
         then 
         runclinvar="$runclinvar --custom ${gnomad},gnomADg,vcf,exact,0,AF_AFR,AF_AMR,AF_ASJ,AF_EAS,AF_FIN,AF_NFE,AF_OTH "
+        fi
+
+        if [ ${runMGRB} -eq "1" ];
+        then 
+        runclinvar="$runclinvar --custom ${MGRB},mgrb,vcf,exact,0,AF "
         fi
 
         ## gnomad

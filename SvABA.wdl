@@ -21,6 +21,8 @@ task svabaCall{
     Int sizeAll
     Int memoryin = 32
     String runMode
+    Boolean SaveAlignments = false # do we want to save the outputs to file or not "0" off "1" on
+
     }
 
     String Germline = if (runMode=="Germline") then "1" else "0"
@@ -48,6 +50,10 @@ task svabaCall{
 
         ls *.vcf
 
+        if [ ~{SaveAlignments} == true ]; then
+            mv ~{id}.alignment.txt.gz ~{id}.evidence.alignment.txt.gz
+        fi
+
         gzip ~{id}.svaba.indel.vcf
         gzip ~{id}.svaba.sv.vcf
         gzip ~{id}.svaba.unfiltered.indel.vcf
@@ -55,11 +61,11 @@ task svabaCall{
     }
 
     output {
-        File? outputlog = "~{id}.log"
         File? SvABA_Indel_VCF = "~{id}.svaba.indel.vcf.gz"
         File? SvABA_SV_VCF = "~{id}.svaba.sv.vcf.gz"
         File? SvABA_Unfiltered_indel_VCF = "~{id}.svaba.unfiltered.indel.vcf.gz"
         File? SvABA_Unfiltered_SV_VCF = "~{id}.svaba.unfiltered.sv.vcf.gz"
+        File? Svaba_evidence = "~{id}.evidence.alignment.txt.gz" 
     }
 
 }
@@ -121,6 +127,7 @@ workflow svabaSomatic {
         File? SvABA_SV_VCF = svabaCall.SvABA_SV_VCF
         File? SvABA_Unfiltered_indel_VCF = svabaCall.SvABA_Unfiltered_indel_VCF
         File? SvABA_Unfiltered_SV_VCF = svabaCall.SvABA_Unfiltered_SV_VCF
+        File? Svaba_evidence =svabaCall.Svaba_evidence 
 
     }
 
