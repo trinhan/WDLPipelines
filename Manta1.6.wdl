@@ -143,7 +143,7 @@ workflow Manta {
     String runMode = "Tumour" ## "Tumour" or "Germline" 
     }
     
-    Int disk_size=4*ceil(size(tumor_bam, "GB")+ size(normal_bam, "GB") +size(ref_fasta, "GB")) 
+    Int disk_size=4*ceil(size(bam, "GB")+ size(normal_bam, "GB") +size(ref_fasta, "GB")) 
 
     if (runMode =="Tumour"){
     call MantaSomaticSV {
