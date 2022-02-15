@@ -110,7 +110,7 @@ task MantaGermline{
         
         mv results/variants/diploidSV.vcf.gz ${sample_name}.diploidSV.vcf.gz
 
-        if [ ${save_evidence} == true];then
+        if [ ${save_evidence} == true ]; then
         tar -zcvf ${sample_name}evidence.tar.gz results/evidence/
         fi 
     }
