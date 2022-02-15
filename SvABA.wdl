@@ -53,7 +53,6 @@ task svabaCall{
         gzip ~{id}.svaba.unfiltered.indel.vcf
         gzip ~{id}.svaba.unfiltered.sv.vcf
 
-        ls *.vcf
         ls *.txt.gz
 
         if [ ~{SaveAlignments} == true ]; then
