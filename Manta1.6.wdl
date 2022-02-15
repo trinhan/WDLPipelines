@@ -52,7 +52,7 @@ task MantaSomaticSV {
            mv results/variants/tumorSV.vcf.gz ${sample_name}.somaticSV.vcf.gz
         fi
         
-        if [ ${save_evidence} == true];then
+        if [ ${save_evidence} == true ];then
         tar -zcvf ${sample_name}evidence.tar.gz folderToCompress results/evidence/
         fi 
         
@@ -130,8 +130,8 @@ task MantaGermline{
 workflow Manta {
     input {
     String sample_name
-    File tumor_bam
-    File tumor_bam_index
+    File bam
+    File bam_index
     File? normal_bam
     File? normal_bam_index
     File ref_fasta
@@ -148,8 +148,8 @@ workflow Manta {
     if (runMode =="Tumour"){
     call MantaSomaticSV {
         input: sample_name = sample_name,
-               tumor_bam = tumor_bam,
-               tumor_bam_index = tumor_bam_index,
+               tumor_bam = bam,
+               tumor_bam_index = bam_index,
                normal_bam = normal_bam,
                normal_bam_index = normal_bam_index,
                ref_fasta = ref_fasta,
@@ -165,8 +165,8 @@ workflow Manta {
     if (runMode =="Germline"){
     call MantaGermline {
         input: sample_name = sample_name,
-               bam = normal_bam,
-               bam_index = normal_bam_index,
+               bam = bam,
+               bam_index = bam_index,
                ref_fasta = ref_fasta,
                ref_fasta_index = ref_fasta_index,
                is_cram = is_cram,

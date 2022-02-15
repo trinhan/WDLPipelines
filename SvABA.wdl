@@ -49,6 +49,8 @@ task svabaCall{
             -G ${reference} -a ${id} ~{"-n " + normalBAM} ~{"-t " + queryBAM} ~{"-k " + regions} ~{"-D " + dbSNPVCF} --hp $germline_mode
 
         ls *.vcf
+        ls *.txt
+        ls *.txt.gz
 
         if [ ~{SaveAlignments} == true ]; then
             mv ~{id}.alignment.txt.gz ~{id}.evidence.alignment.txt.gz
