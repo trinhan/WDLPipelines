@@ -56,7 +56,7 @@ task svabaCall{
         ls *.txt.gz
 
         if [ ~{SaveAlignments} == true ]; then
-            mv ~{id}.alignment.txt.gz ~{id}.evidence.alignment.txt.gz
+            mv ~{id}.alignments.txt.gz ~{id}.evidence.alignments.txt.gz
         fi
     }
 
@@ -65,7 +65,7 @@ task svabaCall{
         File? SvABA_SV_VCF = "~{id}.svaba.sv.vcf.gz"
         File? SvABA_Unfiltered_indel_VCF = "~{id}.svaba.unfiltered.indel.vcf.gz"
         File? SvABA_Unfiltered_SV_VCF = "~{id}.svaba.unfiltered.sv.vcf.gz"
-        File? Svaba_evidence = "~{id}.evidence.alignment.txt.gz" 
+        File? Svaba_evidence = "~{id}.evidence.alignments.txt.gz" 
     }
 
 }
