@@ -11,7 +11,7 @@
     "VEP.clinvar": "gs://kccg-cb-tools/vep104/ClinVar/clinvar_20211030.GRCh38.vcf.gz",
     "VEP.clinvarTbi": "gs://kccg-cb-tools/vep104/ClinVar/clinvar_20211030.GRCh38.vcf.gz.tbi",
     "VEP.gnomad": "gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz",
-    "VEP.gnomadidx": "gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz.tbi",
+    "VEP.gnomadIdx": "gs://gatk-best-practices/somatic-hg38/af-only-gnomad.hg38.vcf.gz.tbi",
     "VEP.inputFile": "${this.vcf}",
     "VEP.input_format": "vcf",
     "VEP.refFasta": "${workspace.referenceData_hg38_ref_fasta}",
