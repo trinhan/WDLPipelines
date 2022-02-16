@@ -219,12 +219,12 @@ task variant_effect_predictor {
 
         if [ ${rungnomad} -eq "1" ];
         then 
-        runclinvar="$runclinvar --custom ${gnomad},gnomADg,vcf,exact,0,AF_AFR,AF_AMR,AF_ASJ,AF_EAS,AF_FIN,AF_NFE,AF_OTH "
+        runclinvar="$runclinvar --custom ${gnomad},gnomADg,vcf,exact,0,AF"
         fi
 
         if [ ${runMGRB} -eq "1" ];
         then 
-        runclinvar="$runclinvar --custom ${MGRB},mgrb,vcf,exact,0,AF "
+        runclinvar="$runclinvar --custom ${MGRB},mgrb,vcf,exact,0,MGRB_AF"
         fi
 
         ## gnomad
