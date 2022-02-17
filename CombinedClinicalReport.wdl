@@ -6,114 +6,219 @@ workflow ClinicalReport {
 # inputs and their types specified here
     input {
         File inputSNV
-        File? inputCV
+        File inputCV
         File? inputSV
         String sampleName
         File cosmicMut
         File MsigDBAnnotation
-        File AMCG
+        File pfam
+        File pirsf
+        File ACMG
+        File? AddList
         String FiltOut = "damaging|ncogen|pathogenic|risk_factor|protective|TSG|drug_response|fusion"
         File inputYaml
+        File GTex
         Int memoryGB = 14
     }
 
-# start listing all the tasks in your workflow here and the required inputs. This example only has one
-
-    call CombineReport {
+    call ConvertSNVs {
         input:
         inputSNV = inputSNV,
-        inputCV = inputCV,
-        inputSV = inputSV,
         sampleName = sampleName,
         cosmicMut = cosmicMut,
         MsigDBAnnotation = MsigDBAnnotation,
+        pfam=pfam,
+        pirsf=pirsf,
         FiltOut=FiltOut,
+        memoryGB=memoryGB,
+        ACMG=ACMG,
+        AddList=AddList,
+        inputYaml=inputYaml
+    }
+
+
+    call ConvertSVs as CNVFormat {
+        input:
+        inputSV=inputCV,
+        sampleName=sampleName,
+        AddList=AddList,
+        MsigDBAnnotation=MsigDBAnnotation,
+        GTex=GTex,
         inputYaml=inputYaml,
         memoryGB=memoryGB,
-        AMCG=AMCG
+        CNV=true
     }
+
+    call CreateClinical{
+        input:
+        FormatSNV=ConvertSNVs.SNV,
+        sampleName=sampleName,
+        CNV=CNVFormat.CNV,
+        memoryGB=memoryGB,
+        yaml=inputYaml
+    }
+
 # outputs and their types specified here
 	output {
-		File yaml=CombineReport.yaml
-        Array[File] SNV = CombineReport.SNV
-        File htmlFile = CombineReport.htmlFile
-        File FinalannotMafGz = CombineReport.annotMafGz
-        File FilteredOnoMafGz = CombineReport.mafFiltGz
+	  File yaml=CreateClinical.yamlOut
+      File CNV = CNVFormat.CNV
+      File htmlFile = CreateClinical.html
+      File FinalannotMafGz = ConvertSNVs.annotMafGz
+      File SupportingSNVs = ConvertSNVs.SNV
 	}
 
 }
 
-task CombineReport {
+task CreateClinical {
     input {
-        File inputSNV
-        File? inputCV
-        File? inputSV
+        File FormatSNV
+        File CNV 
         String sampleName
-        File cosmicMut
-        File MsigDBAnnotation
-        File AMCG
-        String FiltOut
-        File inputYaml
+        File yaml
         Int memoryGB
     }
-        Int diskGB=6*ceil(size(inputSNV, "GB")+size(inputCV, "GB")+size(inputSV, "GB")+size(cosmicMut, "GB"))
-
 
     command <<<
 
+        tar -C . -xvf ~{FormatSNV}
+        ###tar {FormatSNV}
+        cp ~{CNV} .
+        cp /template/*.Rmd . 
+        ##cp ~/Documents/ER_pilot/New_Clin_Reports/*.Rmd .
+        mv Template_Germline_Report.Rmd ~{sampleName}_Germline_Report.Rmd
+
+        # export everything and edit the yaml file
+        export cnvAnnot="~{sampleName}.CNV.formated.tsv"
+       ## create a yaml file for the outputs
+        export snvsummary="~{sampleName}variantSummary.filt.maf"
+        export snvcancer="~{sampleName}cancerVariants.filt.maf"
+        export snvvus="~{sampleName}pathogenicVUS.filt.maf"
+        export snvdrug="~{sampleName}drugprotective.filt.maf"
+        export snvhallmark="~{sampleName}PathwayVariants.filt.maf"
+        export snvacmg="~{sampleName}ACMG.filt.maf"
+
+
+        rm -f final.yml temp.yml
+        ( echo "cat <<EOF >final.yml"; cat ~{yaml}) > temp.yml
+        . temp.yml
+
+
+        # Now use this yaml and use it in the Rmd
+        ## How to use whethere pandoc exists?>/Applications/RStudio.app/Contents/MacOS/pandoc # /usr/local/bin/pandoc
+        Rscript -e 'library(rmarkdown);Sys.setenv(RSTUDIO_PANDOC="/usr/local/bin/pandoc"); rmarkdown::render("./~{sampleName}_Germline_Report.Rmd")'
+   
+        mv final.yml ~{sampleName}.final.yaml
+    >>>
+
+    runtime {
+        docker: "trinhanne/clin_report_annot:v1.1"
+        preemptible: "3"
+        memory: memoryGB + "GB"
+        disks: "local-disk 10 HDD"
+    }
+
+    output {
+        File html = "~{sampleName}_Germline_Report.html"
+        File yamlOut = "~{sampleName}.final.yaml"
+    }
+
+}
+
+task ConvertSVs {
+    input {
+        File inputSV
+        String sampleName
+        File cosmicMut
+        File MsigDBAnnotation
+        Int ACMGcutoff
+        File GTex
+        File inputYaml
+        File? AddList
+        Boolean CNV
+        Int memoryGB 
+    }
+
+    command <<<
+
+        TissueWd=`grep "Tissue" ~{inputYaml}| cut -d' ' -f2 `
+        keyWd=`grep "TreatmentKeywords" ~{inputYaml}| cut -d' ' -f2 `
+
+        ## ~/gitLibs/DockerRepository/clinRep
+        Rscript /opt/SummarizeAnnotSV.R --AnnotSVtsv ~{inputSV} --outputname ~{sampleName} --MSigDB ~{MsigDBAnnotation} \
+        --GTex ~{GTex} --CosmicList ~{cosmicMut} ~{"--AddList " + AddList} --pathwayList "$keyWd" --ACMGCutoff ~{ACMGcutoff} --Tissue "$TissueWd" --CNV ~{CNV}
+
+        if [ ~{CNV} == true ]; then
+            touch "~{sampleName}.SV.formated.tsv"
+        else
+            touch "~{sampleName}.CNV.formated.tsv"
+        fi
+    >>>
+
+    runtime {
+        docker: "trinhanne/clin_report_annot:v1.1"
+        preemptible: "3"
+        memory: memoryGB + "GB"
+        disks: "local-disk 10 HDD"
+    }
+
+    output {
+        File SV = "~{sampleName}.SV.formated.tsv"
+        File CNV = "~{sampleName}.CNV.formated.tsv"
+    }
+}
+
+task ConvertSNVs {
+    input {
+        File inputSNV
+        String sampleName
+        File cosmicMut
+        File MsigDBAnnotation
+        File ACMG
+        File pfam
+        File pirsf
+        File? AddList
+        String FiltOut
+        File inputYaml
+        Int memoryGB
+        Int? caddScore = 20
+        Float? gnomadcutoff =0.1
+    }
+        Int diskGB=6*ceil(size(inputSNV, "GB")+size(cosmicMut, "GB"))
+
+
+    command <<<
+        ## modify the SNV files here:
         #unzip files
         annotMaf="~{sampleName}_oncokb.maf"
         tempOut="~{sampleName}_newannot.maf"
-        annotM2="~{sampleName}_oncokb_2.maf"
+        annotM2="~{sampleName}_oncokb_final.maf"
 
         gunzip -c ~{inputSNV} > $annotMaf
 
         ##tar -xvzf ~{inputSNV} -C .
         keyWd=`grep "TreatmentKeywords" ~{inputYaml}| cut -d' ' -f2 `
 
-
         echo 'annotating SNVs with additional databases'
-        Rscript /opt/DBAnnotations.R --maffile $annotMaf --outputfile $tempOut --cosmicMut ~{cosmicMut} --MSigDB ~{MsigDBAnnotation}
+        Rscript /opt/DBAnnotations.R --maffile $annotMaf --outputfile $tempOut --cosmicMut ~{cosmicMut} --MSigDB ~{MsigDBAnnotation} --pfam ~{pfam} --pirsf ~{pirsf}
         paste $annotMaf $tempOut > $annotM2
-        ## filter out here
-        grep -E "~{FiltOut}" $annotM2> ~{sampleName}.filt.prot.onco.maf
-        #echo 'summarise SNVs for export'
-        Rscript /opt/SummarizeVariants.R --maffile $annotM2 --outputname ~{sampleName} --pathwayList "$keyWd" --AMCG ~{AMCG}
+
+        Rscript /opt/SummarizeVariants.R --maffile $annotM2 --outputname ~{sampleName} --caddscore ~{caddScore} --gnomadcutoff ~{gnomadcutoff} \
+        --pathwayList "$keyWd" --ACMG ~{ACMG} ~{"--AddList " + AddList }
         # compress the original file
-        tar -cvzf ~{sampleName}_oncokb_2.maf.gz ~{sampleName}_oncokb_2.maf
-
-        ## create a yaml file for the outputs
-
-        export snvsummary="~{sampleName}variantSummary.filt.maf"
-        export snvcancer="~{sampleName}cancerVariants.filt.maf"
-        export snvvus="~{sampleName}pathogenicVUS.filt.maf"
-        export snvdrug="~{sampleName}drugprotective.filt.maf"
-        export snvhallmark="~{sampleName}HallmarkVUS.filt.maf"
-
-        rm -f final.yml temp.yml
-        ( echo "cat <<EOF >final.yml"; cat ~{inputYaml}) > temp.yml
-        . temp.yml
-
-        cp /template/*.Rmd . 
-        mv Template_Germline_Report.Rmd ~{sampleName}_Germline_Report.Rmd
-
-        # Now use this yaml and use it in the Rmd
-        Rscript -e 'library(rmarkdown);Sys.setenv(RSTUDIO_PANDOC="/usr/local/bin/pandoc"); rmarkdown::render("./~{sampleName}_Germline_Report.Rmd")'
-
-        tar -cvzf ~{sampleName}.filt.prot.onco.maf.gz ~{sampleName}.filt.prot.onco.maf
+        tar -cvzf ~{sampleName}_oncokb_final.maf.gz ~{sampleName}_oncokb_final.maf
+        ###mv *filt.maf filtOut
+        tar -cvf ~{sampleName}.SNV.tar.gz *.filt.maf
+        ##tar -zcvf ~{sampleName}.SNV.tar.gz filtOut
 
     >>>
 
     output {
-        File yaml = "final.yml"
-        Array[File] SNV = glob("*filt.maf")
-        File htmlFile = "~{sampleName}_Germline_Report.html"
-        File annotMafGz = "~{sampleName}_oncokb_2.maf.gz"
-        File mafFiltGz = "~{sampleName}.filt.prot.onco.maf.gz"
+        File SNV = "~{sampleName}.SNV.tar.gz"
+        File annotMafGz = "~{sampleName}_oncokb_final.maf.gz"
     }
 
     runtime {
-        docker: "trinhanne/clin_report_annot:v1"
+        docker: "trinhanne/clin_report_annot:v1.1"
         preemptible: "3"
         memory: memoryGB + "GB"
         disks: "local-disk ~{diskGB} HDD"
