@@ -8,8 +8,6 @@
 ## oncotree: e.g. MEL. oncotree code. See http://oncotree.mskcc.org/#/home
 ## token: token code required. Sign up here to get one for API access: https://www.oncokb.org/apiAccess
 ## searchby: options are hgvsp, hgvsp_short, hgvsg
-## pfam: File containing pfam annotations (in .json)
-## pirsf: File containing pirsf annotations (in .json)
 ## AAlist: File to convert 3 letter AA to 1 letter (in .json)
 ## grepRm (optional): To shorten the search time, remove all rows within the vcf containing these terms. Use grep terminology here. e.g. "synonymous|benign|intergenic"
 ## FiltOut (optional): Save a compressed maf file based on these terms .e.g. "damaging|pathogenic"
@@ -28,11 +26,8 @@ workflow oncokbAnnotate {
     String token
     # Options for searchby: "hgvsp", "hgvsp_short", "hgvsg"
     String searchby = "HGVSp_Short" 
-    File pfam
-    File pirsf
     File AAlist
-    String? grepRm
-    String? FiltOut = "damaging|ncogenic|pathogenic|risk_factor|protective"
+    String? grepRm = "intergenic|synonymous|pseudogene|non_coding_transcript_variant"
     String? canonical = "FALSE"
     }
 
@@ -46,16 +41,12 @@ workflow oncokbAnnotate {
         token = token,
         searchby = searchby,
         AAlist = AAlist,
-        pfam=pfam,
-        pirsf=pirsf,
         grepRm=grepRm,
-        FiltOut=FiltOut,
         canonical=canonical
     }
 # outputs and their types specified here
     output {
         File onco = oncokb.oncokbout
-        File MafFilt = oncokb.MafFilt
     }
 }
 
@@ -66,13 +57,10 @@ task oncokb {
     String samplename
     String searchby
     String oncotree
-    File pfam
-    File pirsf
     File AAlist
     String? memoryGB ="10"
     Float? diskGB_buffer = 5
     String? grepRm
-    String? FiltOut
     String? canonical = "FALSE"
     }
 
@@ -114,28 +102,21 @@ CODE
 
     Rscript /opt/vepVCF2maf4Oncokb.R --vcffile $vcfMod --outputfile $OutputMaf --sampleName ${samplename} --canonical "${canonical}" 
     Rscript /opt/HGVSMafAnnot.R --maffile $OutputMaf --outputfile $OutputMaf2 --AAlist ${AAlist}
-    Rscript /opt/annotateProteins.R --maffile $OutputMaf2 --outputfile $OutputMaf --pfam ${pfam} --pirsf ${pirsf}
-# Run the Rscript: step 2 annotate the data file with pfam and pirsf
-# Run the Rscript: step 2 annotate the data file with pfam and pirsf
+    ## Run the Rscript: step 2 annotate the data file with pfam and pirsf
+    ## Run the Rscript: step 2 annotate the data file with pfam and pirsf
 
-python3 /oncokb/MafAnnotator.py -i $OutputMaf -o "${samplename}_oncokb.maf" -c "clinannot.txt" -b ${token} -q ${searchby}
-
-# Filter out 
-(head -1 ${samplename}_oncokb.maf; grep -E "${FiltOut}" ${samplename}_oncokb.maf) > $MafFilt
-
-# compress 
-gzip $MafFilt
+python3 /oncokb/MafAnnotator.py -i $OutputMaf2 -o "${samplename}_oncokb.maf" -c "clinannot.txt" -b ${token} -q ${searchby}
 gzip ${samplename}_oncokb.maf
 
     }
 
     output {
     File oncokbout = "${samplename}_oncokb.maf.gz"
-    File MafFilt = "${samplename}.prot.onco.filt.maf.gz"
+
     }
 
     runtime {
-    docker: "trinhanne/oncokb:3.1.2Renv"
+    docker: "trinhanne/oncokb:v3.2.2Renv"
     preemptible: "3"
     memory: memoryGB + "GB"
     disks: "local-disk ${diskGB} HDD"
