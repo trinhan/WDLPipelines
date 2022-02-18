@@ -65,3 +65,7 @@ workflows:
     primaryDescriptorPath: /annotsv.wdl
     testParameterFiles: 
     - /json/annotsv.inputs.json
+  - name: GRIDSS
+    subclass: WDL
+    primaryDescriptorPath: /gridss_task.wdl
+    
