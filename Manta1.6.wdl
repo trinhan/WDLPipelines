@@ -45,11 +45,14 @@ task MantaSomaticSV {
         # change the default names with sample prefix
         if [[ -f "${normal_bam}" ]]; then
             mv results/variants/diploidSV.vcf.gz ${sample_name}.diploidSV.vcf.gz
+            mv results/variants/diploidSV.vcf.gz.tbi ${sample_name}.diploidSV.vcf.gz.tbi
             mv results/variants/somaticSV.vcf.gz ${sample_name}.somaticSV.vcf.gz
+            mv results/variants/somaticSV.vcf.gz.tbi ${sample_name}.somaticSV.vcf.gz.tbi
         else
            touch ${sample_name}.diploidSV.vcf.gz
            touch ${sample_name}.diploidSV.vcf.gz.tbi
            mv results/variants/tumorSV.vcf.gz ${sample_name}.somaticSV.vcf.gz
+           mv results/variants/tumorSV.vcf.gz.tbi ${sample_name}.somaticSV.vcf.gz.tbi
         fi
         
         if [ ${save_evidence} == true ];then
@@ -69,7 +72,9 @@ task MantaSomaticSV {
     }
     output {
         File? germline_sv_vcf = "${sample_name}.diploidSV.vcf.gz"
+        File? germline_sv_vcf_tbi = "${sample_name}.diploidSV.vcf.gz.tbi"
         File somatic_sv_vcf = "${sample_name}.somaticSV.vcf.gz"
+        File somatic_sv_vcf_tbi = "${sample_name}.somaticSV.vcf.gz.tbi"
         File candidate_sv_vcf = "${sample_name}.candidateSV.vcf.gz"
         File candidate_indel_vcf = "${sample_name}.candidateSmallIndels.vcf.gz"
         File? compressed_evidence = "${sample_name}evidence.tar.gz"
@@ -109,6 +114,7 @@ task MantaGermline{
         # change the default names with sample prefix
         
         mv results/variants/diploidSV.vcf.gz ${sample_name}.diploidSV.vcf.gz
+        mv results/variants/diploidSV.vcf.gz.tbi ${sample_name}.diploidSV.vcf.gz.tbi
 
         if [ ${save_evidence} == true ]; then
         tar -zcvf ${sample_name}evidence.tar.gz results/evidence/
@@ -123,6 +129,7 @@ task MantaGermline{
     }
     output {
         File germline_sv_vcf = "${sample_name}.diploidSV.vcf.gz"
+        File germline_sv_vcf_tbi = "${sample_name}.diploidSV.vcf.gz.tbi"
         File? compressed_evidence = "${sample_name}evidence.tar.gz"
     }
 }
@@ -178,8 +185,10 @@ workflow Manta {
     }
 
     output {
-        File? germline_sv_vcf = select_first([MantaSomaticSV.germline_sv_vcf, MantaGermline.germline_sv_vcf]) 
+        File? germline_sv_vcf = select_first([MantaSomaticSV.germline_sv_vcf, MantaGermline.germline_sv_vcf])
+        File? germline_sv_vcf_tbi = select_first([MantaSomaticSV.germline_sv_vcf_tbi, MantaGermline.germline_sv_vcf_tbi]) 
         File? somatic_sv_vcf = MantaSomaticSV.somatic_sv_vcf
+        File? somatic_sv_vcf_tbi = MantaSomaticSV.somatic_sv_vcf_tbi
         File? candidate_sv_vcf = MantaSomaticSV.candidate_sv_vcf
         File? candidate_indel_vcf = MantaSomaticSV.candidate_indel_vcf
         File? evidence = select_first([MantaSomaticSV.compressed_evidence, MantaGermline.compressed_evidence]) 
