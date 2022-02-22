@@ -7,13 +7,15 @@ workflow ClinicalReport {
     input {
         File inputSNV
         File inputCV
-        File? inputSV
+        File inputSV
         String sampleName
         File cosmicMut
+        File cosmicGenes
         File MsigDBAnnotation
         File pfam
         File pirsf
         File ACMG
+        Int SVACMGcutoff =3
         File? AddList
         String FiltOut = "damaging|ncogen|pathogenic|risk_factor|protective|TSG|drug_response|fusion"
         File inputYaml
@@ -46,7 +48,23 @@ workflow ClinicalReport {
         GTex=GTex,
         inputYaml=inputYaml,
         memoryGB=memoryGB,
+        cosmicGenes=cosmicGenes,
+        ACMGcutoff=SVACMGcutoff,
         CNV=true
+    }
+
+     call ConvertSVs as SVFormat {
+        input:
+        inputSV=inputSV,
+        sampleName=sampleName,
+        AddList=AddList,
+        MsigDBAnnotation=MsigDBAnnotation,
+        GTex=GTex,
+        inputYaml=inputYaml,
+        memoryGB=memoryGB,
+        cosmicGenes=cosmicGenes,
+        ACMGcutoff=SVACMGcutoff,
+        CNV=false
     }
 
     call CreateClinical{
@@ -54,6 +72,7 @@ workflow ClinicalReport {
         FormatSNV=ConvertSNVs.SNV,
         sampleName=sampleName,
         CNV=CNVFormat.CNV,
+        SV=SVFormat.SV,
         memoryGB=memoryGB,
         yaml=inputYaml
     }
@@ -73,6 +92,7 @@ task CreateClinical {
     input {
         File FormatSNV
         File CNV 
+        File SV
         String sampleName
         File yaml
         Int memoryGB
@@ -83,12 +103,14 @@ task CreateClinical {
         tar -C . -xvf ~{FormatSNV}
         ###tar {FormatSNV}
         cp ~{CNV} .
+        cp ~{SV} .
         cp /template/*.Rmd . 
         ##cp ~/Documents/ER_pilot/New_Clin_Reports/*.Rmd .
         mv Template_Germline_Report.Rmd ~{sampleName}_Germline_Report.Rmd
 
         # export everything and edit the yaml file
         export cnvAnnot="~{sampleName}.CNV.formated.tsv"
+        export svAnnot="~{sampleName}.SV.formated.tsv"
        ## create a yaml file for the outputs
         export snvsummary="~{sampleName}variantSummary.filt.maf"
         export snvcancer="~{sampleName}cancerVariants.filt.maf"
@@ -96,6 +118,7 @@ task CreateClinical {
         export snvdrug="~{sampleName}drugprotective.filt.maf"
         export snvhallmark="~{sampleName}PathwayVariants.filt.maf"
         export snvacmg="~{sampleName}ACMG.filt.maf"
+
 
 
         rm -f final.yml temp.yml
@@ -107,7 +130,7 @@ task CreateClinical {
         ## How to use whethere pandoc exists?>/Applications/RStudio.app/Contents/MacOS/pandoc # /usr/local/bin/pandoc
         Rscript -e 'library(rmarkdown);Sys.setenv(RSTUDIO_PANDOC="/usr/local/bin/pandoc"); rmarkdown::render("./~{sampleName}_Germline_Report.Rmd")'
    
-        mv final.yml ~{sampleName}.final.yaml
+        mv final.yml ~{sampleName}.final.yml
     >>>
 
     runtime {
@@ -119,7 +142,7 @@ task CreateClinical {
 
     output {
         File html = "~{sampleName}_Germline_Report.html"
-        File yamlOut = "~{sampleName}.final.yaml"
+        File yamlOut = "~{sampleName}.final.yml"
     }
 
 }
@@ -128,7 +151,7 @@ task ConvertSVs {
     input {
         File inputSV
         String sampleName
-        File cosmicMut
+        File cosmicGenes
         File MsigDBAnnotation
         Int ACMGcutoff
         File GTex
@@ -145,7 +168,7 @@ task ConvertSVs {
 
         ## ~/gitLibs/DockerRepository/clinRep
         Rscript /opt/SummarizeAnnotSV.R --AnnotSVtsv ~{inputSV} --outputname ~{sampleName} --MSigDB ~{MsigDBAnnotation} \
-        --GTex ~{GTex} --CosmicList ~{cosmicMut} ~{"--AddList " + AddList} --pathwayList "$keyWd" --ACMGCutoff ~{ACMGcutoff} --Tissue "$TissueWd" --CNV ~{CNV}
+        --GTex ~{GTex} --CosmicList ~{cosmicGenes} ~{"--AddList " + AddList} --pathwayList "$keyWd" --ACMGCutoff ~{ACMGcutoff} --Tissue "$TissueWd" --CNV ~{CNV} --PASSfilt TRUE
 
         if [ ~{CNV} == true ]; then
             touch "~{sampleName}.SV.formated.tsv"
