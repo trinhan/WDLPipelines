@@ -70,7 +70,6 @@ workflow gridss_workflow {
             interval=interval,
             runMode=runMode,
             blacklist=blacklist,
-            pondir=pon,
             preemptible=preemptible,
             bedRegion=bedRegion,
             nthreads=nthreads,
@@ -187,7 +186,6 @@ task rungridssGermline {
     Int preemptible =3
     String runMode
     File? blacklist
-    File? pondir
     File? bedRegion
     
     }
@@ -198,8 +196,8 @@ task rungridssGermline {
         set -e
 
         ls /opt/gridss
-        mkdir pondir 
-        tar -C pondir -xvf ~{pondir} 
+        ####mkdir pondir 
+        ######tar -C pondir -xvf ${pondir} 
 
         GRIDSS_JAR=/opt/gridss/gridss-2.13.1-gridss-jar-with-dependencies.jar
         ##PATH=/opt/gridss/:/opt/RepeatMasker:/opt/rmblast/:/opt/trf:/opt/kraken2:/opt/blast:/opt/edirect:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
