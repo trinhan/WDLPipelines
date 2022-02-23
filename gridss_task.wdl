@@ -121,7 +121,7 @@ task rungridssSomatic {
     String matchPair = if (runMode=="Paired" ||  ( defined(normalBam) && defined(tumorBam))) then "1" else "0"
     Int tumBamSize = select_first([ceil(size(tumorBam, "G")+size(tumorBai, "G")), 0])
     Int normBamSize = select_first([ceil(size(normalBam, "G")+size(normalBai, "G")), 0])
-    Int disk_size=2*(tumBamSize+ normBamSize+3)
+    Int disk_size=2*ceil(tumBamSize+ normBamSize+3)
    
     command <<<
         set -e
@@ -192,7 +192,7 @@ task rungridssGermline {
     
     }
 
-    Int disk_size=2*(size(bam , "GB")+size(refFasta, "GB")+3)
+    Int disk_size=2*ceil((size(bam , "GB")+size(refFasta, "GB")+3))
    
     command <<<
         set -e
