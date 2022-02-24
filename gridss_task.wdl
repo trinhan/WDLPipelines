@@ -181,8 +181,8 @@ task rungridssGermline {
     File bai
     String pairName
     File? interval
-    Int? nthreads =2
-    String mem =8
+    Int? nthreads = 3
+    String mem = 14
     Int preemptible =3
     String runMode
     File? blacklist
@@ -207,13 +207,14 @@ task rungridssGermline {
         gridss -r ~{refFasta} --jar /opt/gridss/gridss-2.13.1-gridss-jar-with-dependencies.jar -o ~{pairName}.Germline.vcf  ~{"--targetbed " + bedRegion} \
         ~{"--blacklist " + blacklist} --threads ~{nthreads} ~{bam}
 
-        ls *.bam*
+        ls *
 
     >>>
 
     output {
         File Germline= "~{pairName}.Germline.vcf" 
-        File evidence_bam= "ASSEMBLY.sv.bam" 
+        File evidence_bam= "ASSEMBLY.sv.bam"
+        Array[File] log= glob("*.log") 
 
     }
 
