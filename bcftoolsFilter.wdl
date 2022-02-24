@@ -4,7 +4,6 @@ workflow filterPASS {
 	input {
 		File vcfgz
 		File vcftbi
-		String outname
 		Boolean findPass
 		String? SearchTerm
 	}
@@ -13,7 +12,6 @@ workflow filterPASS {
 		input:
 		vcfgz=vcfgz,
 		vcftbi=vcftbi,
-		outname=outname,
 		findPass=findPass,
 		SearchTerm=SearchTerm
 	}
@@ -28,20 +26,20 @@ task runbcftools{
 	input {
 		File vcfgz
 		File vcftbi
-		String outname
 		Boolean findPass
 		String? SearchTerm	
 	}
 		Boolean FiltTerm = if defined(SearchTerm) then true else false
 		Int disk_space_gb = 2*ceil(size(vcfgz, "GB"))
+		String vcf_basename = basename(vcfgz, ".vcf.gz") 
 
 	command {
 
 
-		bcftools view ${true="-f 'PASS,.'" false="" findPass} ~{"-i " + SearchTerm} ~{vcfgz} > ~{outname}.vcf
+		bcftools view ${true="-f 'PASS,.'" false="" findPass} ~{"-i " + SearchTerm} ~{vcfgz} > ~{vcf_basename}.vcf
 
-		bgzip ~{outname}.vcf
-		tabix -p vcf ~{outname}.vcf.gz
+		bgzip ~{vcf_basename}.vcf
+		tabix -p vcf ~{vcf_basename}.vcf.gz
 	}
 
 	runtime {
@@ -53,7 +51,7 @@ task runbcftools{
   }
   
   output {
-    File Outvcfgz = "~{outname}.vcf.gz"
-    File Outvcfgztbi = "~{outname}.vcf.gz.tbi"
+    File Outvcfgz = "~{vcf_basename}.vcf.gz"
+    File Outvcfgztbi = "~{vcf_basename}.vcf.gz.tbi"
   }
 }
