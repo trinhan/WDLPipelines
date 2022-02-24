@@ -68,4 +68,7 @@ workflows:
   - name: GRIDSS
     subclass: WDL
     primaryDescriptorPath: /gridss_task.wdl
+  - name: bcftoolsFilter
+    subclass: WDL
+    primaryDescriptorPath: /bcftoolsFilter.wdl
     

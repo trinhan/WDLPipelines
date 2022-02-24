@@ -213,7 +213,7 @@ task rungridssGermline {
 
     output {
         File Germline= "~{pairName}.Germline.vcf" 
-        File evidence_bam= "ASSEMBLY.sv.bam"
+        File evidence_bam= "~{pairName}.Germline.vcf.assembly.bam"
         Array[File] log= glob("*.log") 
 
     }
