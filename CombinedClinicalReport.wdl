@@ -138,6 +138,7 @@ task CreateClinical {
         preemptible: "3"
         memory: memoryGB + "GB"
         disks: "local-disk 10 HDD"
+        maxRetries: "3"
     }
 
     output {
