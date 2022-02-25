@@ -36,10 +36,10 @@ task runbcftools{
 	command {
 
 
-		bcftools view ${true="-f 'PASS,.'" false="" findPass} ~{"-i " + SearchTerm} ~{vcfgz} > ~{vcf_basename}.vcf
+		bcftools view ${true="-f 'PASS,.'" false="" findPass} ~{"-i " + SearchTerm} ~{vcfgz} > ~{vcf_basename}.pass.vcf
 
-		bgzip ~{vcf_basename}.vcf
-		tabix -p vcf ~{vcf_basename}.vcf.gz
+		bgzip ~{vcf_basename}.pass.vcf
+		tabix -p vcf ~{vcf_basename}.pass.vcf.gz
 	}
 
 	runtime {
@@ -51,7 +51,7 @@ task runbcftools{
   }
   
   output {
-    File Outvcfgz = "~{vcf_basename}.vcf.gz"
-    File Outvcfgztbi = "~{vcf_basename}.vcf.gz.tbi"
+    File Outvcfgz = "~{vcf_basename}.pass.vcf.gz"
+    File Outvcfgztbi = "~{vcf_basename}.pass.vcf.gz.tbi"
   }
 }
