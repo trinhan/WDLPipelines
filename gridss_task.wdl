@@ -153,7 +153,7 @@ task rungridssSomatic {
     output {
         File somatic_high_conf= "~{pairName}.high_confidence_somatic.vcf.gz" 
         File somatic_all= "~{pairName}.high_and_low_confidence_somatic.vcf.gz" 
-        File evidence_bam= "ASSEMBLY.sv.bam" 
+        File evidence_bam= "~{pairName}.vcf.assembly.bam"
 
     }
 
@@ -207,13 +207,17 @@ task rungridssGermline {
         gridss -r ~{refFasta} --jar /opt/gridss/gridss-2.13.1-gridss-jar-with-dependencies.jar -o ~{pairName}.Germline.vcf  ~{"--targetbed " + bedRegion} \
         ~{"--blacklist " + blacklist} --threads ~{nthreads} ~{bam}
 
+        mv ~{pairName}.Germline.vcf.assembly.bam.gridss.working/~{pairName}.Germline.vcf.assembly.bam.sv.bam .
+        mv ~{pairName}.Germline.vcf.assembly.bam.gridss.working/~{pairName}.Germline.vcf.assembly.bam.sv.bam.bai .
+
         ls *
 
     >>>
 
     output {
         File Germline= "~{pairName}.Germline.vcf" 
-        File evidence_bam= "~{pairName}.Germline.vcf.assembly.bam"
+        File evidence_bam= "~{pairName}.Germline.vcf.assembly.bam.sv.bam"
+        File evidence_bai= "~{pairName}.Germline.vcf.assembly.bam.sv.bam.bai"
         Array[File] log= glob("*.log") 
 
     }
