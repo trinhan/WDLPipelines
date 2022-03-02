@@ -6,7 +6,7 @@ workflow downsamplingWF {
 	File file_bai
 	Int interval = 1000000
 	String? tag
-	String roi
+	String? roi
 	Int memory_size = 32
     }
     
@@ -32,7 +32,7 @@ task downsamplingTask {
 	File file_bai
 	Int interval = 1000000
 	String? tag
-	String roi
+	String? roi
 	Int memory_size = 32
     }
 
