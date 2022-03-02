@@ -71,8 +71,6 @@ workflows:
   - name: bcftoolsFilter
     subclass: WDL
     primaryDescriptorPath: /bcftoolsFilter.wdl
-  -name: downsample
+  - name: downsample
     subclass: WDL
     primaryDescriptorPath: /downsampling.4.wdl
-
-    
