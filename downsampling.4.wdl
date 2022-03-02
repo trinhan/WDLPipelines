@@ -50,7 +50,7 @@ task downsampling {
     Int disk_size = 2 * ceil(size(file_bam, "GB"))
 
     runtime {
-	docker: docker_image
+	docker: "trinhanne/downsamplebam:v1"
 	memory: "${memory_size} GB"
 	disks: "local-disk ${disk_size} HDD"
     }
