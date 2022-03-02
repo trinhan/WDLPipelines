@@ -21,7 +21,7 @@ workflow downsamplingWF {
     }
 
     output {
-	File downsampling_output = downsampling.file_out
+	File downsampling_output = downsamplingTask.file_out
     }
 
 }	 
