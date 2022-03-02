@@ -1,16 +1,23 @@
 version 1.0
 
-workflow downsampling {
-
+workflow downsamplingWF {
     input {
 	File file_bam
 	File file_bai
+	Int interval = 1000000
+	String? tag
+	String roi
+	Int memory_size = 32
     }
     
-    call downsampling {
+    call downsamplingTask {
 	input:
 	file_bam = file_bam,
-	file_bai = file_bai
+	file_bai = file_bai,
+	interval=interval,
+	tag=tag,
+	roi=roi,
+	memory_size=memory_size
     }
 
     output {
@@ -19,15 +26,13 @@ workflow downsampling {
 
 }	 
 
-task downsampling {
-
+task downsamplingTask {
     input {
 	File file_bam
 	File file_bai
 	Int interval = 1000000
 	String? tag
 	String roi
-	String docker_image
 	Int memory_size = 32
     }
 
