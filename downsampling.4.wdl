@@ -21,7 +21,7 @@ workflow downsamplingWF {
     }
 
     output {
-	File downsampling_output = downsamplingTask.file_out
+	File downsampling_txtfile = downsamplingTask.txtout
     }
 
 }	 
@@ -49,7 +49,7 @@ task downsamplingTask {
     }
 
     output {
- 	File file_out = "${file_out}"
+ 	File txtout = "${file_out}"
     }
     
     Int disk_size = 2 * ceil(size(file_bam, "GB"))
