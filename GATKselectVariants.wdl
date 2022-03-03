@@ -51,7 +51,7 @@ task SelectVariants{
 
 	command {
 
-	gatk SelectVariants -V ~{vcfgz} ~{"-R "+ referenceFasta} ~{searchString} -O ~{vcf_basename}.SVfilt.gvcf.gz
+	gatk SelectVariants -V ~{vcfgz} ~{"-R "+ referenceFasta} --exclude-non-variants --remove-unused-alternates ~{searchString} -O ~{vcf_basename}.SVfilt.gvcf.gz
 
 	}
 
