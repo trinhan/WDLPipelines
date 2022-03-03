@@ -50,16 +50,17 @@ task SelectVariants{
 	Int disk_space_gb = 2*ceil(size(vcfgz, "GB")+ size(referenceFasta, "GB")+1)
 
 	command {
-	# move the files for DNAnexus
-	cp ~{vcftbi} ./in/vcfgz	
 
-	gatk SelectVariants -V ~{vcfgz} ~{"-R "+ referenceFasta} --exclude-non-variants --remove-unused-alternates ~{searchString} -O ~{vcf_basename}.SVfilt.gvcf.gz
+	cp ~{vcfgz} .
+	cp ~{vcftbi} .
+
+	gatk SelectVariants -V ~{vcf_basename}.vcf.gz ~{"-R "+ referenceFasta} ~{searchString} -O ~{vcf_basename}.SVfilt.gvcf.gz
 
 	}
 
 	runtime {
     	docker: "broadinstitute/gatk:4.2.4.0"
-    	memory: "5 GB"
+    	memory: "12 GB"
     	cpu: "1"
     	disks: "local-disk " + disk_space_gb + " HDD"
     	preemptible: 3
