@@ -50,6 +50,8 @@ task SelectVariants{
 	Int disk_space_gb = 2*ceil(size(vcfgz, "GB")+ size(referenceFasta, "GB")+1)
 
 	command {
+	# move the files for DNAnexus
+	cp ~{vcftbi} ./in/vcfgz	
 
 	gatk SelectVariants -V ~{vcfgz} ~{"-R "+ referenceFasta} --exclude-non-variants --remove-unused-alternates ~{searchString} -O ~{vcf_basename}.SVfilt.gvcf.gz
 

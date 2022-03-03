@@ -73,7 +73,7 @@ workflows:
     primaryDescriptorPath: /bcftoolsFilter.wdl
   - name: downsample
     subclass: WDL
-    primaryDescriptorPath: /downsampling.4.wdl
+    primaryDescriptorPath: /downsampling.5.wdl
   - name: GATKSelectVariants
     subclass: WDL
     primaryDescriptorPath: /GATKselectVariants.wdl
