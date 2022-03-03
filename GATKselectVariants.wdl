@@ -46,15 +46,17 @@ task SelectVariants{
 		String? searchString
 	}
 
-	String vcf_basename = basename(vcfgz, ".vcf.gz") 
+	String vcf_basename = basename(vcfgz, ".gvcf.gz") 
 	Int disk_space_gb = 2*ceil(size(vcfgz, "GB")+ size(referenceFasta, "GB")+1)
 
 	command {
 
-	cp ~{vcfgz} .
-	cp ~{vcftbi} .
+	gunzip -c ~{vcfgz} > ~{vcf_basename}.gvcf
 
-	gatk SelectVariants -V ~{vcf_basename}.vcf.gz ~{"-R "+ referenceFasta} ~{searchString} -O ~{vcf_basename}.SVfilt.gvcf.gz
+	gatk SelectVariants -V ~{vcf_basename}.gvcf ~{"-R "+ referenceFasta} ~{searchString} -O ~{vcf_basename}.SVfilt.gvcf.gz
+
+	#bgzip ~{vcf_basename}.SVfilt.gvcf
+	#tabix -p vcf ~{vcf_basename}.SVfilt.gvcf.gz
 
 	}
 
