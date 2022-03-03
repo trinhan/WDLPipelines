@@ -74,3 +74,6 @@ workflows:
   - name: downsample
     subclass: WDL
     primaryDescriptorPath: /downsampling.4.wdl
+  - name: GATKSelectVariants
+    subclass: WDL
+    primaryDescriptorPath: /GATKselectVariants.wdl
