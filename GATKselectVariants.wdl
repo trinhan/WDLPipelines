@@ -32,8 +32,8 @@ workflow runSelectVariants {
 	}
 
 	output {
-		File Outvcfgz = SelectVariants.Outvcfgz
-		File Outvcfgztbi = SelectVariants.Outvcfgztbi
+		File OutvcfgzSR = SelectVariants.Outvcfgz
+		File OutvcfgztbiSR = SelectVariants.Outvcfgztbi
 	}
 
 }
