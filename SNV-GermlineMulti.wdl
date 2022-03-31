@@ -52,8 +52,8 @@ workflow runGermlineVariants{
 
     String oncotree
     File AAlist
-    File pfam
-    File pirsf
+    String? canonical
+    String? grepRm
     String OncoKBtoken
 
     ## jointdiscovery inputs
@@ -217,8 +217,8 @@ workflow runGermlineVariants{
         token = OncoKBtoken,
         searchby = "HGVSp_Short",
         AAlist = AAlist,
-        pfam=pfam,
-        pirsf=pirsf
+        canonical=canonical,
+        grepRm=grepRm
     }    
 
     output {
@@ -236,7 +236,6 @@ workflow runGermlineVariants{
        File vep_annot = vep.annotatedFile
        File? vep_summary_html=vep.summary_html
        File oncokbMaf=oncokbCalls.oncokbout
-       File OncoMafFilt = oncokbCalls.MafFilt
 
      }
 }
