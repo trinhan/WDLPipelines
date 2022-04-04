@@ -186,14 +186,14 @@ task ConvertSNVs {
         tempOut="~{sampleName}_newannot.maf"
         annotM2="~{sampleName}_oncokb_final.maf"
 
-        #gunzip -c ~{inputSNV} > $annotMaf
+        gunzip -c ~{inputSNV} > $annotMaf
 
         ##tar -xvzf ~{inputSNV} -C .
         keyWd=`grep "TreatmentKeywords" ~{inputYaml}| cut -d' ' -f2 `
 
         echo 'convert vcf to maf'
-        Rscript /opt/vepVCF2maf.R --vcffile ~{inputSNV} --outputfile $annotMaf --sampleName ~{sampleName} --canonical "~{canonical}" --runMode ~{runMode} --AAlist ~{AAlist} 
-        echo 'MAF file saved!'
+        #Rscript /opt/vepVCF2maf.R --vcffile ~{inputSNV} --outputfile $annotMaf --sampleName ~{sampleName} --canonical "~{canonical}" --runMode ~{runMode} --AAlist ~{AAlist} 
+        #echo 'MAF file saved!'
         echo 'annotating SNVs with additional databases'
         Rscript /opt/DBAnnotations.R --maffile $annotMaf --outputfile $tempOut --cosmicMut ~{cosmicMut} --MSigDB ~{MsigDBAnnotation} --pfam ~{pfam} --pirsf ~{pirsf}
         paste $annotMaf $tempOut > $annotM2
