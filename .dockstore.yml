@@ -34,6 +34,9 @@ workflows:
   - name: ClinicalReport
     subclass: WDL
     primaryDescriptorPath: /CombinedClinicalReport.wdl
+  - name: ClinicalReportSNVOnly
+    subclass: WDL
+    primaryDescriptorPath: /CombinedClinicalReportModified.wdl
   - name: Manta
     subclass: WDL
     primaryDescriptorPath: /Manta1.6.wdl
