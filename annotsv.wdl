@@ -73,10 +73,12 @@ task annotsv {
 
     /opt/AnnotSV_3.1/bin/AnnotSV -SVinputFile ~{input_vcf} -bedtools /opt/bedtools2/bin/bedtools -bcftools /opt/bcftools-1.13/bcftools -snvIndelPASS ~{snvIndelPASS} \
     -genomeBuild ~{genome_build} -annotationsDir AnnotationsFolder -annotationMode ~{typeofAnnotation} -outputFile ~{sampleName}.~{caller}.annotSV.tsv -outputDir .
+
+    tar -czvf ~{sampleName}.~{caller}.annotSV.tsv.gz ~{sampleName}.~{caller}.annotSV.tsv
     #### -vcfFiles ~{sep="," snps_vcf}
   >>>
 
   output {
-    File sv_variants_tsv = "~{sampleName}.~{caller}.annotSV.tsv "
+    File sv_variants_tsv = "~{sampleName}.~{caller}.annotSV.tsv.gz"
   }
 }
