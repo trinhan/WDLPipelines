@@ -1,3 +1,4 @@
+
 ## Script for collating information from different runs
 
 version 1.0
@@ -21,6 +22,11 @@ workflow ClinicalReport {
         File inputYaml
         File GTex
         Int memoryGB = 14
+        File? columnEntries
+        String runMode ="Germline"
+        Boolean SNVvcfformat = true 
+        Boolean canonical = true
+        File? AAlist
     }
 
     call ConvertSNVs {
@@ -35,7 +41,12 @@ workflow ClinicalReport {
         memoryGB=memoryGB,
         ACMG=ACMG,
         AddList=AddList,
-        inputYaml=inputYaml
+        inputYaml=inputYaml,
+        columnEntries=columnEntries,
+        SNVvcfformat=SNVvcfformat,
+        canonical=canonical,
+        AAlist=AAlist,
+        runMode=runMode
     }
 
 
@@ -78,13 +89,13 @@ workflow ClinicalReport {
     }
 
 # outputs and their types specified here
-	output {
-	  File yaml=CreateClinical.yamlOut
+    output {
+      File yaml=CreateClinical.yamlOut
       File CNV = CNVFormat.CNV
       File htmlFile = CreateClinical.html
       File FinalannotMafGz = ConvertSNVs.annotMafGz
       File SupportingSNVs = ConvertSNVs.SNV
-	}
+    }
 
 }
 
@@ -128,13 +139,14 @@ task CreateClinical {
 
         # Now use this yaml and use it in the Rmd
         ## How to use whethere pandoc exists?>/Applications/RStudio.app/Contents/MacOS/pandoc # /usr/local/bin/pandoc
+        
         Rscript -e 'library(rmarkdown);Sys.setenv(RSTUDIO_PANDOC="/usr/local/bin/pandoc"); rmarkdown::render("./~{sampleName}_Germline_Report.Rmd")'
    
         mv final.yml ~{sampleName}.final.yml
     >>>
 
     runtime {
-        docker: "trinhanne/clin_report_annot:v1.1"
+        docker: "trinhanne/clin_report_annot:v2.1"
         preemptible: "3"
         memory: memoryGB + "GB"
         disks: "local-disk 10 HDD"
@@ -162,13 +174,23 @@ task ConvertSVs {
         Int memoryGB 
     }
 
+    Boolean is_compressed = sub(basename(inputSV), ".*\\.", "") == "gz"
+
     command <<<
+
+        SVusethis="thisfile.tsv"
+
+        if [ ~{is_compressed} == true ]; then
+            gunzip -c ~{inputSV} > $SVusethis
+        else 
+            cp ~{inputSV} $SVusethis
+        fi
 
         TissueWd=`grep "Tissue" ~{inputYaml}| cut -d' ' -f2 `
         keyWd=`grep "TreatmentKeywords" ~{inputYaml}| cut -d' ' -f2 `
 
         ## ~/gitLibs/DockerRepository/clinRep
-        Rscript /opt/SummarizeAnnotSV.R --AnnotSVtsv ~{inputSV} --outputname ~{sampleName} --MSigDB ~{MsigDBAnnotation} \
+        Rscript /opt/SummarizeAnnotSV.R --AnnotSVtsv $SVusethis --outputname ~{sampleName} --MSigDB ~{MsigDBAnnotation} \
         --GTex ~{GTex} --CosmicList ~{cosmicGenes} ~{"--AddList " + AddList} --pathwayList "$keyWd" --ACMGCutoff ~{ACMGcutoff} --Tissue "$TissueWd" --CNV ~{CNV} --PASSfilt TRUE
 
         if [ ~{CNV} == true ]; then
@@ -179,7 +201,7 @@ task ConvertSVs {
     >>>
 
     runtime {
-        docker: "trinhanne/clin_report_annot:v1.1"
+        docker: "trinhanne/clin_report_annot:v2.1"
         preemptible: "3"
         memory: memoryGB + "GB"
         disks: "local-disk 10 HDD"
@@ -206,18 +228,31 @@ task ConvertSNVs {
         Int memoryGB
         Int? caddScore = 20
         Float? gnomadcutoff =0.1
+        File? columnEntries
+        Boolean SNVvcfformat
+        String runMode
+        File? AAlist
+        Boolean canonical
     }
         Int diskGB=6*ceil(size(inputSNV, "GB")+size(cosmicMut, "GB"))
+        String AAb = select_first([AAlist, "/annotFiles/AminoAcid_table.csv"])
 
 
     command <<<
         ## modify the SNV files here:
         #unzip files
+
         annotMaf="~{sampleName}_oncokb.maf"
         tempOut="~{sampleName}_newannot.maf"
         annotM2="~{sampleName}_oncokb_final.maf"
 
-        gunzip -c ~{inputSNV} > $annotMaf
+        if [ ~{SNVvcfformat} == true ]; then
+            echo 'convert vcf to maf'
+            Rscript /opt/vepVCF2maf.R --vcffile ~{inputSNV} --outputfile $annotMaf --sampleName ~{sampleName} --canonical "~{canonical}" --runMode ~{runMode} --AAlist ~{AAb} 
+            echo 'MAF file saved!'
+        else     
+            gunzip -c ~{inputSNV} > $annotMaf
+        fi 
 
         ##tar -xvzf ~{inputSNV} -C .
         keyWd=`grep "TreatmentKeywords" ~{inputYaml}| cut -d' ' -f2 `
@@ -225,9 +260,9 @@ task ConvertSNVs {
         echo 'annotating SNVs with additional databases'
         Rscript /opt/DBAnnotations.R --maffile $annotMaf --outputfile $tempOut --cosmicMut ~{cosmicMut} --MSigDB ~{MsigDBAnnotation} --pfam ~{pfam} --pirsf ~{pirsf}
         paste $annotMaf $tempOut > $annotM2
-
+        echo 'create filtered lists'
         Rscript /opt/SummarizeVariants.R --maffile $annotM2 --outputname ~{sampleName} --caddscore ~{caddScore} --gnomadcutoff ~{gnomadcutoff} \
-        --pathwayList "$keyWd" --ACMG ~{ACMG} ~{"--AddList " + AddList }
+        --pathwayList "$keyWd" --ACMG ~{ACMG} ~{"--AddList " + AddList } ~{"--columnEntries " + columnEntries}
         # compress the original file
         tar -cvzf ~{sampleName}_oncokb_final.maf.gz ~{sampleName}_oncokb_final.maf
         ###mv *filt.maf filtOut
@@ -242,7 +277,7 @@ task ConvertSNVs {
     }
 
     runtime {
-        docker: "trinhanne/clin_report_annot:v1.1"
+        docker: "trinhanne/clin_report_annot:v2.1"
         preemptible: "3"
         memory: memoryGB + "GB"
         disks: "local-disk ~{diskGB} HDD"
