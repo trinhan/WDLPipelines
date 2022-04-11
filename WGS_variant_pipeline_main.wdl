@@ -106,6 +106,7 @@ workflow WGS_SNV_CNV_Workflow {
         Boolean run_absolute
         Boolean run_blat
         Boolean run_abra2
+        Boolean targetedRun
     }
     String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
     Int tumorBam_size=ceil(size(tumorBam, "G")+size(tumorBamIdx, "G"))
@@ -141,7 +142,8 @@ workflow WGS_SNV_CNV_Workflow {
             forceComputePicardMetrics_normal=forceComputePicardMetrics_normal,
             normalBam=normalBam,
             normalBamIdx=normalBamIdx,
-            ctrlName=ctrlName
+            ctrlName=ctrlName,
+            targetedRun=targetedRun
      }
 
     call SomaticVC.runVariantCallers as somaticVC {
