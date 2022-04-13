@@ -107,6 +107,7 @@ workflow WGS_SNV_CNV_Workflow {
         Boolean run_blat
         Boolean run_abra2
         Boolean targetedRun
+        Float? fracContam
     }
     String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
     Int tumorBam_size=ceil(size(tumorBam, "G")+size(tumorBamIdx, "G"))
@@ -141,6 +142,7 @@ workflow WGS_SNV_CNV_Workflow {
             forceComputePicardMetrics_tumor=forceComputePicardMetrics_tumor,
             forceComputePicardMetrics_normal=forceComputePicardMetrics_normal,
             normalBam=normalBam,
+            fracContam=fracContam,
             normalBamIdx=normalBamIdx,
             ctrlName=ctrlName,
             targetedRun=targetedRun
@@ -169,7 +171,7 @@ workflow WGS_SNV_CNV_Workflow {
             DB_SNP_VCF=DB_SNP_VCF,
             DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
             cosmicVCF=cosmicVCF,
-            fracContam=QCChecks.fracContam,
+            fracContam=select_first([fracContam,QCChecks.fracContam]),
             runMode=runMode,
             gatk_docker=gatk_docker,
             strelka_config=strelka_config
@@ -206,7 +208,7 @@ workflow WGS_SNV_CNV_Workflow {
                 DB_SNP_VCF=DB_SNP_VCF,
                 DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
                 cosmicVCF=cosmicVCF, # can this be updated?
-                fracContam=QCChecks.fracContam,
+                fracContam=select_first([fracContam,QCChecks.fracContam]),
                 runMode=runMode,
                 gatk_docker=gatk_docker,
                 strelka_config=strelka_config,

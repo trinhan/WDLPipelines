@@ -36,6 +36,7 @@ workflow QCChecks {
     # ContEst
     # CrossCheckLane
     File HaplotypeDBForCrossCheck
+    Float? fracContam
 
     # Does the sample already have picard metrics computed
     Boolean hasPicardMetrics_tumor = false
@@ -59,7 +60,7 @@ workflow QCChecks {
     File readGrpBL=select_first([readGroupBlackList, "null"])
 
     Boolean override_CNQC = if defined (normalBam) then run_CNQC else false
-    Boolean runContEst = if defined (normalBam) then true else false
+    Boolean runContEst = if defined (normalBam) && defined(fracContam)  then true else false
 
 
     if (override_CNQC){
