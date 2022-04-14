@@ -60,7 +60,7 @@ workflow QCChecks {
     File readGrpBL=select_first([readGroupBlackList, "null"])
 
     Boolean override_CNQC = if defined (normalBam) then run_CNQC else false
-    Boolean runContEst = if defined (normalBam) && defined(fracContam)  then true else false
+    Boolean runContEst = if defined (normalBam) && !defined(fracContam)  then true else false
 
 
     if (override_CNQC){
@@ -213,8 +213,8 @@ task CopyNumberReportQC_Task {
     Int command_memoryGB = floor(memoryGB) - 1
     
     # COMPUTE DISK SIZE
-    Int diskGB = 2*ceil(tumorBam_size + normalBam_size + size(regionFile, 'G') + size(readGroupBlackList, 'G') 
-                    + size(captureNormalsDBRCLZip, 'G') + diskGB_buffer)
+    Int diskGB = ceil(2.5*ceil(tumorBam_size + normalBam_size + size(regionFile, 'G') + size(readGroupBlackList, 'G') 
+                    + size(captureNormalsDBRCLZip, 'G') + diskGB_buffer))
 
     parameter_meta {
         tumorBam : "sample tumor  BAM file"
