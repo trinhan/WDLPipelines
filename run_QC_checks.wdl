@@ -60,7 +60,7 @@ workflow QCChecks {
     File readGrpBL=select_first([readGroupBlackList, "null"])
 
     Boolean override_CNQC = if defined (normalBam) then run_CNQC else false
-    Boolean runContEst = if defined (normalBam) && !defined(fracContam)  then true else false
+    Boolean runContEst = if defined(fracContam) || !defined(normalBam) then false else true
 
 
     if (override_CNQC){
