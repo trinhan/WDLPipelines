@@ -786,7 +786,7 @@ CODE
 
 task CombineVariants {
     input {
-        Array[File?] input_vcfs
+        Array[File] input_vcfs
         File ref_fasta
         File ref_fai
         File ref_dict
