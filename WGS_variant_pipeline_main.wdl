@@ -318,11 +318,9 @@ workflow WGS_SNV_CNV_Workflow {
         File? strelka2SomaticSNVs = somaticVC.strelka2SomaticSNVs
         File? strelka2SomaticIndels = somaticVC.strelka2SomaticIndels
         ####### pisces outputs ########
-        File? pisces_tum_phased=somaticVC.pisces_tum_phased
-        File? pisces_tum_unique=somaticVC.pisces_tum_unique
-        File? pisces_venn=somaticVC.pisces_venn
+        File pisces_tum_unique=somaticVC.pisces_tum_unique
+        Array[File?] pisces_venn=somaticVC.pisces_venn
         File? pisces_norm_same_site=somaticVC.pisces_norm_same_site
-        File? pisces_tumor_variants=somaticVC.pisces_tumor_variants
         ####### M2 workflow2 outputs #####
         File M2_filtered_vcf=somaticVC.M2_filtered_vcf
         File M2_filtered_vcf_idx=somaticVC.M2_filtered_vcf_idx

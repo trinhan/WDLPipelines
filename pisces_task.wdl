@@ -32,10 +32,9 @@ workflow pisces_workflow {
 
     output {
         File? tumor_unique_variants_phased=runpisces.tumor_unique_variants_phased
-        File? tumor_unique_variants=runpisces.tumor_unique_variants
+        File tumor_unique_variants=runpisces.tumor_unique_variants
         File? normal_variants_same_site=runpisces.normal_variants_same_site
         File? normal_variants=runpisces.normal_variants
-        File? tumor_variants=runpisces.tumor_variants
         File? venn_zip=runpisces.venn_zip
         File? refzip=runpisces.refzip
 
@@ -61,6 +60,7 @@ task runpisces {
     Int preemptible =3
     String saveDict = "0"
     String runMode
+    String runScylla = "0"
     }
 
 
@@ -177,9 +177,9 @@ task runpisces {
             mv somatic_~{pairName}/~{tumPrefix}.recal.vcf ~{tumPrefix}.somatic.unique.recal.vcf
         fi; 
 
-        if [ ~{runTum} -eq "1" ];
+        if [ ~{runScylla} -eq "1" ];
         then  
-        # perform phasing here
+        ## perform phasing here
         dotnet /app/Scylla_5.2.10.49/Scylla.dll -g $sname --vcf ~{tumPrefix}.somatic.unique.recal.vcf --bam ~{tumorBam}
         fi
 
@@ -191,12 +191,11 @@ task runpisces {
     >>>
 
     output {
-        File? tumor_unique_variants= "~{tumPrefix}.somatic.unique.recal.vcf" 
+        File tumor_unique_variants= select_first(["~{tumPrefix}.somatic.unique.recal.vcf", "somatic_${pairName}/~{tumPrefix}.recal.vcf" ])
         File? tumor_unique_variants_phased= "~{tumPrefix}.somatic.unique.recal.phased.vcf" 
         File? normal_variants_same_site= "variant2_~{pairName}/~{normPrefix}.genome.recal.vcf" 
         File? normal_variants_recal =  "somatic_${pairName}/~{normPrefix}.recal.vcf" 
         File? normal_variants =  "somatic_~{pairName}/~{normPrefix}.vcf" 
-        File? tumor_variants =  "somatic_${pairName}/~{tumPrefix}.recal.vcf" 
         File? venn_zip="~{pairName}_venn_pisces.tar.gz"
         File? refzip="refPisces.tar.gz"
 

@@ -44,7 +44,6 @@ workflow runVariantCallers{
     # contamination fraction: from running ContEST  
     Float fracContam 
     File strelka_config
-
     # Options here: Pair TumorOnly, Germline
     String runMode = if defined(normalBam) then "Paired" else "TumOnly"
     String gatk_docker
@@ -114,6 +113,21 @@ workflow runVariantCallers{
                 tumorBam_size=tumorBam_size,
                 normalBam_size=normalBam_size
         }
+
+        call pisces.runpisces as runpisces {
+            input:
+                refFasta=refFasta,
+                refFastaFai=refFastaIdx,
+                refFastaDict=refFastaDict,
+                tumorBam=tumorBam,
+                normalBam=normalBam,
+                normalBai=normalBamIdx,
+                tumorBai=tumorBamIdx,
+                pairName=pairName,
+                pisces_reference=pisces_reference,
+                interval=CallSomaticMutations_Prepare_Task.bed_list[idx],
+                runMode=runMode    
+        }
     }
 
     call Mutect2WF.Mutect2 as M2WF {
@@ -136,23 +150,29 @@ workflow runVariantCallers{
             m2_extra_args=m2_extra_args,
             gatk_docker=gatk_docker
         }
-
-    # # Run pisces
-    
-    call pisces.runpisces as runpisces {
+       
+    call CombineVariants as piscesTumVCF {
         input:
-            refFasta=refFasta,
-            refFastaFai=refFastaIdx,
-            refFastaDict=refFastaDict,
-            tumorBam=tumorBam,
-            normalBam=normalBam,
-            normalBai=normalBamIdx,
-            tumorBai=tumorBamIdx,
-            pairName=pairName,
-            pisces_reference=pisces_reference,
-            interval=targetIntervals,
-            runMode=runMode    
-    }
+            input_vcfs = runpisces.tumor_unique_variants,
+            ref_fasta = refFasta,
+            ref_fai = refFastaIdx,
+            ref_dict = refFastaDict,
+            gatk_docker = gatk_docker,
+            output_file = "~{caseName}.Pisces_tumour"
+    }    
+
+    if (runMode=="Paired"){
+        Array[File] pisces_norm = select_first([runpisces.normal_variants_same_site, "NULL"])
+        call CombineVariants as piscesNormVCF {
+            input:
+                input_vcfs = pisces_norm,
+                ref_fasta = refFasta,
+                ref_fai = refFastaIdx,
+                ref_dict = refFastaDict,
+                gatk_docker = gatk_docker,
+                output_file = "~{caseName}.Pisces_normal"
+        }
+    }    
 
     if (runS2){
     call Strelka2Somatic_Task {
@@ -173,7 +193,7 @@ workflow runVariantCallers{
     }
     }
 
-    File pisces_tumor=select_first([runpisces.tumor_unique_variants, runpisces.tumor_variants])
+    ##File pisces_tumor=select_first([runpisces.tumor_unique_variants, runpisces.tumor_variants])
     
     if (runMode=="Paired") {
         call Merge_Variant_Calls as PairedCall {
@@ -183,8 +203,8 @@ workflow runVariantCallers{
             M2=M2WF.filtered_vcf,
             STRELKA2_SNVS=Strelka2Somatic_Task.strelka2SomaticSNVs,
             STRELKA2_INDELS=Strelka2Somatic_Task.strelka2SomaticIndels,
-            PISCES_TUMOR=pisces_tumor,
-            PISCES_NORMAL=runpisces.normal_variants_same_site,
+            PISCES_TUMOR=piscesTumVCF.merged_vcf,
+            PISCES_NORMAL= piscesNormVCF.merged_vcf,
             ctrlName=ctrlName,
             caseName=caseName,
             refFastaDict=refFastaDict,
@@ -198,7 +218,7 @@ workflow runVariantCallers{
             pairName=pairName,
             mutect1_cs=Mutect1_Task.mutect1_cs,
             M2=M2WF.filtered_vcf,
-            PISCES_TUMOR=pisces_tumor,
+            PISCES_TUMOR=piscesTumVCF.merged_vcf,
             caseName=caseName,
             refFastaDict=refFastaDict,
             runMode=runMode
@@ -210,11 +230,11 @@ workflow runVariantCallers{
        File? strelka2SomaticSNVs = Strelka2Somatic_Task.strelka2SomaticSNVs
        File? strelka2SomaticIndels = Strelka2Somatic_Task.strelka2SomaticIndels
        # pisces outputs
-       File? pisces_tum_phased=runpisces.tumor_unique_variants_phased
-       File? pisces_tum_unique=runpisces.tumor_unique_variants
-       File? pisces_venn=runpisces.venn_zip
-       File? pisces_norm_same_site=runpisces.normal_variants_same_site
-       File? pisces_tumor_variants=runpisces.tumor_variants
+       ##File? pisces_tum_phased=runpisces.tumor_unique_variants_phased
+       File? pisces_tum_unique=piscesTumVCF.merged_vcf
+       Array[File?] pisces_venn=runpisces.venn_zip
+       File? pisces_norm_same_site=piscesNormVCF.merged_vcf
+      ## File? pisces_tumor_variants=runpisces.tumor_variants
 
       #  M2 workflow2 outputs
        File M2_filtered_vcf=M2WF.filtered_vcf
@@ -435,9 +455,21 @@ task CallSomaticMutations_Prepare_Task {
 
         seq 0 $((${nWay}-1)) > indices.dat
 
+        # create a list of intervalfiles
+
         mkdir intervalfolder
         gatk SplitIntervals -R ${refFasta} -L ${targetIntervals} --scatter-count ${nWay} -O intervalfolder
         cp intervalfolder/*.interval_list .
+
+        ## make the list of bed files
+        mkdir bedfolder
+
+        for file in *.interval_list;
+        do 
+            gatk IntervalListToBed -I $file -O bedfolder/$file.bed
+        done 
+
+        cp bedfolder/*.bed .
 
 
     }
@@ -452,6 +484,7 @@ task CallSomaticMutations_Prepare_Task {
     output {
         Array[File] interval_files=glob("*.interval_list")
         Array[Int] scatterIndices=read_lines("indices.dat")
+        Array[File] bed_list=glob("*.bed")
     }
 }
 
@@ -716,3 +749,32 @@ CODE
         File Interval_list="~{pairName}.variantList.interval_list"        
         }
 }
+
+task CombineVariants {
+    input {
+        Array[File] input_vcfs
+        File ref_fasta
+        File ref_fai
+        File ref_dict
+        # runtime
+        String gatk_docker
+        String output_file
+        Int mem_gb= 6
+    }
+        Int diskGB = 4*(size(ref_fasta, "GB")+size(input_vcfs, "GB"))
+
+    command <<<
+        gatk GatherVcfs ${sep=' -I ' input_vcfs} -R ~{ref_fasta} -O ~{output_file}.vcf
+    >>>
+
+    runtime {
+        docker: gatk_docker
+        memory: "~{mem_gb} GB"
+        disk_space: "local-disk ~{diskGB} HDD"
+    }
+
+    output {
+    File merged_vcf = "~{output_file}.vcf"
+    }
+}
+
