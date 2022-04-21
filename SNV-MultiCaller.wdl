@@ -187,10 +187,9 @@ workflow runVariantCallers{
     }    
 
     if (runMode=="Paired"){
-        Array[File] pisces_norm = select_first([runpisces.normal_variants_same_site, "NULL"])
         call CombineVariants as piscesNormVCF {
             input:
-                input_vcfs = pisces_norm,
+                input_vcfs = runpisces.normal_variants_same_site
                 ref_fasta = refFasta,
                 ref_fai = refFastaIdx,
                 ref_dict = refFastaDict,
