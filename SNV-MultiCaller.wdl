@@ -230,6 +230,7 @@ workflow runVariantCallers{
             STRELKA2_INDELS=Strelka2Somatic_Task.strelka2SomaticIndels,
             PISCES_TUMOR=piscesTumVCF.merged_vcf,
             PISCES_NORMAL= piscesNormVCF.merged_vcf,
+            Vardict=vardictVCF.merged_vcf,
             ctrlName=ctrlName,
             caseName=caseName,
             refFastaDict=refFastaDict,
@@ -245,6 +246,7 @@ workflow runVariantCallers{
             M2=M2WF.filtered_vcf,
             PISCES_TUMOR=piscesTumVCF.merged_vcf,
             caseName=caseName,
+            Vardict=vardictVCF.merged_vcf,
             refFastaDict=refFastaDict,
             runMode=runMode
         } 
@@ -586,6 +588,7 @@ task Merge_Variant_Calls {
     File M2
     File? STRELKA2_INDELS
     File? STRELKA2_SNVS
+    File Vardict
     String pairName
     String caseName
     String? ctrlName
@@ -656,6 +659,7 @@ CODE
         PISCES_PASSED="~{pairName}.Pisces.call_stats.passed.vcf"
         PISCES_Tzip="~{pairName}.Pisces.call_stats.tum.vcf.gz"
         PISCES_Nzip="~{pairName}.Pisces.call_stats.norm.vcf.gz"
+        Vardict_PASSED="~{pairName}.Vardict.passed.vcf"
 
         MERGED_VCF="~{pairName}.M1_M2_S2_pisces.passed.merged.vcf.gz"
         RENAME_MERGED_VCF="~{pairName}.M1_M2_S2_pisces.passed.merged2.vcf.gz"
@@ -668,6 +672,9 @@ CODE
         echo "~{PISCES_TUMOR}.gz"
         mv "~{PISCES_TUMOR}.gz" $PISCES_Tzip
         tabix -p vcf $PISCES_Tzip
+
+        bgzip ~{Vardict}
+        tabix -p vcf ~{Vardict}.gz
 
 
     if [ ~{runMode} == "Paired" ];
@@ -684,11 +691,11 @@ CODE
         bgzip $PISCES_MERGEu
         tabix -p vcf $PISCES_MERGEu.gz    
          # gsub
-        echo -e "~{ctrlName}.M1\n~{caseName}.M1\n~{ctrlName}.P\n~{caseName}.P\n~{ctrlName}.M2\n~{caseName}.M2\n~{ctrlName}.S2\n~{caseName}.S2\n"> samples.txt       
+        echo -e "~{ctrlName}.M1\n~{caseName}.M1\n~{ctrlName}.P\n~{caseName}.P\n~{ctrlName}.M2\n~{caseName}.M2\n~{ctrlName}.S2\n~{caseName}.S2\n~{caseName}.Vardict\n~{ctrlName}.S2\n"> samples.txt       
         elif [ ~{runMode} == "TumOnly" ] ;
         then
         mv $PISCES_Tzip $PISCES_MERGEu.gz
-        echo -e "~{caseName}.M1\n~{caseName}.P\n~{caseName}.M2\n"> samples.txt
+        echo -e "~{caseName}.M1\n~{caseName}.P\n~{caseName}.M2\n~{caseName}.Vardict\n"> samples.txt
     fi;
 
         tabix -p vcf $PISCES_MERGEu.gz    
@@ -704,6 +711,9 @@ CODE
         bcftools view -f PASS ~{M2} > $MUTECT2_CS_PASSED
         bgzip $MUTECT2_CS_PASSED
         tabix -p vcf $MUTECT2_CS_PASSED.gz
+        bcftools -view -f PASS ~{Vardict}.gz > $Vardict_PASSED
+        bgzip $Vardict_PASSED
+        tabix -p vcf $Vardict_PASSED
 
 
         cat samples.txt
@@ -734,22 +744,22 @@ CODE
         bcftools concat -a $STRELKA2_SNV_REFORMATTED_VCF.gz $STRELKA2_INDEL_REFORMATTED_VCF.gz -O vcf -o $STRELKA2_MERGE
         tabix -p vcf $STRELKA2_MERGE
 
-        bcftools merge $MUTECT1_CS_VCF.gz $PISCES_PASSED.gz $MUTECT2_CS_PASSED.gz $STRELKA2_MERGE -O vcf -o $MERGED_VCF --force-samples
+        bcftools merge $MUTECT1_CS_VCF.gz $PISCES_PASSED.gz $MUTECT2_CS_PASSED.gz $STRELKA2_MERGE $Vardict_PASSED.gz -O vcf -o $MERGED_VCF --force-samples
     else 
-        bcftools merge $MUTECT1_CS_VCF.gz $PISCES_PASSED.gz $MUTECT2_CS_PASSED.gz -O vcf -o $MERGED_VCF --force-samples
+        bcftools merge $MUTECT1_CS_VCF.gz $PISCES_PASSED.gz $MUTECT2_CS_PASSED.gz $Vardict_PASSED.gz -O vcf -o $MERGED_VCF --force-samples
     fi;
 
         ## merge this first  $MUTECT1_CS_VCF.gz  ##  $PISCES_PASSED.gz $MUTECT2_CS_PASSED.gz 
 
         bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF
 
-        RENAME_MERGED_VCF_decomp="~{pairName}.M1_M2_S2_pisces.passed.merged2.vcf"
+        RENAME_MERGED_VCF_decomp="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.vcf"
 
         gunzip -c $RENAME_MERGED_VCF > $RENAME_MERGED_VCF_decomp
 
         tabix -p vcf $RENAME_MERGED_VCF
         # extract the variant locations for mutect2
-        python3 /usr/local/bin/vcf2mafbed.py $RENAME_MERGED_VCF_decomp "~{pairName}.M1_M2_S2_pisces.passed.merged2.maf" "~{pairName}.intervals.bed" 150 "~{runMode}"
+        python3 /usr/local/bin/vcf2mafbed.py $RENAME_MERGED_VCF_decomp "~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.maf" "~{pairName}.intervals.bed" 150 "~{runMode}"
 
         # run picard to change the input 
         java -jar /tmp/picard.jar BedToIntervalList -I "~{pairName}.intervals.bed" -O "~{pairName}.variantList.interval_list" -SD ~{refFastaDict}
@@ -766,10 +776,10 @@ CODE
         }
 
     output {
-        File MergedVcfGz="~{pairName}.M1_M2_S2_pisces.passed.merged2.vcf.gz"
-        File MergedVcf="~{pairName}.M1_M2_S2_pisces.passed.merged2.vcf"     
-        File MergedVcfIdx="~{pairName}.M1_M2_S2_pisces.passed.merged2.vcf.gz.tbi"
-        File MergedMaf="~{pairName}.M1_M2_S2_pisces.passed.merged2.maf"
+        File MergedVcfGz="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.vcf.gz"
+        File MergedVcf="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.vcf"     
+        File MergedVcfIdx="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.vcf.gz.tbi"
+        File MergedMaf="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.maf"
         File LocBed="~{pairName}.intervals.bed"
         File Interval_list="~{pairName}.variantList.interval_list"        
         }
