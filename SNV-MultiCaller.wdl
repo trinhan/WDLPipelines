@@ -229,7 +229,7 @@ workflow runVariantCallers{
             STRELKA2_SNVS=Strelka2Somatic_Task.strelka2SomaticSNVs,
             STRELKA2_INDELS=Strelka2Somatic_Task.strelka2SomaticIndels,
             PISCES_TUMOR=piscesTumVCF.merged_vcf,
-            PISCES_NORMAL= piscesNormVCF.merged_vcf,
+            PISCES_NORMAL=piscesNormVCF.merged_vcf,
             Vardict=vardictVCF.merged_vcf,
             ctrlName=ctrlName,
             caseName=caseName,
@@ -787,7 +787,7 @@ CODE
 
 task CombineVariants {
     input {
-        Array[File] input_vcfs
+        Array[File?] input_vcfs
         File ref_fasta
         File ref_fai
         File ref_dict
