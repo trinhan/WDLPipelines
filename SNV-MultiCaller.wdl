@@ -139,7 +139,9 @@ workflow runVariantCallers{
                 normalBamIndex=normalBamIdx,
                 tumorBamIndex=tumorBamIdx,
                 outputName=pairName,
-                bedFile=CallSomaticMutations_Prepare_Task.bed_list[idx]
+                bedFile=CallSomaticMutations_Prepare_Task.bed_list[idx],
+                tumorSampleName=caseName,
+                normalSampleName=ctrlName
         }
     }
 
