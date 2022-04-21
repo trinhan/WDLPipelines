@@ -4,6 +4,7 @@ version 1.0
 
 import "mutect2_wdl/mutect2.wdl" as Mutect2WF
 import "pisces_task.wdl" as pisces
+import "vardict.wdl" as vardict
 
 workflow runVariantCallers{
     input {
@@ -128,6 +129,18 @@ workflow runVariantCallers{
                 interval=CallSomaticMutations_Prepare_Task.bed_list[idx],
                 runMode=runMode    
         }
+
+        call vardict.VarDict as runvardict {
+            input:
+                referenceFasta=refFasta,
+                referenceFastaFai=refFastaIdx,
+                tumorBam=tumorBam,
+                normalBam=normalBam,
+                normalBamIndex=normalBamIdx,
+                tumorBamIndex=tumorBamIdx,
+                outputName=pairName,
+                bedFile=CallSomaticMutations_Prepare_Task.bed_list[idx]
+        }
     }
 
     call Mutect2WF.Mutect2 as M2WF {
@@ -159,6 +172,16 @@ workflow runVariantCallers{
             ref_dict = refFastaDict,
             gatk_docker = gatk_docker,
             output_file = "~{caseName}.Pisces_tumour"
+    }    
+
+    call CombineVariants as vardictVCF {
+        input:
+            input_vcfs = runvardict.vcfFile,
+            ref_fasta = refFasta,
+            ref_fai = refFastaIdx,
+            ref_dict = refFastaDict,
+            gatk_docker = gatk_docker,
+            output_file = "~{caseName}.vardict"
     }    
 
     if (runMode=="Paired"){
@@ -231,7 +254,7 @@ workflow runVariantCallers{
        File? strelka2SomaticIndels = Strelka2Somatic_Task.strelka2SomaticIndels
        # pisces outputs
        ##File? pisces_tum_phased=runpisces.tumor_unique_variants_phased
-       File? pisces_tum_unique=piscesTumVCF.merged_vcf
+       File pisces_tum_unique=piscesTumVCF.merged_vcf
        Array[File?] pisces_venn=runpisces.venn_zip
        File? pisces_norm_same_site=piscesNormVCF.merged_vcf
       ## File? pisces_tumor_variants=runpisces.tumor_variants
