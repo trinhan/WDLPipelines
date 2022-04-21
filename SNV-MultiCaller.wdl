@@ -260,7 +260,7 @@ workflow runVariantCallers{
        Array[File?] pisces_venn=runpisces.venn_zip
        File? pisces_norm_same_site=piscesNormVCF.merged_vcf
       ## File? pisces_tumor_variants=runpisces.tumor_variants
-
+        File vardict_out=vardictVCF.merged_vcf
       #  M2 workflow2 outputs
        File M2_filtered_vcf=M2WF.filtered_vcf
        File M2_filtered_vcf_idx=M2WF.filtered_vcf_idx
@@ -786,7 +786,7 @@ task CombineVariants {
         String output_file
         Int mem_gb= 6
     }
-        Int diskGB = 4*(size(ref_fasta, "GB")+size(input_vcfs, "GB"))
+        Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_vcfs, "GB"))
 
     command <<<
         gatk GatherVcfs ${sep=' -I ' input_vcfs} -R ~{ref_fasta} -O ~{output_file}.vcf
