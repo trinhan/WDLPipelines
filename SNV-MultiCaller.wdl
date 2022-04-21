@@ -189,7 +189,7 @@ workflow runVariantCallers{
     if (runMode=="Paired"){
         call CombineVariants as piscesNormVCF {
             input:
-                input_vcfs = runpisces.normal_variants_same_site
+                input_vcfs = runpisces.normal_variants_same_site,
                 ref_fasta = refFasta,
                 ref_fai = refFastaIdx,
                 ref_dict = refFastaDict,
