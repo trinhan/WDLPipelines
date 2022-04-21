@@ -798,7 +798,7 @@ task CombineVariants {
         Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_vcfs, "GB"))
 
     command <<<
-        gatk GatherVcfs ${sep=' -I ' input_vcfs} -R ~{ref_fasta} -O ~{output_file}.vcf
+        gatk GatherVcfs -I ~{sep=' -I ' input_vcfs} -R ~{ref_fasta} -O ~{output_file}.vcf
     >>>
 
     runtime {
