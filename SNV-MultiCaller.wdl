@@ -165,37 +165,26 @@ workflow runVariantCallers{
             m2_extra_args=m2_extra_args,
             gatk_docker=gatk_docker
         }
-       
-    call CombineVariants as piscesTumVCF {
+
+    call UpdateHeaders {
         input:
-            input_vcfs = runpisces.tumor_unique_variants,
+            input_vcfsPT = runpisces.tumor_unique_variants,
+            input_vcfsPN = runpisces.normal_variants_same_site,
+            input_vcfsVar =runvardict.vcfFile,
+            ref_dict=refFastaDict,
+            gatk_docker = gatk_docker
+    }
+
+    call CombineVariants {
+        input:
+            input_PT= UpdateHeaders.PThead_vcf,
+            input_PN=UpdateHeaders.PNhead_vcf,
+            input_VD=UpdateHeaders.VDhead_vcf,
             ref_fasta = refFasta,
             ref_fai = refFastaIdx,
             ref_dict = refFastaDict,
             gatk_docker = gatk_docker,
-            output_file = "~{caseName}.Pisces_tumour"
-    }    
-
-    call CombineVariants as vardictVCF {
-        input:
-            input_vcfs = runvardict.vcfFile,
-            ref_fasta = refFasta,
-            ref_fai = refFastaIdx,
-            ref_dict = refFastaDict,
-            gatk_docker = gatk_docker,
-            output_file = "~{caseName}.vardict"
-    }    
-
-    if (runMode=="Paired"){
-        call CombineVariants as piscesNormVCF {
-            input:
-                input_vcfs = runpisces.normal_variants_same_site,
-                ref_fasta = refFasta,
-                ref_fai = refFastaIdx,
-                ref_dict = refFastaDict,
-                gatk_docker = gatk_docker,
-                output_file = "~{caseName}.Pisces_normal"
-        }
+            sample_name = caseName
     }    
 
     if (runS2){
@@ -217,8 +206,7 @@ workflow runVariantCallers{
     }
     }
 
-    ##File pisces_tumor=select_first([runpisces.tumor_unique_variants, runpisces.tumor_variants])
-    
+
     if (runMode=="Paired") {
         call Merge_Variant_Calls as PairedCall {
             input:
@@ -227,9 +215,9 @@ workflow runVariantCallers{
             M2=M2WF.filtered_vcf,
             STRELKA2_SNVS=Strelka2Somatic_Task.strelka2SomaticSNVs,
             STRELKA2_INDELS=Strelka2Somatic_Task.strelka2SomaticIndels,
-            PISCES_TUMOR=piscesTumVCF.merged_vcf,
-            PISCES_NORMAL=piscesNormVCF.merged_vcf,
-            Vardict=vardictVCF.merged_vcf,
+            PISCES_TUMOR=CombineVariants.merged_vcfPT,
+            PISCES_NORMAL=CombineVariants.merged_vcfPN,
+            Vardict=CombineVariants.merged_vcfVD,
             ctrlName=ctrlName,
             caseName=caseName,
             refFastaDict=refFastaDict,
@@ -243,9 +231,9 @@ workflow runVariantCallers{
             pairName=pairName,
             mutect1_cs=Mutect1_Task.mutect1_cs,
             M2=M2WF.filtered_vcf,
-            PISCES_TUMOR=piscesTumVCF.merged_vcf,
+            PISCES_TUMOR=CombineVariants.merged_vcfPT,
             caseName=caseName,
-            Vardict=vardictVCF.merged_vcf,
+            Vardict=CombineVariants.merged_vcfVD,
             refFastaDict=refFastaDict,
             runMode=runMode
         } 
@@ -257,11 +245,11 @@ workflow runVariantCallers{
        File? strelka2SomaticIndels = Strelka2Somatic_Task.strelka2SomaticIndels
        # pisces outputs
        ##File? pisces_tum_phased=runpisces.tumor_unique_variants_phased
-       File pisces_tum_unique=piscesTumVCF.merged_vcf
+       File pisces_tum_unique=CombineVariants.merged_vcfPT
        Array[File?] pisces_venn=runpisces.venn_zip
-       File? pisces_norm_same_site=piscesNormVCF.merged_vcf
+       File? pisces_norm_same_site=CombineVariants.merged_vcfPN
       ## File? pisces_tumor_variants=runpisces.tumor_variants
-        File vardict_out=vardictVCF.merged_vcf
+        File vardict_out=CombineVariants.merged_vcfVD
       #  M2 workflow2 outputs
        File M2_filtered_vcf=M2WF.filtered_vcf
        File M2_filtered_vcf_idx=M2WF.filtered_vcf_idx
@@ -786,19 +774,30 @@ CODE
 
 task CombineVariants {
     input {
-        Array[File] input_vcfs
+        Array[File] input_PT
+        Array[File]? input_PN
+        Array[File] input_VD
         File ref_fasta
         File ref_fai
         File ref_dict
         # runtime
         String gatk_docker
-        String output_file
+        String sample_name
         Int mem_gb= 6
     }
-        Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_vcfs, "GB"))
+        Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_PT, "GB")+size(input_VD, "GB"))
+        String runNorm = if defined(input_PN) then "1" else "0"
 
     command <<<
-        gatk GatherVcfs -I ~{sep=' -I ' input_vcfs} -R ~{ref_fasta} -O ~{output_file}.vcf
+
+        gatk GatherVcfs -I ~{sep=' -I ' input_PT} -R ~{ref_fasta} -O ~{sample_name}.PiscesTum.vcf
+        gatk GatherVcfs -I ~{sep=' -I ' input_VD} -R ~{ref_fasta} -O ~{sample_name}.VD.vcf
+
+    if [ ~{runNorm} -eq "1" ];
+        then
+        gatk GatherVcfs -I ~{sep=' -I ' input_PN} -R ~{ref_fasta} -O ~{sample_name}.PiscesNorm.vcf
+    fi
+
     >>>
 
     runtime {
@@ -808,7 +807,76 @@ task CombineVariants {
     }
 
     output {
-    File merged_vcf = "~{output_file}.vcf"
+    File merged_vcfPT = "~{sample_name}.PiscesTum.vcf"
+    File? merged_vcfPN = "~{sample_name}.PiscesNorm.vcf"
+    File merged_vcfVD = "~{sample_name}.VD.vcf"
+    }
+}
+
+task UpdateHeaders {
+    input {
+        Array[File] input_vcfsPT
+        Array[File?] input_vcfsPN
+        Array[File] input_vcfsVar
+        File ref_dict
+        # runtime
+        String gatk_docker
+        Int mem_gb= 6
+    }
+        Int diskGB = 4*ceil(size(ref_dict, "GB")+size(input_vcfsPT, "GB")+size(input_vcfsVar, "GB"))
+        String runNorm = if defined(input_vcfsPN) then "1" else "0"
+
+    command <<<
+
+        # do this for Pisces Normal
+        for i in ~{sep=' ' input_vcfsPT}; 
+        do 
+         newstr=`basename $i`
+         gatk UpdateVCFSequenceDictionary \
+            -V $i \
+            --source-dictionary ~{ref_dict} \
+            --output $newstr.reheaderPT.vcf \
+            --replace true
+        done
+
+        # vardict
+
+        for i in ~{sep=' ' input_vcfsVar}; 
+        do 
+         newstr=`basename $i`
+         gatk UpdateVCFSequenceDictionary \
+            -V $i \
+            --source-dictionary ~{ref_dict} \
+            --output $newstr.reheaderVD.vcf \
+            --replace true
+        done
+
+    if [ ~{runNorm} -eq "1" ];
+        then
+        # do this for Pisces Normal
+        for i in ~{sep=' ' input_vcfsPT}; 
+        do 
+         newstr=`basename $i`
+         gatk UpdateVCFSequenceDictionary \
+            -V $i \
+            --source-dictionary ~{ref_dict} \
+            --output $newstr.reheaderPT.vcf \
+            --replace true
+        done
+    fi
+
+    >>>
+
+    runtime {
+        docker: gatk_docker
+        memory: "~{mem_gb} GB"
+        disk_space: "local-disk ~{diskGB} HDD"
+    }
+
+    output {
+    Array[File] PThead_vcf = glob("*.reheaderPT.vcf")
+    Array[File]? PNhead_vcf = glob("*.reheaderPN.vcf")
+    Array[File] VDhead_vcf = glob("*.reheaderVD.vcf")
     }
 }
 
