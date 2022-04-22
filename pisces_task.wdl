@@ -193,7 +193,7 @@ task runpisces {
     output {
         File tumor_unique_variants= select_first(["~{tumPrefix}.somatic.unique.recal.vcf", "somatic_${pairName}/~{tumPrefix}.recal.vcf" ])
         File? tumor_unique_variants_phased= "~{tumPrefix}.somatic.unique.recal.phased.vcf" 
-        File? normal_variants_same_site= "variant2_~{pairName}/~{normPrefix}.genome.recal.vcf"
+        File normal_variants_same_site= select_first(["variant2_~{pairName}/~{normPrefix}.genome.recal.vcf", "NULL"])
         File? normal_variants_recal =  "somatic_${pairName}/~{normPrefix}.recal.vcf" 
         File? normal_variants =  "somatic_~{pairName}/~{normPrefix}.vcf" 
         File? venn_zip="~{pairName}_venn_pisces.tar.gz"

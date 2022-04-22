@@ -185,7 +185,8 @@ workflow runVariantCallers{
             ref_fai = refFastaIdx,
             ref_dict = refFastaDict,
             gatk_docker = gatk_docker,
-            sample_name = caseName
+            sample_name = caseName,
+            runMode=runMode
     }    
 
     if (runS2){
@@ -248,7 +249,7 @@ workflow runVariantCallers{
        ##File? pisces_tum_phased=runpisces.tumor_unique_variants_phased
        File pisces_tum_unique=CombineVariants.merged_vcfPT
        Array[File?] pisces_venn=runpisces.venn_zip
-       File? pisces_norm_same_site=CombineVariants.merged_vcfPN
+       File pisces_norm_same_site=select_first([CombineVariants.merged_vcfPN, "NULL"])
       ## File? pisces_tumor_variants=runpisces.tumor_variants
         File vardict_out=CombineVariants.merged_vcfVD
       #  M2 workflow2 outputs
@@ -776,7 +777,7 @@ CODE
 task CombineVariants {
     input {
         Array[File] input_PT
-        Array[File]? input_PN
+        Array[File] input_PN
         Array[File] input_VD
         File ref_fasta
         File ref_fai
@@ -785,9 +786,10 @@ task CombineVariants {
         String gatk_docker
         String sample_name
         Int mem_gb= 6
+        String runMode
     }
         Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_PT, "GB")+size(input_VD, "GB"))
-        String runNorm = if defined(input_PN) then "1" else "0"
+        String runNorm = if (runMode=="Paired") then "1" else "0"
 
     command <<<
 
@@ -809,7 +811,7 @@ task CombineVariants {
 
     output {
     File merged_vcfPT = "~{sample_name}.PiscesTum.vcf"
-    File? merged_vcfPN = "~{sample_name}.PiscesNorm.vcf"
+    File merged_vcfPN = "~{sample_name}.PiscesNorm.vcf"
     File merged_vcfVD = "~{sample_name}.VD.vcf"
     }
 }
@@ -817,7 +819,7 @@ task CombineVariants {
 task UpdateHeaders {
     input {
         Array[File] input_vcfsPT
-        Array[File?] input_vcfsPN
+        Array[File] input_vcfsPN
         Array[File] input_vcfsVar
         File ref_dict
         # runtime
@@ -882,7 +884,7 @@ task UpdateHeaders {
 
     output {
     Array[File] PThead_vcf = glob("*.reheaderPT.vcf")
-    Array[File]? PNhead_vcf = glob("*.reheaderPN.vcf")
+    Array[File] PNhead_vcf = glob("*.reheaderPN.vcf")
     Array[File] VDhead_vcf = glob("*.reheaderVD.vcf")
     }
 }
