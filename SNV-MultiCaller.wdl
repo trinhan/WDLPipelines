@@ -172,7 +172,8 @@ workflow runVariantCallers{
             input_vcfsPN = runpisces.normal_variants_same_site,
             input_vcfsVar =runvardict.vcfFile,
             ref_dict=refFastaDict,
-            gatk_docker = gatk_docker
+            gatk_docker = gatk_docker,
+            runMode=runMode
     }
 
     call CombineVariants {
@@ -822,9 +823,10 @@ task UpdateHeaders {
         # runtime
         String gatk_docker
         Int mem_gb= 6
+        String runMode
     }
         Int diskGB = 4*ceil(size(ref_dict, "GB")+size(input_vcfsPT, "GB")+size(input_vcfsVar, "GB"))
-        String runNorm = if defined(input_vcfsPN) then "1" else "0"
+        String runNorm = if (runMode=="Paired") then "1" else "0"
 
     command <<<
 
