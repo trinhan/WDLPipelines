@@ -829,28 +829,32 @@ task UpdateHeaders {
     command <<<
 
         # do this for Pisces Normal
+        count=0
         for i in ~{sep=' ' input_vcfsPT}; 
         do 
          newstr=`basename $i`
          gatk UpdateVCFSequenceDictionary \
             -V $i \
             --source-dictionary ~{ref_dict} \
-            --output $newstr.reheaderPT.vcf \
+            --output $newstr.$count.reheaderPT.vcf \
             --replace true
+        count+=1
         done
 
         # vardict
-
+        count=0
         for i in ~{sep=' ' input_vcfsVar}; 
         do 
          newstr=`basename $i`
          gatk UpdateVCFSequenceDictionary \
             -V $i \
             --source-dictionary ~{ref_dict} \
-            --output $newstr.reheaderVD.vcf \
+            --output $newstr.$count.reheaderVD.vcf \
             --replace true
+         count+=1
         done
 
+        count=0
     if [ ~{runNorm} -eq "1" ];
         then
         # do this for Pisces Normal
@@ -860,8 +864,9 @@ task UpdateHeaders {
          gatk UpdateVCFSequenceDictionary \
             -V $i \
             --source-dictionary ~{ref_dict} \
-            --output $newstr.reheaderPT.vcf \
+            --output $newstr.$count.reheaderPT.vcf \
             --replace true
+          count+=1
         done
     fi
 
