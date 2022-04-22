@@ -700,10 +700,9 @@ CODE
         bcftools view -f PASS ~{M2} > $MUTECT2_CS_PASSED
         bgzip $MUTECT2_CS_PASSED
         tabix -p vcf $MUTECT2_CS_PASSED.gz
-        bcftools -view -f PASS ~{Vardict}.gz > $Vardict_PASSED
+        bcftools view -f PASS ~{Vardict}.gz > $Vardict_PASSED
         bgzip $Vardict_PASSED
-        tabix -p vcf $Vardict_PASSED
-
+        tabix -p vcf $Vardict_PASSED.gz
 
         cat samples.txt
 
