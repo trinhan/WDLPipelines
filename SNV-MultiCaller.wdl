@@ -860,13 +860,13 @@ task UpdateHeaders {
     if [ ~{runNorm} -eq "1" ];
         then
         # do this for Pisces Normal
-        for i in ~{sep=' ' input_vcfsPT}; 
+        for i in ~{sep=' ' input_vcfsPN}; 
         do 
          newstr=`basename $i`
          gatk UpdateVCFSequenceDictionary \
             -V $i \
             --source-dictionary ~{ref_dict} \
-            --output $newstr.$count.reheaderPT.vcf \
+            --output $newstr.$count.reheaderPN.vcf \
             --replace true
           count+=1
         done
