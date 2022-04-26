@@ -650,8 +650,8 @@ CODE
         PISCES_Nzip="~{pairName}.Pisces.call_stats.norm.vcf.gz"
         Vardict_PASSED="~{pairName}.Vardict.passed.vcf"
 
-        MERGED_VCF="~{pairName}.M1_M2_S2_pisces.passed.merged.vcf.gz"
-        RENAME_MERGED_VCF="~{pairName}.M1_M2_S2_pisces.passed.merged2.vcf.gz"
+        MERGED_VCF="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged.vcf.gz"
+        RENAME_MERGED_VCF="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.vcf.gz"
 
         echo 'merge pisces files'
 
@@ -680,7 +680,7 @@ CODE
         bgzip $PISCES_MERGEu
         tabix -p vcf $PISCES_MERGEu.gz    
          # gsub
-        echo -e "~{ctrlName}.M1\n~{caseName}.M1\n~{ctrlName}.P\n~{caseName}.P\n~{ctrlName}.M2\n~{caseName}.M2\n~{ctrlName}.S2\n~{caseName}.S2\n~{caseName}.Vardict\n~{ctrlName}.S2\n"> samples.txt       
+        echo -e "~{ctrlName}.M1\n~{caseName}.M1\n~{ctrlName}.P\n~{caseName}.P\n~{ctrlName}.M2\n~{caseName}.M2\n~{ctrlName}.S2\n~{caseName}.S2\n~{caseName}.Vardict\n~{ctrlName}.Vardict\n"> samples.txt       
         elif [ ~{runMode} == "TumOnly" ] ;
         then
         mv $PISCES_Tzip $PISCES_MERGEu.gz
