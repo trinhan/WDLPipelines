@@ -80,3 +80,6 @@ workflows:
   - name: GATKSelectVariants
     subclass: WDL
     primaryDescriptorPath: /GATKselectVariants.wdl
+  - name: CNVkit
+    subclass: WDL
+    primaryDescriptorPath: /cnvkit.wdl
