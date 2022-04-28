@@ -29,7 +29,9 @@ task VarDict {
         String javaXmx = "15G"
         Int threads = 4
         String memory = "16"
-        String dockerImage = "quay.io/biocontainers/vardict-java:1.5.8--1"
+        String dockerImage = "quay.io/biocontainers/vardict-java:1.8.3--hdfd78af_0"
+        Int? opt_preempt
+        Int? timeMinutes = 350
     }
         Int diskGB=3*ceil(size(tumorBam, "GB")+size(normalBam, "GB")+size(referenceFasta, "GB"))
 
@@ -70,6 +72,8 @@ task VarDict {
         memory: "${memory} GB"
         docker: dockerImage
         disks: "local-disk ${diskGB} HDD"
+        preemptible: select_first([opt_preempt, 1])
+        time_minutes: timeMinutes
     }
 
     parameter_meta {
