@@ -100,6 +100,7 @@ task cnvkit_coverage {
         File input_bai
         File target_bed
         File? antitarget_bed
+        File? mappable
         String docker_image = "etal/cnvkit:0.9.8"
         Int memory_size = 16
         Int threads = 4
@@ -116,7 +117,7 @@ task cnvkit_coverage {
 
         if [ ~{createAntitarget} -eq "1" ];
         then 
-            cnvkit.py antitarget ~{target_bed} -g data/access-5kb-mappable.hg19.bed -o my_antitargets.bed
+            cnvkit.py antitarget ~{target_bed} -g ~{mappable} -o my_antitargets.bed
             cnvkit.py coverage ~{input_bam} my_antitargets.bed -o ~{output_antitarget_cnn} -p ~{threads}
         else 
             cnvkit.py coverage ~{input_bam} {antitarget_bed} -o ~{output_antitarget_cnn} -p ~{threads}
