@@ -19,7 +19,7 @@ task VarDict {
         Boolean outputAllVariantsAtSamePosition = true
         Float mappingQuality = 20
         Int minimumTotalDepth = 8
-        Int minimumVariantDepth = 4
+        Int minimumVariantDepth = 5
         Float minimumAlleleFrequency = 0.05
         Int chromosomeColumn = 1
         Int startColumn = 2
