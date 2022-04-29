@@ -6,12 +6,16 @@ workflow cnvkit {
 	File input_bam
 	File input_bai
 	File? reference_cnn
+	File target_bed
+	File? antitarget_bed
     }
 
     call cnvkit_coverage {
 	input:
-	input_bam = input_bam,
-	input_bai = input_bai
+		input_bam = input_bam,
+		input_bai = input_bai,
+		target_bed=target_bed,
+		antitarget_bed=antitarget_bed
     }
 
     if (defined(reference_cnn)) {
@@ -35,7 +39,8 @@ workflow cnvkit {
 	File? cnvkit_diagram = cnvkit_analysis.output_diagram	    
 	File? cnvkit_breaks = cnvkit_analysis.output_breaks	    
 	File? cnvkit_genemetrics = cnvkit_analysis.output_genemetrics	    
-	File? cnvkit_metrics = cnvkit_analysis.output_metrics	    
+	File? cnvkit_metrics = cnvkit_analysis.output_metrics
+	File? antitarget_bedout = cnvkit_coverage.antitarget_bedOut 
     }
 
 }	 
@@ -46,7 +51,7 @@ task cnvkit_coverage {
 	File input_bam
 	File input_bai
  	File target_bed
- 	File antitarget_bed
+ 	File? antitarget_bed
 	String docker_image = "etal/cnvkit:0.9.8"
 	Int memory_size = 16
 	Int threads = 4
@@ -56,15 +61,27 @@ task cnvkit_coverage {
     String base_name = basename(input_bam, ".bam")
     String output_target_cnn = base_name + ".targetcoverage.cnn"
     String output_antitarget_cnn = base_name + ".antitargetcoverage.cnn"
+    Boolean createAntitarget = if defined(antitarget_bed) then 0 else 1
     
     command {
 	cnvkit.py coverage ${input_bam} ${target_bed} -o ${output_target_cnn} -p ${threads}
-	cnvkit.py coverage ${input_bam} ${antitarget_bed} -o ${output_antitarget_cnn} -p ${threads}
+
+	if [ ~{createAntitarget} -eq 1 ];
+	then 
+		cnvkit.py antitarget ~{target_bed} -g data/access-5kb-mappable.hg19.bed -o my_antitargets.bed
+		cnvkit.py coverage ${input_bam} my_antitargets.bed -o ${output_antitarget_cnn} -p ${threads}
+	else 
+		cnvkit.py coverage ${input_bam} ~{antitarget_bed} -o ${output_antitarget_cnn} -p ${threads}
+	fi
+
+
+	
     }
 
     output {
  	File output_target_cnn = "${output_target_cnn}"
  	File output_antitarget_cnn = "${output_antitarget_cnn}"
+ 	File? antitarget_bedOut = "my_antitargets.bed"
     }
     
     Int disk_size = 2 * ceil(size(input_bam, "GB"))
