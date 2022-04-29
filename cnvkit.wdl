@@ -10,7 +10,7 @@ workflow cnvkit {
     }
 
     call cnvkit_coverage {
-    	input:
+        input:
             input_bam = input_bam,
             input_bai = input_bai,
             target_bed=target_bed,
@@ -94,7 +94,6 @@ task cnvkit_analysis {
     disks: "local-disk ${disk_size} HDD"
     }
 }
-
 
 task cnvkit_coverage {
     input {
