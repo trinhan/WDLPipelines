@@ -46,7 +46,6 @@ workflow cnvkit {
 }     
 
 task cnvkit_coverage {
-
     input {
     File input_bam
     File input_bai
@@ -73,9 +72,6 @@ task cnvkit_coverage {
     else 
         cnvkit.py coverage ${input_bam} ~{antitarget_bed} -o ${output_antitarget_cnn} -p ${threads}
     fi
-
-
-    
     }
 
     output {
