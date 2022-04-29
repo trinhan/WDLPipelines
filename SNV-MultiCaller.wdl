@@ -463,31 +463,24 @@ task CallSomaticMutations_Prepare_Task {
         refFastaDict : "FASTA file dictionary for the reference genome"
     }
 
-    command <<<
-
+    command {
         set -euxo pipefail
         seq 0 $((~{nWay}-1)) > indices.dat
-
         # create a list of intervalfiles
-
         mkdir intervalfolder
-        gatk SplitIntervals -R ${refFasta} -L ~{targetIntervals} --scatter-count ~{nWay} -O intervalfolder
+        gatk SplitIntervals -R ~{refFasta} -L ~{targetIntervals} --scatter-count ~{nWay} --subdivision-mode BALANCING_WITHOUT_INTERVAL_SUBDIVISION -O intervalfolder
         cp intervalfolder/*.interval_list .
 
         ## make the list of bed files
         mkdir bedfolder
-
         for file in *.interval_list;
         do 
             gatk IntervalListToBed -I $file -O bedfolder/$file.bed
-            #small hack to subtract 1 from the bed file
-            awk 'BEGIN { FS="\t" } {print $0,$1,$2-1, $3 $4 $5}' bedfolder/$file.bed > bedfolder/$file.mod2.bed 
+            ##small hack to subtract 1 from the bed file
         done 
 
         cp bedfolder/*.bed .
-
-
-    >>>
+    }
 
     runtime {
         docker         : gatk_docker
@@ -499,7 +492,7 @@ task CallSomaticMutations_Prepare_Task {
     output {
         Array[File] interval_files=glob("*.interval_list")
         Array[Int] scatterIndices=read_lines("indices.dat")
-        Array[File] bed_list=glob("*.mod2.bed")
+        Array[File] bed_list=glob("*.mod.bed")
     }
 }
 
