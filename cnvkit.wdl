@@ -1,5 +1,5 @@
 version 1.0
-
+## this is a workflow to run cnvkit
 workflow cnvkit {
     input {
         File input_bam
@@ -73,7 +73,6 @@ task cnvkit_analysis {
         cnvkit.py breaks ~{output_cnr} ~{output_cns} -o ~{output_breaks}
         cnvkit.py genemetrics ~{output_cnr} -s ~{output_cns} -o ~{output_genemetrics} -x male
         cnvkit.py metrics ~{output_cnr} -s ~{output_cns} -o ~{output_metrics}
-    
     >>>
 
     output {
