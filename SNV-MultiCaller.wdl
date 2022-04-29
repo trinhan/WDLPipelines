@@ -447,9 +447,7 @@ task CallSomaticMutations_Prepare_Task {
     File refFasta
     File refFastaIdx
     File refFastaDict
-
     String nWay = "10"
-
     # RUNTIME INPUT PARAMS
     String preemptible = "1"
     String diskGB_boot = "15"
@@ -468,13 +466,12 @@ task CallSomaticMutations_Prepare_Task {
     command <<<
 
         set -euxo pipefail
-
-        seq 0 $((${nWay}-1)) > indices.dat
+        seq 0 $((~{nWay}-1)) > indices.dat
 
         # create a list of intervalfiles
 
         mkdir intervalfolder
-        gatk SplitIntervals -R ${refFasta} -L ${targetIntervals} --scatter-count ${nWay} -O intervalfolder
+        gatk SplitIntervals -R ${refFasta} -L ~{targetIntervals} --scatter-count ~{nWay} -O intervalfolder
         cp intervalfolder/*.interval_list .
 
         ## make the list of bed files
