@@ -65,33 +65,33 @@ task cnvkit_analysis {
         String output_metrics = base_name + ".metrics.txt"
 
     command <<<
-        cnvkit.py fix ${input_target_cnn} ${input_antitarget_cnn} ${reference_cnn} -o ${output_cnr}
-        cnvkit.py segment ${output_cnr} -o ${output_cns} -p ${threads}
-        cnvkit.py export seg ${output_cns} -o ${output_seg}
-        cnvkit.py scatter ${output_cnr} -s ${output_cns} -o ${output_scatter}
-        cnvkit.py diagram ${output_cnr} -s ${output_cns} -o ${output_diagram} -x male
-        cnvkit.py breaks ${output_cnr} ${output_cns} -o ${output_breaks}
-        cnvkit.py genemetrics ${output_cnr} -s ${output_cns} -o ${output_genemetrics} -x male
-        cnvkit.py metrics ${output_cnr} -s ${output_cns} -o ${output_metrics}
+        cnvkit.py fix ~{input_target_cnn} ~{input_antitarget_cnn} ~{reference_cnn} -o ~{output_cnr}
+        cnvkit.py segment ~{output_cnr} -o ~{output_cns} -p ~{threads}
+        cnvkit.py export seg ~{output_cns} -o ~{output_seg}
+        cnvkit.py scatter ~{output_cnr} -s ~{output_cns} -o ~{output_scatter}
+        cnvkit.py diagram ~{output_cnr} -s ~{output_cns} -o ~{output_diagram} -x male
+        cnvkit.py breaks ~{output_cnr} ~{output_cns} -o ~{output_breaks}
+        cnvkit.py genemetrics ~{output_cnr} -s ~{output_cns} -o ~{output_genemetrics} -x male
+        cnvkit.py metrics ~{output_cnr} -s ~{output_cns} -o ~{output_metrics}
     
     >>>
 
     output {
-        File output_cnr = "${output_cnr}"
-        File output_cns = "${output_cns}"
-        File output_seg = "${output_seg}"
-        File output_scatter = "${output_scatter}" 
-        File output_diagram = "${output_diagram}"
-        File output_breaks = "${output_breaks}" 
-        File output_genemetrics = "${output_genemetrics}" 
-        File output_metrics = "${output_metrics}" 
+        File output_cnr = "~{output_cnr}"
+        File output_cns = "~{output_cns}"
+        File output_seg = "~{output_seg}"
+        File output_scatter = "~{output_scatter}" 
+        File output_diagram = "~{output_diagram}"
+        File output_breaks = "~{output_breaks}" 
+        File output_genemetrics = "~{output_genemetrics}" 
+        File output_metrics = "~{output_metrics}" 
     }
 
     runtime {
         preemptible: preemptible_tries
         docker: docker_image
-        memory: "${memory_size} GB"
-        disks: "local-disk ${disk_size} HDD"
+        memory: "~{memory_size} GB"
+        disks: "local-disk ~{disk_size} HDD"
     }
 }
 
@@ -113,26 +113,26 @@ task cnvkit_coverage {
         Int disk_size = 2 * ceil(size(input_bam, "GB"))
 
     command <<<
-        cnvkit.py coverage ${input_bam} ${target_bed} -o ${output_target_cnn} -p ${threads}
+        cnvkit.py coverage ~{input_bam} ~{target_bed} -o ~{output_target_cnn} -p ~{threads}
 
         if [ ~{createAntitarget} -eq 1 ];
         then 
             cnvkit.py antitarget ~{target_bed} -g data/access-5kb-mappable.hg19.bed -o my_antitargets.bed
-            cnvkit.py coverage ${input_bam} my_antitargets.bed -o ${output_antitarget_cnn} -p ${threads}
+            cnvkit.py coverage ~{input_bam} my_antitargets.bed -o ~{output_antitarget_cnn} -p ~{threads}
         else 
-            cnvkit.py coverage ${input_bam} ~{antitarget_bed} -o ${output_antitarget_cnn} -p ${threads}
+            cnvkit.py coverage ~{input_bam} {antitarget_bed} -o ~{output_antitarget_cnn} -p ~{threads}
         fi
     >>>
 
     output {
-        File output_target_cnn = "${output_target_cnn}"
-        File output_antitarget_cnn = "${output_antitarget_cnn}"
+        File output_target_cnn = "~{output_target_cnn}"
+        File output_antitarget_cnn = "~{output_antitarget_cnn}"
         File? antitarget_bedOut = "my_antitargets.bed"
     }
     runtime {
         preemptible: preemptible_tries
         docker: docker_image
-        memory: "${memory_size} GB"
-        disks: "local-disk ${disk_size} HDD"
+        memory: "~{memory_size} GB"
+        disks: "local-disk ~{disk_size} HDD"
     }
 }
