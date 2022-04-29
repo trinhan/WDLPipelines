@@ -97,23 +97,23 @@ task cnvkit_analysis {
 
 task cnvkit_coverage {
     input {
-        File input_bam
-        File input_bai
-        File target_bed
-        File? antitarget_bed
-        String docker_image = "etal/cnvkit:0.9.8"
-        Int memory_size = 16
-        Int threads = 4
-        Int preemptible_tries = 3
+    File input_bam
+    File input_bai
+    File target_bed
+    File? antitarget_bed
+    String docker_image = "etal/cnvkit:0.9.8"
+    Int memory_size = 16
+    Int threads = 4
+    Int preemptible_tries = 3
     }
-        String base_name = basename(input_bam, ".bam")
-        String output_target_cnn = base_name + ".targetcoverage.cnn"
-        String output_antitarget_cnn = base_name + ".antitargetcoverage.cnn"
-        Boolean createAntitarget = if defined(antitarget_bed) then 0 else 1
-        Int disk_size = 2 * ceil(size(input_bam, "GB"))
+    String base_name = basename(input_bam, ".bam")
+    String output_target_cnn = base_name + ".targetcoverage.cnn"
+    String output_antitarget_cnn = base_name + ".antitargetcoverage.cnn"
+    Boolean createAntitarget = if defined(antitarget_bed) then 0 else 1
+    Int disk_size = 2 * ceil(size(input_bam, "GB"))
 
     command <<<
-    cnvkit.py coverage ${input_bam} ${target_bed} -o ${output_target_cnn} -p ${threads}
+        cnvkit.py coverage ${input_bam} ${target_bed} -o ${output_target_cnn} -p ${threads}
 
     if [ ~{createAntitarget} -eq 1 ];
     then 
