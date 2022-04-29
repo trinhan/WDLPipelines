@@ -1,7 +1,6 @@
 version 1.0
 
 workflow cnvkit {
-
     input {
     File input_bam
     File input_bai
@@ -11,22 +10,20 @@ workflow cnvkit {
     }
 
     call cnvkit_coverage {
-    input:
+    	input:
         input_bam = input_bam,
         input_bai = input_bai,
         target_bed=target_bed,
         antitarget_bed=antitarget_bed
     }
 
-    if (defined(reference_cnn)) {
-    
+    if (defined(reference_cnn)) {  
     call cnvkit_analysis {
         input:
         input_target_cnn = cnvkit_coverage.output_target_cnn,
         input_antitarget_cnn = cnvkit_coverage.output_antitarget_cnn,
         reference_cnn = reference_cnn
     }
-    
     }
 
     output {
@@ -42,15 +39,14 @@ workflow cnvkit {
     File? cnvkit_metrics = cnvkit_analysis.output_metrics
     File? antitarget_bedout = cnvkit_coverage.antitarget_bedOut 
     }
-
 }     
 
 task cnvkit_coverage {
     input {
     File input_bam
     File input_bai
-     File target_bed
-     File? antitarget_bed
+    File target_bed
+    File? antitarget_bed
     String docker_image = "etal/cnvkit:0.9.8"
     Int memory_size = 16
     Int threads = 4
@@ -88,11 +84,9 @@ task cnvkit_coverage {
     memory: "${memory_size} GB"
     disks: "local-disk ${disk_size} HDD"
     }
-
 }
 
 task cnvkit_analysis {
-
     input {
     File input_target_cnn
     File input_antitarget_cnn
@@ -143,5 +137,4 @@ task cnvkit_analysis {
     memory: "${memory_size} GB"
     disks: "local-disk ${disk_size} HDD"
     }
-
 }
