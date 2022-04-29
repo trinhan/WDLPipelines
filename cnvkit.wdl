@@ -108,13 +108,13 @@ task cnvkit_coverage {
         String base_name = basename(input_bam, ".bam")
         String output_target_cnn = base_name + ".targetcoverage.cnn"
         String output_antitarget_cnn = base_name + ".antitargetcoverage.cnn"
-        Boolean createAntitarget = if defined(antitarget_bed) then 0 else 1
+        String createAntitarget = if defined(antitarget_bed) then "0" else "1"
         Int disk_size = 2 * ceil(size(input_bam, "GB"))
 
     command <<<
         cnvkit.py coverage ~{input_bam} ~{target_bed} -o ~{output_target_cnn} -p ~{threads}
 
-        if [ ~{createAntitarget} -eq true ];
+        if [ ~{createAntitarget} -eq "1" ];
         then 
             cnvkit.py antitarget ~{target_bed} -g data/access-5kb-mappable.hg19.bed -o my_antitargets.bed
             cnvkit.py coverage ~{input_bam} my_antitargets.bed -o ~{output_antitarget_cnn} -p ~{threads}
