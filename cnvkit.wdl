@@ -114,7 +114,7 @@ task cnvkit_coverage {
     command <<<
         cnvkit.py coverage ~{input_bam} ~{target_bed} -o ~{output_target_cnn} -p ~{threads}
 
-        if [ ~{createAntitarget} -eq 1 ];
+        if [ ~{createAntitarget} -eq true ];
         then 
             cnvkit.py antitarget ~{target_bed} -g data/access-5kb-mappable.hg19.bed -o my_antitargets.bed
             cnvkit.py coverage ~{input_bam} my_antitargets.bed -o ~{output_antitarget_cnn} -p ~{threads}
