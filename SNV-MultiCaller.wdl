@@ -476,7 +476,6 @@ task CallSomaticMutations_Prepare_Task {
         for file in *.interval_list;
         do 
             gatk IntervalListToBed -I $file -O bedfolder/$file.bed
-            ##small hack to subtract 1 from the bed file
         done 
 
         cp bedfolder/*.bed .
@@ -492,7 +491,7 @@ task CallSomaticMutations_Prepare_Task {
     output {
         Array[File] interval_files=glob("*.interval_list")
         Array[Int] scatterIndices=read_lines("indices.dat")
-        Array[File] bed_list=glob("*.mod.bed")
+        Array[File] bed_list=glob("*.bed")
     }
 }
 
