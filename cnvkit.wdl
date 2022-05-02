@@ -120,7 +120,7 @@ task cnvkit_coverage {
             cnvkit.py antitarget ~{target_bed} -g ~{mappable} -o my_antitargets.bed
             cnvkit.py coverage ~{input_bam} my_antitargets.bed -o ~{output_antitarget_cnn} -p ~{threads}
         else 
-            cnvkit.py coverage ~{input_bam} {antitarget_bed} -o ~{output_antitarget_cnn} -p ~{threads}
+            cnvkit.py coverage ~{input_bam} ~{antitarget_bed} -o ~{output_antitarget_cnn} -p ~{threads}
         fi
     >>>
 
