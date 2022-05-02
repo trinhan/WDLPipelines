@@ -1,9 +1,8 @@
 version 1.0
 
-# this runs mutect1 mutect2 strelka2 and pisces
+# this runs mutect1 mutect2 strelka2
 
 import "mutect2_wdl/mutect2.wdl" as Mutect2WF
-import "pisces_task.wdl" as pisces
 import "vardict.wdl" as vardict
 
 workflow runVariantCallers{
@@ -34,7 +33,6 @@ workflow runVariantCallers{
     File? m2_extra_args
     File? m2_pon
     File? m2_pon_idx
-    File? pisces_reference
     File? variants_for_contamination
     File? variants_for_contamination_idx
     File? DB_SNP_VCF
@@ -54,7 +52,6 @@ workflow runVariantCallers{
     String targName=basename(sub(targetIntervals,"\\.interval_list", ""))
 
     Boolean runS2 = if (runMode =="Paired") then true else false
-
 
     Int tumorBam_size   = ceil(size(tumorBam,   "G") + size(tumorBamIdx,    "G")) 
     Int normalBam_size  = if defined (normalBam) then ceil(size(normalBam,  "G") + size(normalBamIdx,   "G")) else 0
@@ -115,21 +112,6 @@ workflow runVariantCallers{
                 normalBam_size=normalBam_size
         }
 
-        call pisces.runpisces as runpisces {
-            input:
-                refFasta=refFasta,
-                refFastaFai=refFastaIdx,
-                refFastaDict=refFastaDict,
-                tumorBam=tumorBam,
-                normalBam=normalBam,
-                normalBai=normalBamIdx,
-                tumorBai=tumorBamIdx,
-                pairName=pairName,
-                pisces_reference=pisces_reference,
-                interval=CallSomaticMutations_Prepare_Task.bed_list[idx],
-                runMode=runMode    
-        }
-
         call vardict.VarDict as runvardict {
             input:
                 referenceFasta=refFasta,
@@ -168,25 +150,19 @@ workflow runVariantCallers{
 
     call UpdateHeaders {
         input:
-            input_vcfsPT = runpisces.tumor_unique_variants,
-            input_vcfsPN = runpisces.normal_variants_same_site,
             input_vcfsVar =runvardict.vcfFile,
             ref_dict=refFastaDict,
-            gatk_docker = gatk_docker,
-            runMode=runMode
+            gatk_docker = gatk_docker
     }
 
     call CombineVariants {
         input:
-            input_PT= UpdateHeaders.PThead_vcf,
-            input_PN=UpdateHeaders.PNhead_vcf,
             input_VD=UpdateHeaders.VDhead_vcf,
             ref_fasta = refFasta,
             ref_fai = refFastaIdx,
             ref_dict = refFastaDict,
             gatk_docker = gatk_docker,
-            sample_name = caseName,
-            runMode=runMode
+            sample_name = caseName
     }    
 
     if (runS2){
@@ -217,8 +193,6 @@ workflow runVariantCallers{
             M2=M2WF.filtered_vcf,
             STRELKA2_SNVS=Strelka2Somatic_Task.strelka2SomaticSNVs,
             STRELKA2_INDELS=Strelka2Somatic_Task.strelka2SomaticIndels,
-            PISCES_TUMOR=CombineVariants.merged_vcfPT,
-            PISCES_NORMAL=CombineVariants.merged_vcfPN,
             Vardict=CombineVariants.merged_vcfVD,
             ctrlName=ctrlName,
             caseName=caseName,
@@ -233,7 +207,6 @@ workflow runVariantCallers{
             pairName=pairName,
             mutect1_cs=Mutect1_Task.mutect1_cs,
             M2=M2WF.filtered_vcf,
-            PISCES_TUMOR=CombineVariants.merged_vcfPT,
             caseName=caseName,
             Vardict=CombineVariants.merged_vcfVD,
             refFastaDict=refFastaDict,
@@ -245,12 +218,6 @@ workflow runVariantCallers{
         
        File? strelka2SomaticSNVs = Strelka2Somatic_Task.strelka2SomaticSNVs
        File? strelka2SomaticIndels = Strelka2Somatic_Task.strelka2SomaticIndels
-       # pisces outputs
-       ##File? pisces_tum_phased=runpisces.tumor_unique_variants_phased
-       File pisces_tum_unique=CombineVariants.merged_vcfPT
-       Array[File?] pisces_venn=runpisces.venn_zip
-       File pisces_norm_same_site=select_first([CombineVariants.merged_vcfPN, "NULL"])
-      ## File? pisces_tumor_variants=runpisces.tumor_variants
         File vardict_out=CombineVariants.merged_vcfVD
       #  M2 workflow2 outputs
        File M2_filtered_vcf=M2WF.filtered_vcf
@@ -476,6 +443,7 @@ task CallSomaticMutations_Prepare_Task {
         for file in *.interval_list;
         do 
             gatk IntervalListToBed -I $file -O bedfolder/$file.bed
+            ##small hack to subtract 1 from the bed file
         done 
 
         cp bedfolder/*.bed .
@@ -563,8 +531,6 @@ task Merge_Variant_Calls {
     input {
     # TASK INPUT PARAMS
     Array[File] mutect1_cs
-    File? PISCES_NORMAL
-    File PISCES_TUMOR
     File M2
     File? STRELKA2_INDELS
     File? STRELKA2_SNVS
@@ -633,25 +599,11 @@ CODE
         bgzip $MUTECT1_CS_VCF
         tabix -p vcf $MUTECT1_CS_VCF.gz
           
-        # PISCES files
-        PISCES_MERGEu="~{pairName}.Pisces.call_stats.tum.norm.filt.vcf"
-        PISCES_MERGE="~{pairName}.Pisces.call_stats.tum.norm.vcf.gz"
-        PISCES_PASSED="~{pairName}.Pisces.call_stats.passed.vcf"
-        PISCES_Tzip="~{pairName}.Pisces.call_stats.tum.vcf.gz"
-        PISCES_Nzip="~{pairName}.Pisces.call_stats.norm.vcf.gz"
         Vardict_PASSED="~{pairName}.Vardict.passed.vcf"
+        MERGED_VCF="~{pairName}.M1_M2_S2_vardict.passed.merged.vcf.gz"
+        RENAME_MERGED_VCF="~{pairName}.M1_M2_S2_vardict.passed.merged2.vcf.gz"
 
-        MERGED_VCF="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged.vcf.gz"
-        RENAME_MERGED_VCF="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.vcf.gz"
-
-        echo 'merge pisces files'
-
-        # compress and index where appropriate
-
-        bgzip ~{PISCES_TUMOR} 
-        echo "~{PISCES_TUMOR}.gz"
-        mv "~{PISCES_TUMOR}.gz" $PISCES_Tzip
-        tabix -p vcf $PISCES_Tzip
+        echo 'merge vardict files'
 
         bgzip ~{Vardict}
         tabix -p vcf ~{Vardict}.gz
@@ -659,44 +611,21 @@ CODE
 
     if [ ~{runMode} == "Paired" ];
         then
-        bgzip ~{PISCES_NORMAL}
-        mv "~{PISCES_NORMAL}.gz" $PISCES_Nzip
-        tabix -p vcf $PISCES_Nzip
-        # merge the tumor normal in pisces together
-        bcftools merge $PISCES_Nzip $PISCES_Tzip -O vcf -o $PISCES_MERGE
-        tabix -p vcf $PISCES_MERGE
-        bcftools isec -p test -n=2 $PISCES_MERGE $PISCES_Tzip
-        awk '{gsub(/SB/, "SBP")}1' test/0000.vcf > test/0000.mod.vcf
-        mv test/0000.mod.vcf $PISCES_MERGEu
-        bgzip $PISCES_MERGEu
-        tabix -p vcf $PISCES_MERGEu.gz    
-         # gsub
-        echo -e "~{ctrlName}.M1\n~{caseName}.M1\n~{ctrlName}.P\n~{caseName}.P\n~{ctrlName}.M2\n~{caseName}.M2\n~{ctrlName}.S2\n~{caseName}.S2\n~{caseName}.Vardict\n~{ctrlName}.Vardict\n"> samples.txt       
+        echo -e "~{ctrlName}.M1\n~{caseName}.M1\n~{ctrlName}.M2\n~{caseName}.M2\n~{ctrlName}.S2\n~{caseName}.S2\n~{caseName}.Vardict\n~{ctrlName}.Vardict\n"> samples.txt     ##~{ctrlName}.P\n~{caseName}.P\n   
         elif [ ~{runMode} == "TumOnly" ] ;
         then
-        mv $PISCES_Tzip $PISCES_MERGEu.gz
-        echo -e "~{caseName}.M1\n~{caseName}.P\n~{caseName}.M2\n~{caseName}.Vardict\n"> samples.txt
+        echo -e "~{caseName}.M1\n~{caseName}.M2\n~{caseName}.Vardict\n"> samples.txt ##~{caseName}.P\n
     fi;
 
-        tabix -p vcf $PISCES_MERGEu.gz    
-
-        # Merge together the pisces inputs
-        # Edit pisces VCF (adding AD and AF, replacing TUMOR/NORMAL with caseName/ctrlName)
-        # Filter Pisces mutation calls that passed filter
         echo 'filter out failed variants'
 
-        bcftools view -f PASS $PISCES_MERGEu.gz > $PISCES_PASSED
-        bgzip $PISCES_PASSED
-        tabix -p vcf $PISCES_PASSED.gz
         bcftools view -f PASS ~{M2} > $MUTECT2_CS_PASSED
         bgzip $MUTECT2_CS_PASSED
         tabix -p vcf $MUTECT2_CS_PASSED.gz
         bcftools view -f PASS ~{Vardict}.gz > $Vardict_PASSED
         bgzip $Vardict_PASSED
         tabix -p vcf $Vardict_PASSED.gz
-
         cat samples.txt
-
         # Strelka2 files
     if [ ~{runS2} -eq "1" ];
     then
@@ -713,7 +642,6 @@ CODE
 
         python3 /usr/local/bin/strelka_allelic_count_indel.py $STRELKA2_INDEL_PASSED $STRELKA2_INDEL_REFORMATTED_VCF "~{caseName}" "~{ctrlName}" -VC "None"
         
-
         # compress the outputs 
         bgzip $STRELKA2_INDEL_REFORMATTED_VCF
         bgzip $STRELKA2_SNV_REFORMATTED_VCF
@@ -723,22 +651,21 @@ CODE
         bcftools concat -a $STRELKA2_SNV_REFORMATTED_VCF.gz $STRELKA2_INDEL_REFORMATTED_VCF.gz -O vcf -o $STRELKA2_MERGE
         tabix -p vcf $STRELKA2_MERGE
 
-        bcftools merge $MUTECT1_CS_VCF.gz $PISCES_PASSED.gz $MUTECT2_CS_PASSED.gz $STRELKA2_MERGE $Vardict_PASSED.gz -O vcf -o $MERGED_VCF --force-samples
+        bcftools merge $MUTECT1_CS_VCF.gz $MUTECT2_CS_PASSED.gz $STRELKA2_MERGE $Vardict_PASSED.gz -O vcf -o $MERGED_VCF --force-samples 
     else 
-        bcftools merge $MUTECT1_CS_VCF.gz $PISCES_PASSED.gz $MUTECT2_CS_PASSED.gz $Vardict_PASSED.gz -O vcf -o $MERGED_VCF --force-samples
+        bcftools merge $MUTECT1_CS_VCF.gz $MUTECT2_CS_PASSED.gz $Vardict_PASSED.gz -O vcf -o $MERGED_VCF --force-samples 
     fi;
 
-        ## merge this first  $MUTECT1_CS_VCF.gz  ##  $PISCES_PASSED.gz $MUTECT2_CS_PASSED.gz 
 
         bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF
 
-        RENAME_MERGED_VCF_decomp="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.vcf"
+        RENAME_MERGED_VCF_decomp="~{pairName}.M1_M2_S2_vardict.passed.merged2.vcf"
 
         gunzip -c $RENAME_MERGED_VCF > $RENAME_MERGED_VCF_decomp
 
         tabix -p vcf $RENAME_MERGED_VCF
         # extract the variant locations for mutect2
-        python3 /usr/local/bin/vcf2mafbed.py $RENAME_MERGED_VCF_decomp "~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.maf" "~{pairName}.intervals.bed" 150 "~{runMode}"
+        python3 /usr/local/bin/vcf2mafbed.py $RENAME_MERGED_VCF_decomp "~{pairName}.M1_M2_S2_vardict.passed.merged2.maf" "~{pairName}.intervals.bed" 150 "~{runMode}"
 
         # run picard to change the input 
         java -jar /tmp/picard.jar BedToIntervalList -I "~{pairName}.intervals.bed" -O "~{pairName}.variantList.interval_list" -SD ~{refFastaDict}
@@ -746,7 +673,7 @@ CODE
         >>>
         
         runtime {
-        docker         : "trinhanne/sambcfhts:v1.13.3"       
+        docker         : "trinhanne/sambcfhts:v1.13.3"
         bootDiskSizeGb : diskGB_boot 
         preemptible    : preemptible
         cpu            : cpu
@@ -755,19 +682,17 @@ CODE
         }
 
     output {
-        File MergedVcfGz="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.vcf.gz"
-        File MergedVcf="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.vcf"     
-        File MergedVcfIdx="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.vcf.gz.tbi"
-        File MergedMaf="~{pairName}.M1_M2_S2_pisces_vardict.passed.merged2.maf"
+        File MergedVcfGz="~{pairName}.M1_M2_S2_vardict.passed.merged2.vcf.gz"
+        File MergedVcf="~{pairName}.M1_M2_S2_vardict.passed.merged2.vcf"
+        File MergedVcfIdx="~{pairName}.M1_M2_S2_vardict.passed.merged2.vcf.gz.tbi"
+        File MergedMaf="~{pairName}.M1_M2_S2_vardict.passed.merged2.maf"
         File LocBed="~{pairName}.intervals.bed"
-        File Interval_list="~{pairName}.variantList.interval_list"        
+        File Interval_list="~{pairName}.variantList.interval_list"
         }
 }
 
 task CombineVariants {
     input {
-        Array[File] input_PT
-        Array[File] input_PN
         Array[File] input_VD
         File ref_fasta
         File ref_fai
@@ -776,20 +701,12 @@ task CombineVariants {
         String gatk_docker
         String sample_name
         Int mem_gb= 6
-        String runMode
     }
-        Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_PT, "GB")+size(input_VD, "GB"))
-        String runNorm = if (runMode=="Paired") then "1" else "0"
+        Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_VD, "GB"))
 
     command <<<
 
-        gatk GatherVcfs -I ~{sep=' -I ' input_PT} -R ~{ref_fasta} -O ~{sample_name}.PiscesTum.vcf
         gatk GatherVcfs -I ~{sep=' -I ' input_VD} -R ~{ref_fasta} -O ~{sample_name}.VD.vcf
-
-    if [ ~{runNorm} -eq "1" ];
-        then
-        gatk GatherVcfs -I ~{sep=' -I ' input_PN} -R ~{ref_fasta} -O ~{sample_name}.PiscesNorm.vcf
-    fi
 
     >>>
 
@@ -800,40 +717,21 @@ task CombineVariants {
     }
 
     output {
-    File merged_vcfPT = "~{sample_name}.PiscesTum.vcf"
-    File merged_vcfPN = "~{sample_name}.PiscesNorm.vcf"
     File merged_vcfVD = "~{sample_name}.VD.vcf"
     }
 }
 
 task UpdateHeaders {
     input {
-        Array[File] input_vcfsPT
-        Array[File] input_vcfsPN
         Array[File] input_vcfsVar
         File ref_dict
         # runtime
         String gatk_docker
         Int mem_gb= 6
-        String runMode
     }
-        Int diskGB = 4*ceil(size(ref_dict, "GB")+size(input_vcfsPT, "GB")+size(input_vcfsVar, "GB"))
-        String runNorm = if (runMode=="Paired") then "1" else "0"
+        Int diskGB = 4*ceil(size(ref_dict, "GB")+size(input_vcfsVar, "GB"))
 
     command <<<
-
-        # do this for Pisces Normal
-        count=0
-        for i in ~{sep=' ' input_vcfsPT}; 
-        do 
-         newstr=`basename $i`
-         gatk UpdateVCFSequenceDictionary \
-            -V $i \
-            --source-dictionary ~{ref_dict} \
-            --output $newstr.$count.reheaderPT.vcf \
-            --replace true
-        count+=1
-        done
 
         # vardict
         count=0
@@ -848,22 +746,6 @@ task UpdateHeaders {
          count+=1
         done
 
-        count=0
-    if [ ~{runNorm} -eq "1" ];
-        then
-        # do this for Pisces Normal
-        for i in ~{sep=' ' input_vcfsPN}; 
-        do 
-         newstr=`basename $i`
-         gatk UpdateVCFSequenceDictionary \
-            -V $i \
-            --source-dictionary ~{ref_dict} \
-            --output $newstr.$count.reheaderPN.vcf \
-            --replace true
-          count+=1
-        done
-    fi
-
     >>>
 
     runtime {
@@ -873,8 +755,6 @@ task UpdateHeaders {
     }
 
     output {
-    Array[File] PThead_vcf = glob("*.reheaderPT.vcf")
-    Array[File] PNhead_vcf = glob("*.reheaderPN.vcf")
     Array[File] VDhead_vcf = glob("*.reheaderVD.vcf")
     }
 }
