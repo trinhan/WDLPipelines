@@ -62,8 +62,7 @@ workflow WGS_SNV_CNV_Workflow {
         File gnomad
         File gnomadidx
         File PoN
-        File PoNidx    
-        File? pisces_reference
+        File PoNidx
         File? variants_for_contamination
         File? variants_for_contamination_idx
         File DB_SNP_VCF
@@ -165,7 +164,6 @@ workflow WGS_SNV_CNV_Workflow {
             gnomad_idx=gnomadidx,
             m2_pon=PoN,
             m2_pon_idx=PoNidx,
-            pisces_reference=pisces_reference,
             variants_for_contamination=variants_for_contamination,
             variants_for_contamination_idx=variants_for_contamination_idx,
             DB_SNP_VCF=DB_SNP_VCF,
@@ -202,7 +200,6 @@ workflow WGS_SNV_CNV_Workflow {
                 gnomadidx=gnomadidx,
                 PoN=PoN,
                 PoNidx=PoNidx,
-                pisces_reference=pisces_reference,
                 variants_for_contamination=variants_for_contamination,
                 variants_for_contamination_idx=variants_for_contamination_idx,
                 DB_SNP_VCF=DB_SNP_VCF,
@@ -317,10 +314,6 @@ workflow WGS_SNV_CNV_Workflow {
         ####### SNV outputs ##########
         File? strelka2SomaticSNVs = somaticVC.strelka2SomaticSNVs
         File? strelka2SomaticIndels = somaticVC.strelka2SomaticIndels
-        ####### pisces outputs ########
-        File pisces_tum_unique=somaticVC.pisces_tum_unique
-        Array[File?] pisces_venn=somaticVC.pisces_venn
-        File? pisces_norm_same_site=somaticVC.pisces_norm_same_site
         ####### M2 workflow2 outputs #####
         File M2_filtered_vcf=somaticVC.M2_filtered_vcf
         File M2_filtered_vcf_idx=somaticVC.M2_filtered_vcf_idx
