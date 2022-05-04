@@ -26,7 +26,7 @@ task VarDict {
         Int startColumn = 2
         Int endColumn = 3
         Int geneColumn = 4
-        Int runLocalRelignment = 1
+        Int runLocalRelignment = 0
         ## run time parameters
         String javaXmx = "15G"
         Int threads = 4
@@ -40,7 +40,7 @@ task VarDict {
 
     command {
 
-     if [ ~{runPaired} -eq "1" ]; then
+
         ## remove this command:  -XX:ParallelGCThreads=1
         set -e -o pipefail
         export JAVA_OPTS="-Xmx~{javaXmx}"
@@ -49,9 +49,8 @@ task VarDict {
         -G ~{referenceFasta} \
         -N ~{tumorSampleName} \
         -b "~{tumorBam}~{"|" + normalBam}" \
+        ~{false="--nosv " true = "" callSVs} \
         ~{true="" false="-z" defined(normalBam)} \
-        ~{false="-U" true="" callSVs} \ 
-        -k ~{runLocalRelignment} \
         -c ~{chromosomeColumn} \
         -S ~{startColumn} \
         -E ~{endColumn} \
@@ -68,33 +67,7 @@ task VarDict {
         -v ~{minimumVariantDepth} \
         -f ~{minimumAlleleFrequency} \
         > ~{outputName}.vardict.vcf
-    else 
-        ## remove this command:  -XX:ParallelGCThreads=1
-        set -e -o pipefail
-        export JAVA_OPTS="-Xmx~{javaXmx}"
-        vardict-java \
-        ~{"-th " + threads} \
-        -G ~{referenceFasta} \
-        -N ~{tumorSampleName} \
-        -b ~{tumorBam} \
-        ~{true="" false="-z" defined(normalBam)} \
-        ~{false="-U" true="" callSVs} \ 
-        -k ~{runLocalRelignment} \
-        -c ~{chromosomeColumn} \
-        -S ~{startColumn} \
-        -E ~{endColumn} \
-        -g ~{geneColumn} \
-        ~{bedFile} | \
-        teststrandbias.R | var2vcf_valid.pl \
-        -N ~{tumorSampleName} -E \
-        ~{true="-M" false="" outputCandidateSomaticOnly} \
-        ~{true="-A" false="" outputAllVariantsAtSamePosition} \
-        -Q ~{mappingQuality} \
-        -d ~{minimumTotalDepth} \
-        -v ~{minimumVariantDepth} \
-        -f ~{minimumAlleleFrequency} \
-        > ~{outputName}.vardict.vcf
-    fi 
+
     }
 
     output {
