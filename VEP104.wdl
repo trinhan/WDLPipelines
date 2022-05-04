@@ -214,7 +214,7 @@ task variant_effect_predictor {
 
         if [ ${runclinvar} -eq "1" ];
         then
-        runclinvar="$runclinvar --custom ${clinvar},ClinVar,vcf,exact,0,CLNSIG,CLNDN,CLINDISDB,CLINHGVS,CLNREVSTAT "
+        runclinvar="$runclinvar --custom ${clinvar},ClinVar,vcf,exact,0,CLNSIG,CLNDN,CLNDISDB,CLNHGVS,CLNREVSTAT,CLNVC,ORIGIN "
         fi
 
         if [ ${rungnomad} -eq "1" ];
