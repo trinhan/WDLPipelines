@@ -36,11 +36,11 @@ task VarDict {
         Int? timeMinutes = 350
     }
         Int diskGB=3*ceil(size(tumorBam, "GB")+size(normalBam, "GB")+size(referenceFasta, "GB"))
-        String runMode = if defined(normalBam) then "Paired" else "SingleSample"
+        String runPaired = if defined(normalBam) then "1" else "0"
 
     command {
 
-     if [ ~{runMode} -eq "Paired" ]; then
+     if [ ~{runPaired} -eq "1" ]; then
         ## remove this command:  -XX:ParallelGCThreads=1
         set -e -o pipefail
         export JAVA_OPTS="-Xmx~{javaXmx}"
