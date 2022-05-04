@@ -36,8 +36,11 @@ task VarDict {
         Int? timeMinutes = 350
     }
         Int diskGB=3*ceil(size(tumorBam, "GB")+size(normalBam, "GB")+size(referenceFasta, "GB"))
+        String runMode = if defined(normalBam) then "Paired" else "SingleSample"
 
     command {
+
+     if [ ~{runMode} -eq "Paired" ]; then
         ## remove this command:  -XX:ParallelGCThreads=1
         set -e -o pipefail
         export JAVA_OPTS="-Xmx~{javaXmx}"
@@ -65,6 +68,33 @@ task VarDict {
         -v ~{minimumVariantDepth} \
         -f ~{minimumAlleleFrequency} \
         > ~{outputName}.vardict.vcf
+    else 
+        ## remove this command:  -XX:ParallelGCThreads=1
+        set -e -o pipefail
+        export JAVA_OPTS="-Xmx~{javaXmx}"
+        vardict-java \
+        ~{"-th " + threads} \
+        -G ~{referenceFasta} \
+        -N ~{tumorSampleName} \
+        -b ~{tumorBam} \
+        ~{true="" false="-z" defined(normalBam)} \
+        ~{false="-U" true="" callSVs} \ 
+        -k ~{runLocalRelignment} \
+        -c ~{chromosomeColumn} \
+        -S ~{startColumn} \
+        -E ~{endColumn} \
+        -g ~{geneColumn} \
+        ~{bedFile} | \
+        teststrandbias.R | var2vcf_valid.pl \
+        -N ~{tumorSampleName} -E \
+        ~{true="-M" false="" outputCandidateSomaticOnly} \
+        ~{true="-A" false="" outputAllVariantsAtSamePosition} \
+        -Q ~{mappingQuality} \
+        -d ~{minimumTotalDepth} \
+        -v ~{minimumVariantDepth} \
+        -f ~{minimumAlleleFrequency} \
+        > ~{outputName}.vardict.vcf
+    fi 
     }
 
     output {
