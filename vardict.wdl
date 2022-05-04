@@ -17,6 +17,7 @@ task VarDict {
         String outputName
         Boolean outputCandidateSomaticOnly = true
         Boolean outputAllVariantsAtSamePosition = true
+        Boolean callSVs = false
         Float mappingQuality = 20
         Int minimumTotalDepth = 8
         Int minimumVariantDepth = 5
@@ -25,6 +26,7 @@ task VarDict {
         Int startColumn = 2
         Int endColumn = 3
         Int geneColumn = 4
+        Int runLocalRelignment = 1
         ## run time parameters
         String javaXmx = "15G"
         Int threads = 4
@@ -45,6 +47,8 @@ task VarDict {
         -N ~{tumorSampleName} \
         -b "~{tumorBam}~{"|" + normalBam}" \
         ~{true="" false="-z" defined(normalBam)} \
+        ~{false="-U" true="" callSVs} \ 
+        -k ~{runLocalRelignment} \
         -c ~{chromosomeColumn} \
         -S ~{startColumn} \
         -E ~{endColumn} \
