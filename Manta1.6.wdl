@@ -24,7 +24,7 @@ task MantaSomaticSV {
     Boolean save_logs = true
     Int disk_size
     Int cpu_num = 8 
-    Int mem_gb_per_job = 1
+    Int mem_gb_per_job = 3
     Int mem_size = cpu_num * mem_gb_per_job
     Int preemptible_attempts = 3
     }
