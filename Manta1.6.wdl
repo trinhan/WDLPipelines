@@ -4,6 +4,8 @@
 ### reference genome data
 ### Intervals list optional 
 ### Boolean save evidence: do you want to save the evidence in a bam file?
+### Boolean save_logs: do you want to save output logs?
+
 version 1.0
 
 task MantaSomaticSV {
@@ -19,6 +21,7 @@ task MantaSomaticSV {
     File? region_bed_index
     Boolean is_cram = false
     Boolean save_evidence = false
+    Boolean save_logs = true
     Int disk_size
     Int cpu_num = 8 
     Int mem_gb_per_job = 1
@@ -71,6 +74,7 @@ task MantaSomaticSV {
         preemptible: preemptible_attempts
     }
     output {
+        File? error_log="./workspace/pyflow.data/logs/pyflow_log.txt"
         File? germline_sv_vcf = "${sample_name}.diploidSV.vcf.gz"
         File? germline_sv_vcf_tbi = "${sample_name}.diploidSV.vcf.gz.tbi"
         File somatic_sv_vcf = "${sample_name}.somaticSV.vcf.gz"
