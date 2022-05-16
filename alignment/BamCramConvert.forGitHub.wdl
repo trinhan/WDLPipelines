@@ -6,7 +6,7 @@ version 1.0
 
 # Git URL Import
 
-import "https://raw.githubusercontent.com/trinhan/wgsAlignment/main/Alignment_tasks.wdl?token=ABVSYKGLUML35DJTE76BS73BAYBLW" as Alignment
+import "Alignment_tasks.wdl" as Alignment
 
 workflow BamToCram {
 
