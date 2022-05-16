@@ -83,3 +83,6 @@ workflows:
   - name: CNVkit
     subclass: WDL
     primaryDescriptorPath: /cnvkit.wdl
+  - name: WGSAlignment
+    subclass: WDL
+    primaryDescriptorPath: /alignment/WGSAlignmentPipeline.wdl
