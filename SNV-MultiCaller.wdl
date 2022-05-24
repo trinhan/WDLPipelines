@@ -511,6 +511,8 @@ task IntervalToBed {
         bgzip ${output_name_intervals}
 
         tabix -s 1 -b 2 -e 3 "${output_name_intervals}.gz"
+
+        # also set a command here to split the intervals? or grep bed according to chromosome?
     }
 
     runtime {

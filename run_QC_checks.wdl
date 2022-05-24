@@ -337,8 +337,8 @@ task PicardMultipleMetrics_Task {
     String preemptible ="1"
     String diskGB_boot ="15"
     String diskGB_buffer = "20"
-    String memoryGB ="10"
-    String cpu ="1"
+    String memoryGB ="16"
+    String cpu ="4"
     String gatk_docker
     String targetedRun = true
     }
