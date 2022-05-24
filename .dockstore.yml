@@ -86,4 +86,7 @@ workflows:
   - name: WGSAlignment
     subclass: WDL
     primaryDescriptorPath: /alignment/WGSAlignmentPipeline.wdl
+  - name: FastQC
+    subclass: WDL
+    primaryDescriptorPath: /FastQC.wdl
     
