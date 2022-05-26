@@ -67,7 +67,7 @@ task trim_PE {
     String settings = ":2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36"
   }
   Int disk_space_gb=ceil(3*(size(f1, "GB")+size(f2, "GB")))
-  String adap_def = select_first([adap,"/opt/trimmomatic/adapters/TruSeq3-PE.fa"])
+  File adap_def = select_first([adap,"/opt/trimmomatic/adapters/TruSeq3-PE.fa"])
   String p1 = sampleName + "Trim_R1.fq.gz"
   String p2 = sampleName + "Trim_R2.fq.gz"
   String u1 = sampleName + "Trim_unpaired_R1.fq.gz"
