@@ -64,7 +64,7 @@ workflow runGermlineVariants{
     String info_key
     String tensor_type = "reference"
     String cnn_extra_args = "-stand-call-conf 0 -A Coverage -A ChromosomeCounts -A BaseQuality -A FragmentLength -A MappingQuality -A ReadPosition "
-
+    Int? HC_shard_counts
     }
 
     String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
@@ -158,7 +158,7 @@ workflow runGermlineVariants{
             output_prefix = pairName,
             info_key=info_key,                 # The score key for the INFO field of the vcf (e.g. CNN_1D, CNN_2D)
             tensor_type=tensor_type,              # What kind of tensors the Neural Net expects (e.g. reference, read_tensor)
-            scatter_count =4,               # Number of shards for parallelization of HaplotypeCaller and CNNScoreVariants
+            scatter_count =select_first([HC_shard_counts, 4]),              # Number of shards for parallelization of HaplotypeCaller and CNNScoreVariants
             snp_tranches=" --snp-tranche 99.9 ",             # Filtering threshold(s) for SNPs in terms of sensitivity to overlapping known variants in resources
             indel_tranches=" --indel-tranche 99.5 " ,          # Filtering threshold(s) for INDELs in terms of sensitivity to overlapping known variants in resources
             gatk_docker=gatk_docker,
