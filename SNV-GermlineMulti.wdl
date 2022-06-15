@@ -495,7 +495,7 @@ task Merge_Variants_Germline {
         bcftools view -f PASS "~{STRELKA2}" > $STRELKA_pass
         bcftools view -f PASS "~{PISCES_NORMAL}" > $PISCES_pass
         bcftools view -f PASS "~{Haplotype}" > $HP_pass
-        bcftools view -f PASS "~{Vardict}" > $Vardict_pass
+        bcftools view -f PASS "~{Vardict}" > $Vardict_PASSED
 
         sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $HP_pass
 
