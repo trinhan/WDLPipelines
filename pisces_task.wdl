@@ -82,7 +82,7 @@ task runpiscesGermline {
     String normPrefix= if (normP!="") then basename(sub(normP,"\\.bam$", "")) else ""
     String buildRef = if defined(pisces_reference) then "0" else "1"
 
-    Int disk_size=2*(ceil(size(normalBam, "G")+size(normalBai, "G")+size(refFasta, "G")+disk_size(pisces_reference, "G")))
+    Int disk_size=2*(ceil(size(normalBam, "G")+size(normalBai, "G")+size(refFasta, "G")+size(pisces_reference, "G")))
    
     command <<<
         set -e
