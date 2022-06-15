@@ -247,7 +247,6 @@ workflow runGermlineVariants{
        File strelka2GermlineVCF=Strelka2Germline_Task.strelka2GermlineVCF
        # pisces outputs
        File pisces_normal_variants=CombineVariants.merged_vcfPN
-       File vardict=CombineVariants.merged_vcfVD
        File HaplotypeVcf=CNNScoreVariantsWorkflow.cnn_filtered_vcf
        File HaplotypeVcfTbi=CNNScoreVariantsWorkflow.cnn_filtered_vcf_index
       # merged germline output
