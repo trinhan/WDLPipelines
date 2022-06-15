@@ -485,10 +485,10 @@ task Merge_Variants_Germline {
         #STRELKA_unzip="~{ctrlName}.S2.unzip.vcf"
         #HP_unzip="~{ctrlName}.haplo.vcf"
         HP_pass="~{ctrlName}.haplo.pass.vcf"
-        MERGED_VCF="~{ctrlName}.P_S2_HP_VD.merged.vcf.gz"
-        RENAME_MERGED_VCF_ALL="~{ctrlName}.P_S2_HP_VD.mergedGermline.all.vcf.gz"
-        RENAME_MERGED_VCF_ANN="~{ctrlName}.P_S2_HP_VD.mergedGermline.ann.vcf"
-        RENAME_MERGED_VCF_FILT="~{ctrlName}.P_S2_HP_VD.mergedGermline.filt.vcf"
+        MERGED_VCF="~{ctrlName}.S2_P_HP_VD.merged.vcf.gz"
+        RENAME_MERGED_VCF_ALL="~{ctrlName}.S2_P_HP_VD.mergedGermline.all.vcf.gz"
+        RENAME_MERGED_VCF_ANN="~{ctrlName}.S2_P_HP_VD.mergedGermline.ann.vcf"
+        RENAME_MERGED_VCF_FILT="~{ctrlName}.S2_P_HP_VD.mergedGermline.filt.vcf"
 
 
         ## filter out passed germline variants
@@ -498,6 +498,8 @@ task Merge_Variants_Germline {
         bcftools view -f PASS "~{Vardict}" > $Vardict_PASSED
 
         sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $HP_pass
+        sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $PISCES_pass
+        sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $Vardict_PASSED
 
         ##bgzip $STRELKA_pass
         bgzip $PISCES_pass
@@ -511,14 +513,14 @@ task Merge_Variants_Germline {
         tabix -p vcf $Vardict_PASSED.gz
 
         #merge vcfs
-        bcftools merge $PISCES_pass.gz $STRELKA_pass.gz $HP_pass.gz $Vardict_PASSED.gz -O vcf -o $MERGED_VCF --force-samples
+        bcftools merge $STRELKA_pass.gz $PISCES_pass.gz $HP_pass.gz $Vardict_PASSED.gz  -O vcf -o $MERGED_VCF --force-samples
         echo -e "~{ctrlName}.Pisces\n~{ctrlName}.Strelka\n~{ctrlName}.Haplotype\n~{ctrlName}.Vardict\n" > samples.txt
         bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF_ALL
         tabix -p vcf $RENAME_MERGED_VCF_ALL
 
         #merge
         bcftools query --format '%CHROM\t%POS\t%POS\n' $RENAME_MERGED_VCF_ALL > test.output 
-        bcftools query -f '[\t%SAMPLE=%GT]\n' $RENAME_MERGED_VCF_ALL | awk '{print 3-gsub(/.\/\./, "")}' > output
+        bcftools query -f '[\t%SAMPLE=%GT]\n' $RENAME_MERGED_VCF_ALL | awk '{print 4-gsub(/.\/\./, "")}' > output
         paste test.output output > annots.tab 
         bgzip annots.tab
         tabix -s1 -b2 -e2 annots.tab.gz
