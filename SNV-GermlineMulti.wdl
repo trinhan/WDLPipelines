@@ -546,8 +546,8 @@ task Merge_Variants_Germline {
     }
 
     output {
-        File MergedGermlineVcf="~{ctrlName}.P_S2_HP.mergedGermline.filt.vcf.gz"
-        File MergedGermlineVcfIdx="~{ctrlName}.P_S2_HP.mergedGermline.filt.vcf.gz.tbi"
+        File MergedGermlineVcf="~{ctrlName}.S2_P_HP_VD.mergedGermline.filt.vcf.gz"
+        File MergedGermlineVcfIdx="~{ctrlName}.S2_P_HP_VD.mergedGermline.filt.vcf.gz.tbi"
     }     
  
 }
