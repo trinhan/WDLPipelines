@@ -13,7 +13,6 @@ import "pisces_task.wdl" as pisces
 import "VEP104.wdl" as VEP
 import "run_QC_checks.wdl" as runQC
 import "oncokb.wdl" as oncokb
-import "vardict.wdl" as vardict
 
 workflow runGermlineVariants{
     input {
@@ -148,21 +147,10 @@ workflow runGermlineVariants{
             runMode="Germline" 
     }
 
-        call vardict.VarDict as runvardict {
-            input:
-                referenceFasta=refFasta,
-                referenceFastaFai=refFastaIdx,
-                tumorBam=normalBam,
-                tumorBamIndex=normalBamIdx,
-                outputName=pairName,
-                bedFile=CallSomaticMutations_Prepare_Task.bed_list[idx],
-                tumorSampleName=pairName
-        }
 }
 
     call UpdateHeaders {
         input:
-            input_vcfsVar =runvardict.vcfFile,
             input_vcfsPN = runpisces.normal_variants,
             ref_dict=refFastaDict,
             gatk_docker = gatk_docker
@@ -170,7 +158,6 @@ workflow runGermlineVariants{
 
     call CombineVariants {
         input:
-            input_VD=UpdateHeaders.VDhead_vcf,
             input_PN=UpdateHeaders.PNhead_vcf,
             ref_fasta = refFasta,
             ref_fai = refFastaIdx,
@@ -204,8 +191,7 @@ workflow runGermlineVariants{
             ctrlName=ctrlName,
             Haplotype=CNNScoreVariantsWorkflow.cnn_filtered_vcf,
             STRELKA2=Strelka2Germline_Task.strelka2GermlineVCF,
-            PISCES_NORMAL=CombineVariants.merged_vcfPN,
-            Vardict=CombineVariants.merged_vcfVD
+            PISCES_NORMAL=CombineVariants.merged_vcfPN
     }
 
     call VEP.variant_effect_predictor as vep {
@@ -459,7 +445,6 @@ task Merge_Variants_Germline {
     File PISCES_NORMAL
     File? Haplotype
     File? STRELKA2
-    File Vardict
     String ctrlName
     
     # RUNTIME INPUT PARAMS
@@ -485,21 +470,19 @@ task Merge_Variants_Germline {
         #STRELKA_unzip="~{ctrlName}.S2.unzip.vcf"
         #HP_unzip="~{ctrlName}.haplo.vcf"
         HP_pass="~{ctrlName}.haplo.pass.vcf"
-        MERGED_VCF="~{ctrlName}.S2_P_HP_VD.merged.vcf.gz"
-        RENAME_MERGED_VCF_ALL="~{ctrlName}.S2_P_HP_VD.mergedGermline.all.vcf.gz"
-        RENAME_MERGED_VCF_ANN="~{ctrlName}.S2_P_HP_VD.mergedGermline.ann.vcf"
-        RENAME_MERGED_VCF_FILT="~{ctrlName}.S2_P_HP_VD.mergedGermline.filt.vcf"
+        MERGED_VCF="~{ctrlName}.S2_P_HP.merged.vcf.gz"
+        RENAME_MERGED_VCF_ALL="~{ctrlName}.S2_P_HP.mergedGermline.all.vcf.gz"
+        RENAME_MERGED_VCF_ANN="~{ctrlName}.S2_P_HP.mergedGermline.ann.vcf"
+        RENAME_MERGED_VCF_FILT="~{ctrlName}.S2_P_HP.mergedGermline.filt.vcf"
 
 
         ## filter out passed germline variants
         bcftools view -f PASS "~{STRELKA2}" > $STRELKA_pass
         bcftools view -f PASS "~{PISCES_NORMAL}" > $PISCES_pass
         bcftools view -f PASS "~{Haplotype}" > $HP_pass
-        bcftools view -f PASS "~{Vardict}" > $Vardict_PASSED
 
         sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $HP_pass
         sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $PISCES_pass
-        sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $Vardict_PASSED
 
         ##bgzip $STRELKA_pass
         bgzip $PISCES_pass
@@ -509,18 +492,16 @@ task Merge_Variants_Germline {
         tabix -p vcf $STRELKA_pass.gz
         #bgzip $HP_pass
         tabix -p vcf $HP_pass.gz
-        bgzip $Vardict_PASSED
-        tabix -p vcf $Vardict_PASSED.gz
 
         #merge vcfs
-        bcftools merge $STRELKA_pass.gz $PISCES_pass.gz $HP_pass.gz $Vardict_PASSED.gz  -O vcf -o $MERGED_VCF --force-samples
-        echo -e "~{ctrlName}.Pisces\n~{ctrlName}.Strelka\n~{ctrlName}.Haplotype\n~{ctrlName}.Vardict\n" > samples.txt
+        bcftools merge $STRELKA_pass.gz $PISCES_pass.gz $HP_pass.gz -O vcf -o $MERGED_VCF --force-samples
+        echo -e "~{ctrlName}.Pisces\n~{ctrlName}.Strelka\n~{ctrlName}.Haplotype\n" > samples.txt
         bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF_ALL
         tabix -p vcf $RENAME_MERGED_VCF_ALL
 
         #merge
         bcftools query --format '%CHROM\t%POS\t%POS\n' $RENAME_MERGED_VCF_ALL > test.output 
-        bcftools query -f '[\t%SAMPLE=%GT]\n' $RENAME_MERGED_VCF_ALL | awk '{print 4-gsub(/.\/\./, "")}' > output
+        bcftools query -f '[\t%SAMPLE=%GT]\n' $RENAME_MERGED_VCF_ALL | awk '{print 3-gsub(/.\/\./, "")}' > output
         paste test.output output > annots.tab 
         bgzip annots.tab
         tabix -s1 -b2 -e2 annots.tab.gz
@@ -546,15 +527,14 @@ task Merge_Variants_Germline {
     }
 
     output {
-        File MergedGermlineVcf="~{ctrlName}.S2_P_HP_VD.mergedGermline.filt.vcf.gz"
-        File MergedGermlineVcfIdx="~{ctrlName}.S2_P_HP_VD.mergedGermline.filt.vcf.gz.tbi"
+        File MergedGermlineVcf="~{ctrlName}.S2_P_HP.mergedGermline.filt.vcf.gz"
+        File MergedGermlineVcfIdx="~{ctrlName}.S2_P_HP.mergedGermline.filt.vcf.gz.tbi"
     }     
  
 }
 
 task CombineVariants {
     input {
-        Array[File] input_VD
         Array[File] input_PN
         File ref_fasta
         File ref_fai
@@ -564,11 +544,10 @@ task CombineVariants {
         String sample_name
         Int mem_gb= 6
     }
-        Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_VD, "GB"))
+        Int diskGB = 4*ceil(size(ref_fasta, "GB"))
 
     command <<<
 
-        gatk GatherVcfs -I ~{sep=' -I ' input_VD} -R ~{ref_fasta} -O ~{sample_name}.VD.vcf
         gatk GatherVcfs -I ~{sep=' -I ' input_PN} -R ~{ref_fasta} -O ~{sample_name}.PiscesNorm.vcf
 
     >>>
@@ -580,36 +559,22 @@ task CombineVariants {
     }
 
     output {
-    File merged_vcfVD = "~{sample_name}.VD.vcf"
     File merged_vcfPN = "~{sample_name}.PiscesNorm.vcf"
     }
 }
 
 task UpdateHeaders {
     input {
-        Array[File] input_vcfsVar
         Array[File] input_vcfsPN
         File ref_dict
         # runtime
         String gatk_docker
         Int mem_gb= 6
     }
-        Int diskGB = 4*ceil(size(ref_dict, "GB")+size(input_vcfsVar, "GB"))
+        Int diskGB = 4*ceil(size(ref_dict, "GB"))
 
     command <<<
 
-        # vardict
-        count=0
-        for i in ~{sep=' ' input_vcfsVar}; 
-        do 
-         newstr=`basename $i`
-         gatk UpdateVCFSequenceDictionary \
-            -V $i \
-            --source-dictionary ~{ref_dict} \
-            --output $newstr.$count.reheaderVD.vcf \
-            --replace true
-         count+=1
-        done
 
         count=0
         for i in ~{sep=' ' input_vcfsPN}; 
@@ -632,7 +597,6 @@ task UpdateHeaders {
     }
 
     output {
-    Array[File] VDhead_vcf = glob("*.reheaderVD.vcf")
     Array[File] PNhead_vcf = glob("*.reheaderPN.vcf")
     }
 }
