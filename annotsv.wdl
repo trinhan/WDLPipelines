@@ -54,10 +54,11 @@ task annotsv {
     String snvIndelPASS
     File annotSVtar
     String sampleName
-    String typeofAnnotation ="full"     
+    String typeofAnnotation ="full"
+    Int space_buffer = 10     
   }
 
-  Int space_needed_gb = 10 + round( size(input_vcf, "GB")+ size(annotSVtar, "GB"))
+  Int space_needed_gb = space_buffer + ceil( size(input_vcf, "GB")+ size(annotSVtar, "GB"))
 
   runtime {
     memory: "8GB"
