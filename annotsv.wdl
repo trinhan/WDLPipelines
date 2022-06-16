@@ -21,6 +21,7 @@ workflow RunAnnotSV{
     String sampleName
     String? caller
     String typeofAnnotation ="full"
+    Int space_buffer= 10     
   }
 
   call annotsv {
@@ -33,7 +34,8 @@ workflow RunAnnotSV{
      snvIndelPASS=snvIndelPASS,
      sampleName=sampleName,
      typeofAnnotation=typeofAnnotation,
-     caller=caller
+     caller=caller,
+     space_buffer=space_buffer
   }
 
   output {
@@ -55,7 +57,7 @@ task annotsv {
     File annotSVtar
     String sampleName
     String typeofAnnotation ="full"
-    Int space_buffer = 10     
+    Int space_buffer 
   }
 
   Int space_needed_gb = space_buffer + ceil( size(input_vcf, "GB")+ size(annotSVtar, "GB"))
