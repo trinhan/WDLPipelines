@@ -22,6 +22,7 @@ workflow RunAnnotSV{
     String? caller
     String typeofAnnotation ="full"
     Int space_buffer= 10     
+    Int memory
   }
 
   call annotsv {
@@ -35,7 +36,8 @@ workflow RunAnnotSV{
      sampleName=sampleName,
      typeofAnnotation=typeofAnnotation,
      caller=caller,
-     space_buffer=space_buffer
+     space_buffer=space_buffer,
+     memory=memory
   }
 
   output {
@@ -58,12 +60,13 @@ task annotsv {
     String sampleName
     String typeofAnnotation ="full"
     Int space_buffer 
+    Int memory
   }
 
   Int space_needed_gb = space_buffer + ceil( size(input_vcf, "GB")+ size(annotSVtar, "GB"))
 
   runtime {
-    memory: "8GB"
+    memory: "~{memory} GB"
     docker: "trinhanne/annotsv:3.1"
     disks: "local-disk ~{space_needed_gb} SSD"
   }
