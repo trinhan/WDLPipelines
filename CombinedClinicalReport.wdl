@@ -27,6 +27,7 @@ workflow ClinicalReport {
         Boolean SNVvcfformat = true 
         Boolean canonical = true
         File? AAlist
+        String dockerFile
     }
 
     call ConvertSNVs {
@@ -46,7 +47,8 @@ workflow ClinicalReport {
         SNVvcfformat=SNVvcfformat,
         canonical=canonical,
         AAlist=AAlist,
-        runMode=runMode
+        runMode=runMode,
+        dockerFile=dockerFile
     }
 
 
@@ -61,7 +63,8 @@ workflow ClinicalReport {
         memoryGB=memoryGB,
         cosmicGenes=cosmicGenes,
         ACMGcutoff=SVACMGcutoff,
-        CNV=true
+        CNV=true,
+        dockerFile=dockerFile
     }
 
      call ConvertSVs as SVFormat {
@@ -75,7 +78,8 @@ workflow ClinicalReport {
         memoryGB=memoryGB,
         cosmicGenes=cosmicGenes,
         ACMGcutoff=SVACMGcutoff,
-        CNV=false
+        CNV=false,
+        dockerFile=dockerFile
     }
 
     call CreateClinical{
@@ -85,7 +89,8 @@ workflow ClinicalReport {
         CNV=CNVFormat.CNV,
         SV=SVFormat.SV,
         memoryGB=memoryGB,
-        yaml=inputYaml
+        yaml=inputYaml,
+        dockerFile=dockerFile
     }
 
 # outputs and their types specified here
@@ -107,6 +112,7 @@ task CreateClinical {
         String sampleName
         File yaml
         Int memoryGB
+        String dockerFile
     }
 
     command <<<
@@ -146,11 +152,11 @@ task CreateClinical {
     >>>
 
     runtime {
-        docker: "trinhanne/clin_report_annot:v2.1"
-        preemptible: "3"
+        docker: dockerFile
+        preemptible: "2"
         memory: memoryGB + "GB"
         disks: "local-disk 10 HDD"
-        maxRetries: "3"
+        maxRetries: "2"
     }
 
     output {
@@ -172,6 +178,7 @@ task ConvertSVs {
         File? AddList
         Boolean CNV
         Int memoryGB 
+        String dockerFile
     }
 
     Boolean is_compressed = sub(basename(inputSV), ".*\\.", "") == "gz"
@@ -201,8 +208,8 @@ task ConvertSVs {
     >>>
 
     runtime {
-        docker: "trinhanne/clin_report_annot:v2.1"
-        preemptible: "3"
+        docker: dockerFile
+        preemptible: "2"
         memory: memoryGB + "GB"
         disks: "local-disk 10 HDD"
     }
@@ -233,6 +240,7 @@ task ConvertSNVs {
         String runMode
         File? AAlist
         Boolean canonical
+        String dockerFile
     }
         Int diskGB=6*ceil(size(inputSNV, "GB")+size(cosmicMut, "GB"))
         String AAb = select_first([AAlist, "/annotFiles/AminoAcid_table.csv"])
@@ -277,8 +285,8 @@ task ConvertSNVs {
     }
 
     runtime {
-        docker: "trinhanne/clin_report_annot:v2.1"
-        preemptible: "3"
+        docker: dockerFile
+        preemptible: "2"
         memory: memoryGB + "GB"
         disks: "local-disk ~{diskGB} HDD"
     }
