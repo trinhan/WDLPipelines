@@ -27,7 +27,7 @@ workflow ClinicalReport {
         Boolean SNVvcfformat = true 
         Boolean canonical = true
         File? AAlist
-        String dockerFile
+        String dockerFile = "trinhanne/clin_report_annot:v2.1.1"
     }
 
     call ConvertSNVs {
