@@ -1,0 +1,7 @@
+clinRep
+samtools
+picard
+merged_SNV_wes
+manta
+gCNV
+merged_SNV_wgs
