@@ -95,5 +95,3 @@ workflows:
   - name: jointGenotyping
     subclass: WDL
     primaryDescriptorPath: /jointGenotyping/JointGenotyping.wdl
-
-

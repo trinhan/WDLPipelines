@@ -257,7 +257,9 @@ workflow runGermlineVariants{
 
     output {
         # Strelka2Germline
-        Array[File]? QC_Output=normalMM_Task.picard_files
+       File? Picard_QC_Output=normalMM_Task.picard_files
+       File? Picard_HsMetrics=normalMM_Task.hsMetrics
+       File? bam_cleaned = normalMM_Task.bam_unmapped_cleaned
        File strelka2GermlineVCF=Strelka2Germline_Task.strelka2GermlineVCF
        # pisces outputs
        File pisces_normal_variants=CombineVariants.merged_vcfPN

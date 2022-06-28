@@ -309,8 +309,12 @@ workflow WGS_SNV_CNV_Workflow {
         Float ContEst_contam = QCChecks.fracContam
         File? cross_check_fingprt_metrics=QCChecks.cross_check_fingprt_metrics
         File? copy_number_qc_report=QCChecks.copy_number_qc_report
-        Array[File]? normal_picard_metrics=QCChecks.normal_bam_picard
-        Array[File]? tumor_picard_metrics=QCChecks.tumor_bam_picard
+        File? normal_picard_metrics=QCChecks.normal_bam_picard
+        File? tumor_picard_metrics=QCChecks.tumor_bam_picard
+        File? tumor_hsmetrics=QCChecks.tumor_bam_hsmetrics
+        File? normal_hsmetrics=QCChecks.normal_bam_hsmetrics
+        File? tumor_cleaned_unmapped_bam=QCChecks.tumor_cleaned_unmapped_bam
+        File? normal_cleaned_unmapped_bam=QCChecks.normal_cleaned_unmapped_bam
         ####### SNV outputs ##########
         File? strelka2SomaticSNVs = somaticVC.strelka2SomaticSNVs
         File? strelka2SomaticIndels = somaticVC.strelka2SomaticIndels
