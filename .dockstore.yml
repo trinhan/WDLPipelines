@@ -89,4 +89,11 @@ workflows:
   - name: FastQC
     subclass: WDL
     primaryDescriptorPath: /FastQC.wdl
-    
+  - name: SamtoolsCoverageMapping
+    subclass: WDL
+    primaryDescriptorPath: /Samtools_Coverage_MapStats.wdl
+  - name: jointGenotyping
+    subclass: WDL
+    primaryDescriptorPath: /jointGenotyping/JointGenotyping.wdl
+
+
