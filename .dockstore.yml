@@ -95,3 +95,9 @@ workflows:
   - name: jointGenotyping
     subclass: WDL
     primaryDescriptorPath: /jointGenotyping/JointGenotyping.wdl
+  - name: star
+    subclass: WDL
+    primaryDescriptorPath: /run_star.wdl
+  - name: kallisto
+    subclass: WDL
+    primaryDescriptorPath: /kallisto-workflow.wdl
