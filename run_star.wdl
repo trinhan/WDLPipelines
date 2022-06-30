@@ -172,5 +172,15 @@ task star {
 
 
 workflow star_workflow {
+
     call star
+    
+    output {
+        File bam_file=star.bam_file
+        File bam_index=star.bam_index
+        File chimeric_junctions=star.chimeric_junctions
+        File read_counts=star.read_counts
+        File splice_junctions=star.junctions
+        File log=star.Finallog
+    }
 }
