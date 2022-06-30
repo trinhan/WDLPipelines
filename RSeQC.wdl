@@ -1,39 +1,43 @@
 ## This WDL pipeline runs RSeQC (version4.0.0) from a bam file
 ## See http://rseqc.sourceforge.net/#download-rseqc for more information
 ##
-## 1. (Optional) Run fastqc (v0.11.8) to check quality of fastqs.
-## 2. (Optional) Run Trimmomatic (v0.39) to remove low-quality basepairs and remove primers/adapter sequence.
-## 3. Run STAR (v0.46.1) to align RNAseq data
+## Run options: The following modules are supported
+## run_read_dup: read_duplication.py   
+## run_gene_body: geneBody_coverage.py
+## run_fpkm_uq: FPKM-UQ.py 
+## run_bam_stat: bam_stat.py 
+## run_read_dist: read_distribution.py
 ##
 ## Required Inputs:
-## - prefix: sample name
+## - sampleName: sample name
 ## - bam: sample bam
 ## - bam_idx: sample bam idx
-## - star_index. STAR index file, can be found in kccg-comb-bio space 
 ##
-## Modules set up:
-## - memory: 40
-## - disk_space: depends on sample, 100 should be sufficient
-## - num_threads: 10
-## - preemptibles: turned off, set to 0
-##
-## Optional Inputs: are set to default values in the STAR user guide
-## - chimOutJunctionFormat: 1 Formats the output chimneric junction file
-## - quantMode: set to "GeneCounts"
-##
+## Annotation Files:
+## These can be accessed here: http://rseqc.sourceforge.net/#download-rseqc
+##    File? refBed - reference transcriptome bed for read_distribution 
+##    File? housekeepBed - house keeping genes for gene body coverage analysis
+##    File? gencodeannotationGtf - see http://rseqc.sourceforge.net/#fpkm-uq-py: for FPKM similar to TCGA
+##    File? gencodegeneinfoTsv - see http://rseqc.sourceforge.net/#fpkm-uq-py: for FPKM similar to TCGA
+## 
 ## Expected Outputs:
-## - bam_file (Aligned.sortedByCoord.out.bam)
-## - bam_index (Aligned.sortedByCoord.out.bam.bai)
-## - chimeric_junctions (Chimeric.out.junction.gz)
-## - read_counts (ReadsPerGene.out.tab.gz)
-## - junctions (SJ.out.tab.gz)
-## - Alignmentlogs 
-## Note that chimeric bam files and transcriptome aligned bam files have been commented out
+## - read_duplicates 
+## - genebody 
+## - FPKM_UQ
+## - run_read_dist 
+## - run_bam_stat
 
 version 1.0
 
 workflow RSeQC {
     call RunQCChecks
+    output {
+        Array[File]? read_duplicates = RunQCChecks.read_duplicates
+        Array[File]? genebody = RunQCChecks.genebody
+        File? FPKM_UQ = RunQCChecks.FPKM_UQ
+        File? run_read_dist = RunQCChecks.run_read_dist
+        File? run_bam_stat = RunQCChecks.run_bam_stat
+    }
 }
 
 task RunQCChecks {
@@ -83,11 +87,11 @@ command {
 }
 
 output {
-    Array[File] read_duplicates = glob("~{sampleName}_read_duplicates")
-    Array[File] genebody = glob("~{sampleName}_genebody")
-    File FPKM_UQ = "~{sampleName}_fpkm"
-    File run_read_dist = "~{sampleName}.read_distribution"
-    File run_bam_stat = "~{sampleName}.bam_stat"
+    Array[File]? read_duplicates = glob("~{sampleName}_read_duplicates")
+    Array[File]? genebody = glob("~{sampleName}_genebody")
+    File? FPKM_UQ = "~{sampleName}_fpkm"
+    File? run_read_dist = "~{sampleName}.read_distribution"
+    File? run_bam_stat = "~{sampleName}.bam_stat"
 }
 
 runtime { 
