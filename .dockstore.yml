@@ -101,3 +101,6 @@ workflows:
   - name: kallisto
     subclass: WDL
     primaryDescriptorPath: /kallisto-workflow.wdl
+  - name: RSeQC
+    subclass: WDL
+    primaryDescriptorPath: /RSeQC.wdl

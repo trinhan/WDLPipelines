@@ -42,13 +42,13 @@ def process_fle(inTsv,mapper, dest, outTsv):
 					for x in d:
 						for y in d[x]:
 							nx=headerlist.index(y)
-							orig_list.append(data[nx])
 							var=data[nx].split("/")
 							keep=var[len(var)-1]
 							''' Only rename the path if the cell is not empty
 							'''
 							if keep!="" :
 								newVar="gs://"+dest+"/"+x+"/"+keep
+								orig_list.append(data[nx])
 								data[nx]=newVar
 								new_list.append(newVar)
 					writer.write('\t'.join(data)+'\n')
