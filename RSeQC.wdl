@@ -95,7 +95,7 @@ output {
 }
 
 runtime { 
-    docker: "clinicalgenomics/rseqc:4.0.0"
+    docker: "trinhanne/rseqc:4.0.0"
     preemptible: "2"
     memory: "5 GB"
     disks: "local-disk ~{diskspace} HDD"
