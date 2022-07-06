@@ -70,6 +70,13 @@ command {
         then 
         echo "Run gene body"
         geneBody_coverage.py -r ~{housekeepBed} -i ~{bam}  -o ~{sampleName}_genebody
+        if [[ ${housekeepBed} == *".gz" ]];
+            then 
+            gunzip -c ~{housekeepBed} > housekeepBed.bed
+            geneBody_coverage.py -r housekeepBed.bed -i ~{bam}  -o ~{sampleName}_genebody
+            else
+            geneBody_coverage.py -r ~{housekeepBed} -i ~{bam}  -o ~{sampleName}_genebody
+        fi 
     fi
 
     if [ "${run_fpkm_uq}" = true ] ;
