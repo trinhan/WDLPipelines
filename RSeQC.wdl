@@ -34,7 +34,7 @@ workflow RSeQC {
     output {
         Array[File]? read_duplicates = RunQCChecks.read_duplicates
         Array[File]? genebody = RunQCChecks.genebody
-        File? FPKM_UQ = RunQCChecks.FPKM_UQ
+        Array[File]? FPKM_UQ = RunQCChecks.FPKM_UQ
         File? run_read_dist = RunQCChecks.run_read_dist
         File? run_bam_stat = RunQCChecks.run_bam_stat
     }
@@ -62,34 +62,45 @@ command {
 
     if [ "${run_read_dup}" = true ] ;
         then 
+        echo "Run read duplication"
         read_duplication.py -i ~{bam} -o ~{sampleName}_read_duplicates
     fi
 
     if [ "${run_gene_body}" = true ] ;
         then 
-    geneBody_coverage.py -r ~{housekeepBed} -i ~{bam}  -o ~{sampleName}_genebody
+        echo "Run gene body"
+        geneBody_coverage.py -r ~{housekeepBed} -i ~{bam}  -o ~{sampleName}_genebody
     fi
 
     if [ "${run_fpkm_uq}" = true ] ;
         then
-    FPKM-UQ.py --bam ~{bam} --gtf ~{gencodeannotationGtf} --info ~{gencodegeneinfoTsv} -o ~{sampleName}_fpkm
+        echo "Run fpkm"
+        FPKM-UQ.py --bam ~{bam} --gtf ~{gencodeannotationGtf} --info ~{gencodegeneinfoTsv} -o ~{sampleName}_fpkm
     fi
 
     if [ "${run_bam_stat}" = true ] ;
         then 
+        echo "Run bam stat"
         bam_stat.py -i ~{bam} > ~{sampleName}.bam_stat
     fi 
 
     if [ "${run_read_dist}" = true ] ;
         then 
-        read_distribution.py  -i ~{bam} -r ~{refBed} > ~{sampleName}.read_distribution
+        echo "Run read read_distribution"
+        if [[ ${refBed} == *".gz" ]];
+            then 
+            gunzip -c ~{refBed} > refBed.bed
+            read_distribution.py  -i ~{bam} -r refBed.bed > ~{sampleName}.read_distribution
+            else
+            read_distribution.py  -i ~{bam} -r ~{refBed} > ~{sampleName}.read_distribution
+        fi 
     fi
 }
 
 output {
-    Array[File]? read_duplicates = glob("~{sampleName}_read_duplicates")
-    Array[File]? genebody = glob("~{sampleName}_genebody")
-    File? FPKM_UQ = "~{sampleName}_fpkm"
+    Array[File]? read_duplicates = glob("~{sampleName}_read_duplicates*")
+    Array[File]? genebody = glob("~{sampleName}_genebody*")
+    Array[File]? FPKM_UQ = "~{sampleName}_fpkm*"
     File? run_read_dist = "~{sampleName}.read_distribution"
     File? run_bam_stat = "~{sampleName}.bam_stat"
 }
