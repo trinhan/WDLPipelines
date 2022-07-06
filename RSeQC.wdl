@@ -69,7 +69,6 @@ command {
     if [ "${run_gene_body}" = true ] ;
         then 
         echo "Run gene body"
-        geneBody_coverage.py -r ~{housekeepBed} -i ~{bam}  -o ~{sampleName}_genebody
         if [[ ${housekeepBed} == *".gz" ]];
             then 
             gunzip -c ~{housekeepBed} > housekeepBed.bed
