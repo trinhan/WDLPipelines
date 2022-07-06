@@ -100,7 +100,7 @@ command {
 output {
     Array[File]? read_duplicates = glob("~{sampleName}_read_duplicates*")
     Array[File]? genebody = glob("~{sampleName}_genebody*")
-    Array[File]? FPKM_UQ = "~{sampleName}_fpkm*"
+    Array[File]? FPKM_UQ = glob("~{sampleName}_fpkm*")
     File? run_read_dist = "~{sampleName}.read_distribution"
     File? run_bam_stat = "~{sampleName}.bam_stat"
 }
