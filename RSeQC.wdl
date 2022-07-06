@@ -33,7 +33,7 @@ workflow RSeQC {
     call RunQCChecks
     output {
         Array[File]? read_duplicates = RunQCChecks.read_duplicates
-        Array[File]? genebody = RunQCChecks.genebody
+        File genebody = RunQCChecks.genebody
         Array[File]? FPKM_UQ = RunQCChecks.FPKM_UQ
         File? run_read_dist = RunQCChecks.run_read_dist
         File? run_bam_stat = RunQCChecks.run_bam_stat
@@ -87,7 +87,7 @@ command {
     if [ "${run_bam_stat}" = true ] ;
         then 
         echo "Run bam stat"
-        bam_stat.py -i ~{bam} > ~{sampleName}.bam_stat
+        bam_stat.py -i ~{bam} > ~{sampleName}.bam_stat.txt
     fi 
 
     if [ "${run_read_dist}" = true ] ;
@@ -96,19 +96,19 @@ command {
         if [[ ${refBed} == *".gz" ]];
             then 
             gunzip -c ~{refBed} > refBed.bed
-            read_distribution.py  -i ~{bam} -r refBed.bed > ~{sampleName}.read_distribution
+            read_distribution.py  -i ~{bam} -r refBed.bed > ~{sampleName}.read_distribution.txt
             else
-            read_distribution.py  -i ~{bam} -r ~{refBed} > ~{sampleName}.read_distribution
+            read_distribution.py  -i ~{bam} -r ~{refBed} > ~{sampleName}.read_distribution.txt
         fi 
     fi
 }
 
 output {
     Array[File]? read_duplicates = glob("~{sampleName}_read_duplicates*")
-    Array[File]? genebody = glob("~{sampleName}_genebody*")
+    File genebody = "~{sampleName}_genebody.geneBodyCoverage.txt"
     Array[File]? FPKM_UQ = glob("~{sampleName}_fpkm*")
-    File? run_read_dist = "~{sampleName}.read_distribution"
-    File? run_bam_stat = "~{sampleName}.bam_stat"
+    File? run_read_dist = "~{sampleName}.read_distribution.txt"
+    File? run_bam_stat = "~{sampleName}.bam_stat.txt"
 }
 
 runtime { 
