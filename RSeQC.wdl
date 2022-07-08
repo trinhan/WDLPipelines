@@ -33,7 +33,7 @@ workflow RSeQC {
     call RunQCChecks
     output {
         Array[File]? read_duplicates = RunQCChecks.read_duplicates
-        File genebody = RunQCChecks.genebody
+        File? genebody = RunQCChecks.genebody
         Array[File]? FPKM_UQ = RunQCChecks.FPKM_UQ
         File? run_read_dist = RunQCChecks.run_read_dist
         File? run_bam_stat = RunQCChecks.run_bam_stat
@@ -105,7 +105,7 @@ command {
 
 output {
     Array[File]? read_duplicates = glob("~{sampleName}_read_duplicates*")
-    File genebody = "~{sampleName}_genebody.geneBodyCoverage.txt"
+    File? genebody = "~{sampleName}_genebody.geneBodyCoverage.txt"
     Array[File]? FPKM_UQ = glob("~{sampleName}_fpkm*")
     File? run_read_dist = "~{sampleName}.read_distribution.txt"
     File? run_bam_stat = "~{sampleName}.bam_stat.txt"
