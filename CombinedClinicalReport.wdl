@@ -9,6 +9,7 @@ workflow ClinicalReport {
         File inputSNV
         File inputCV
         File inputSV
+        File ploidyTar
         String sampleName
         File cosmicMut
         File cosmicGenes
@@ -27,7 +28,9 @@ workflow ClinicalReport {
         Boolean SNVvcfformat = true 
         Boolean canonical = true
         File? AAlist
-        String dockerFile = "trinhanne/clin_report_annot:v2.1.1"
+        Int? SRcounts
+        Int? PRcounts
+        String dockerFile = "trinhanne/clin_report_annot:v2.3"
     }
 
     call ConvertSNVs {
@@ -35,6 +38,7 @@ workflow ClinicalReport {
         inputSNV = inputSNV,
         sampleName = sampleName,
         cosmicMut = cosmicMut,
+        cosmicGenes = cosmicGenes,
         MsigDBAnnotation = MsigDBAnnotation,
         pfam=pfam,
         pirsf=pirsf,
@@ -79,7 +83,9 @@ workflow ClinicalReport {
         cosmicGenes=cosmicGenes,
         ACMGcutoff=SVACMGcutoff,
         CNV=false,
-        dockerFile=dockerFile
+        dockerFile=dockerFile,
+        SRcounts=SRcounts,
+        PRcounts=PRcounts
     }
 
     call CreateClinical{
@@ -88,9 +94,11 @@ workflow ClinicalReport {
         sampleName=sampleName,
         CNV=CNVFormat.CNV,
         SV=SVFormat.SV,
+        SVsplit=SVFormat.SVsplit,
         memoryGB=memoryGB,
         yaml=inputYaml,
-        dockerFile=dockerFile
+        dockerFile=dockerFile,
+        ploidyTar=ploidyTar
     }
 
 # outputs and their types specified here
@@ -109,6 +117,8 @@ task CreateClinical {
         File FormatSNV
         File CNV 
         File SV
+        File ploidyTar
+        File SVsplit
         String sampleName
         File yaml
         Int memoryGB
@@ -116,18 +126,22 @@ task CreateClinical {
     }
 
     command <<<
-
+        echo 'move items' 
         tar -C . -xvf ~{FormatSNV}
+        tar -C . -xvf ~{ploidyTar}
         ###tar {FormatSNV}
         cp ~{CNV} .
         cp ~{SV} .
+        cp ~{SVsplit} .
         cp /template/*.Rmd . 
         ##cp ~/Documents/ER_pilot/New_Clin_Reports/*.Rmd .
         mv Template_Germline_Report.Rmd ~{sampleName}_Germline_Report.Rmd
-
+        echo 'export items and edit yaml' 
         # export everything and edit the yaml file
         export cnvAnnot="~{sampleName}.CNV.formated.tsv"
         export svAnnot="~{sampleName}.SV.formated.tsv"
+        export SVsplit="~{sampleName}.SV.split.formated.tsv"
+        echo $SVsplit
        ## create a yaml file for the outputs
         export snvsummary="~{sampleName}variantSummary.filt.maf"
         export snvcancer="~{sampleName}cancerVariants.filt.maf"
@@ -135,9 +149,7 @@ task CreateClinical {
         export snvdrug="~{sampleName}drugprotective.filt.maf"
         export snvhallmark="~{sampleName}PathwayVariants.filt.maf"
         export snvacmg="~{sampleName}ACMG.filt.maf"
-
-
-
+        echo 'edit yaml' 
         rm -f final.yml temp.yml
         ( echo "cat <<EOF >final.yml"; cat ~{yaml}) > temp.yml
         . temp.yml
@@ -145,8 +157,9 @@ task CreateClinical {
 
         # Now use this yaml and use it in the Rmd
         ## How to use whethere pandoc exists?>/Applications/RStudio.app/Contents/MacOS/pandoc # /usr/local/bin/pandoc
-        
-        Rscript -e 'library(rmarkdown);Sys.setenv(RSTUDIO_PANDOC="/usr/local/bin/pandoc"); rmarkdown::render("./~{sampleName}_Germline_Report.Rmd")'
+        Rscript -e 'library(rmarkdown);Sys.setenv(RSTUDIO_PANDOC="/Applications/RStudio.app/Contents/MacOS/pandoc"); rmarkdown::render("./~{sampleName}_Germline_Report.Rmd")'
+   
+        #Rscript -e 'library(rmarkdown);Sys.setenv(RSTUDIO_PANDOC="/usr/local/bin/pandoc"); rmarkdown::render("./~{sampleName}_Germline_Report.Rmd")'
    
         mv final.yml ~{sampleName}.final.yml
     >>>
@@ -177,7 +190,9 @@ task ConvertSVs {
         File inputYaml
         File? AddList
         Boolean CNV
-        Int memoryGB 
+        Int memoryGB
+        Int? SRcounts
+        Int? PRcounts 
         String dockerFile
     }
 
@@ -185,23 +200,17 @@ task ConvertSVs {
 
     command <<<
 
-        SVusethis="thisfile.tsv"
-
-        if [ ~{is_compressed} == true ]; then
-            gunzip -c ~{inputSV} > $SVusethis
-        else 
-            cp ~{inputSV} $SVusethis
-        fi
-
         TissueWd=`grep "Tissue" ~{inputYaml}| cut -d' ' -f2 `
         keyWd=`grep "TreatmentKeywords" ~{inputYaml}| cut -d' ' -f2 `
 
         ## ~/gitLibs/DockerRepository/clinRep
-        Rscript /opt/SummarizeAnnotSV.R --AnnotSVtsv $SVusethis --outputname ~{sampleName} --MSigDB ~{MsigDBAnnotation} \
-        --GTex ~{GTex} --CosmicList ~{cosmicGenes} ~{"--AddList " + AddList} --pathwayList "$keyWd" --ACMGCutoff ~{ACMGcutoff} --Tissue "$TissueWd" --CNV ~{CNV} --PASSfilt TRUE
+        Rscript /opt/SummarizeAnnotSV.R --AnnotSVtsv ~{inputSV} --outputname ~{sampleName} --MSigDB ~{MsigDBAnnotation} \
+        --GTex ~{GTex} --CosmicList ~{cosmicGenes} ~{"--AddList " + AddList} --pathwayList "$keyWd" --ACMGCutoff ~{ACMGcutoff} --Tissue "$TissueWd" --CNV ~{CNV} \
+        ~{"--SRfiler " + SRcounts} ~{"--PRfilter " + PRcounts} --PASSfilt TRUE
 
         if [ ~{CNV} == true ]; then
             touch "~{sampleName}.SV.formated.tsv"
+            touch "~{sampleName}.SV.split.formated.tsv"
         else
             touch "~{sampleName}.CNV.formated.tsv"
         fi
@@ -216,6 +225,7 @@ task ConvertSVs {
 
     output {
         File SV = "~{sampleName}.SV.formated.tsv"
+        File SVsplit = "~{sampleName}.SV.split.formated.tsv"
         File CNV = "~{sampleName}.CNV.formated.tsv"
     }
 }
@@ -225,6 +235,7 @@ task ConvertSNVs {
         File inputSNV
         String sampleName
         File cosmicMut
+        File cosmicGenes
         File MsigDBAnnotation
         File ACMG
         File pfam
@@ -266,7 +277,7 @@ task ConvertSNVs {
         keyWd=`grep "TreatmentKeywords" ~{inputYaml}| cut -d' ' -f2 `
 
         echo 'annotating SNVs with additional databases'
-        Rscript /opt/DBAnnotations.R --maffile $annotMaf --outputfile $tempOut --cosmicMut ~{cosmicMut} --MSigDB ~{MsigDBAnnotation} --pfam ~{pfam} --pirsf ~{pirsf}
+        Rscript /opt/DBAnnotations.R --maffile $annotMaf --outputfile $tempOut --cosmicMut ~{cosmicMut} --cosmicGenes ~{cosmicGenes} --MSigDB ~{MsigDBAnnotation} --pfam ~{pfam} --pirsf ~{pirsf}
         paste $annotMaf $tempOut > $annotM2
         echo 'create filtered lists'
         Rscript /opt/SummarizeVariants.R --maffile $annotM2 --outputname ~{sampleName} --caddscore ~{caddScore} --gnomadcutoff ~{gnomadcutoff} \

@@ -59,7 +59,8 @@ task MantaSomaticSV {
         fi
         
         if [ ${save_evidence} == true ];then
-        tar -zcvf ${sample_name}evidence.tar.gz results/evidence/
+        mv results/evidence/*bam ${sample_name}.evidence.bam
+        mv results/evidence/*bai ${sample_name}.evidence.bam.bai
         fi 
         
         mv results/variants/candidateSV.vcf.gz ${sample_name}.candidateSV.vcf.gz
@@ -81,7 +82,8 @@ task MantaSomaticSV {
         File somatic_sv_vcf_tbi = "${sample_name}.somaticSV.vcf.gz.tbi"
         File candidate_sv_vcf = "${sample_name}.candidateSV.vcf.gz"
         File candidate_indel_vcf = "${sample_name}.candidateSmallIndels.vcf.gz"
-        File? compressed_evidence = "${sample_name}evidence.tar.gz"
+        File? evidence_bam = "${sample_name}.evidence.bam"
+        File? evidence_bai = "${sample_name}.evidence.bam.bai"
     }
 }
 
@@ -121,7 +123,9 @@ task MantaGermline{
         mv results/variants/diploidSV.vcf.gz.tbi ${sample_name}.diploidSV.vcf.gz.tbi
 
         if [ ${save_evidence} == true ]; then
-        tar -zcvf ${sample_name}evidence.tar.gz results/evidence/
+        mv results/evidence/*bam ${sample_name}.evidence.bam
+        mv results/evidence/*bai ${sample_name}.evidence.bam.bai
+        #tar -zcvf ${sample_name}evidence.tar.gz results/evidence/
         fi 
     }
     runtime {
@@ -134,7 +138,8 @@ task MantaGermline{
     output {
         File germline_sv_vcf = "${sample_name}.diploidSV.vcf.gz"
         File germline_sv_vcf_tbi = "${sample_name}.diploidSV.vcf.gz.tbi"
-        File? compressed_evidence = "${sample_name}evidence.tar.gz"
+        File? evidence_bam = "${sample_name}.evidence.bam"
+        File? evidence_bai = "${sample_name}.evidence.bam.bai"
     }
 }
 
@@ -195,6 +200,7 @@ workflow Manta {
         File? somatic_sv_vcf_tbi = MantaSomaticSV.somatic_sv_vcf_tbi
         File? candidate_sv_vcf = MantaSomaticSV.candidate_sv_vcf
         File? candidate_indel_vcf = MantaSomaticSV.candidate_indel_vcf
-        File? evidence = select_first([MantaSomaticSV.compressed_evidence, MantaGermline.compressed_evidence]) 
+        File? evidence_bam = select_first([MantaSomaticSV.evidence_bam, MantaGermline.evidence_bam]) 
+        File? evidence_bai = select_first([MantaSomaticSV.evidence_bai, MantaGermline.evidence_bai]) 
     }
 }
