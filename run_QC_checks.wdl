@@ -491,7 +491,7 @@ task ContEST_Task {
     Int command_memoryGB = floor(memoryGB) - 1
 
     # COMPUTE DISK SIZE
-    Int diskGB = ceil(tumorBam_size + normalBam_size 
+    Int diskGB = ceil(1.1*(tumorBam_size + normalBam_size)+ 
                 + size(targetIntervals, "G") + size(gnomad, "G") + diskGB_buffer)
 
     parameter_meta {
