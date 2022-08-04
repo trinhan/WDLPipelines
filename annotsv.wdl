@@ -43,7 +43,6 @@ workflow RunAnnotSV{
   output {
     File tsv_anotation = annotsv.sv_variants_tsv
   }
-
 }
 
 

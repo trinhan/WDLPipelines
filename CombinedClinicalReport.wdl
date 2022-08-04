@@ -30,7 +30,7 @@ workflow ClinicalReport {
         File? AAlist
         Int? SRcounts
         Int? PRcounts
-        String dockerFile = "trinhanne/clin_report_annot:v2.3"
+        String dockerFile = "trinhanne/clin_report_annot:v2.4"
     }
 
     call ConvertSNVs {
