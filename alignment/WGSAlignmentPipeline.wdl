@@ -1,6 +1,6 @@
 version 1.0
 
-## This is a copy of the Broad Institute WGS Alignment pipeline, modified 12/11/2019
+## This is a copy of the Broad Institute WGS Alignment pipeline, modified 12/11/2021
 ##
 ## Changes compared to the original:
 ## - Split uBAM if too large, and parallelise mapping
@@ -20,7 +20,7 @@ version 1.0
 ## - - all reads must have an RG tag
 ##
 ## Default Options:
-## - docker: broadinstitute/gatk:4.1.8.1
+## - docker: broadinstitute/gatk: 4.2.6.1
 ## - gotc: broadinstitute/genomes-in-the-cloud:2.3.1-1512499786
 ## - cutoff_size: if raw fastq is greater than [10GB], it will be split
 ## - reads_per_file: divide the fastq into files with [50 000 000] reads each. For 30x, this is ~20 shards
@@ -76,7 +76,7 @@ workflow PreProcessingForVariantDiscovery_GATK4 {
     String bwa_commandline = "bwa mem -K 100000000 -p -v 3 -t 16 -Y $bash_ref_fasta"
     Int compression_level = 5
   
-    String gatk_docker = "broadinstitute/gatk:4.1.8.1"
+    String gatk_docker = "broadinstitute/gatk:4.2.6.1"
     String gatk_path = "/gatk/gatk"
     String gotc_docker = "broadinstitute/genomes-in-the-cloud:2.3.1-1512499786"
     String gotc_path = "/usr/gitc/"

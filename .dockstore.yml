@@ -83,6 +83,9 @@ workflows:
   - name: CNVkit
     subclass: WDL
     primaryDescriptorPath: /cnvkit.wdl
+  - name: Fastq2uBam
+    subclass: WDL
+    primaryDescriptorPath: /alignment/PairedFastQ2UnmappedBAM.wdl
   - name: WGSAlignment
     subclass: WDL
     primaryDescriptorPath: /alignment/WGSAlignmentPipeline.wdl
