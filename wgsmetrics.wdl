@@ -27,6 +27,7 @@ workflow WgsMetrics {
     Boolean ByChromosome = false
     Boolean FastMode = false
     String docker
+    String opts = ""
   }
 
 if (ByChromosome == true){
@@ -44,7 +45,8 @@ if (ByChromosome == true){
            Intervals=chromList,
            FastMode=FastMode,
            docker=docker,
-           region=chr
+           region=chr,
+           opts=opts
     }
   }
 
@@ -66,7 +68,8 @@ if (ByChromosome == false ){
            refFastaIdx=refFastaIdx,
            FastMode=FastMode,
            docker=docker,
-           region="wgs"
+           region="wgs",
+           opts=opts
     }
 }
 
@@ -113,13 +116,14 @@ task runWgsMetrics {
     Boolean FastMode = false
     String docker
     String region
+    String opts
   }
     Int diskspace = 2*ceil(size(bam, "GB")+size(bam_index, "GB")+size(refFasta, "GB")+size(refFastaIdx, "GB"))
 
   command <<<
 
   gatk CollectWgsMetrics -I ~{bam} -O ~{sampleName}.~{region}.txt -R ~{refFasta} \
-   --USE_FAST_ALGORITHM ~{FastMode} ~{"--INTERVALS " + Intervals}
+   --USE_FAST_ALGORITHM ~{FastMode} ~{"--INTERVALS " + Intervals} ~{opts}
 
   >>>
   output {
