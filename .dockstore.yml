@@ -95,6 +95,9 @@ workflows:
   - name: SamtoolsCoverageMapping
     subclass: WDL
     primaryDescriptorPath: /Samtools_Coverage_MapStats.wdl
+  - name: wgsMetrics
+    subclass: WDL
+    primaryDescriptorPath: /wgsmetrics.wdl
   - name: jointGenotyping
     subclass: WDL
     primaryDescriptorPath: /jointGenotyping/JointGenotyping.wdl
