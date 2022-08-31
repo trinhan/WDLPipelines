@@ -90,7 +90,8 @@ task compressFiles {
   }
   command <<<
 
-  tar czf ~{sampleName}.wgs.by.chrom.tar.gz ~{outputsChrom}
+  tar czf ~{sampleName}.wgs.by.chrom.tar.gz ~{sep="\n" outputsChrom}
+
   >>>
 
 output {
