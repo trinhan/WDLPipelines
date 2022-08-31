@@ -90,7 +90,7 @@ task compressFiles {
   }
   command <<<
 
-  tar -czvf ~{sampleName}.wgs.by.chrom.tar.gz --files-from=~{write_lines(files)}
+  tar -czvf ~{sampleName}.wgs.by.chrom.tar.gz --files-from=~{write_lines(outputsChrom)}
 
   >>>
 
