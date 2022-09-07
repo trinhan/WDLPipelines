@@ -17,18 +17,15 @@ workflow ClinicalReport {
         File pfam
         File pirsf
         File ACMG
-        Int SVACMGcutoff =3
         File? AddList
         File inputYaml
         File GTex
-        Int memoryGB = 14
+        Int memoryGB = 10
         File? columnEntries
         String runMode ="Germline"
         Boolean SNVvcfformat =true
         Boolean canonical = true
         File? AAlist
-        Int? SRcounts
-        Int? PRcounts
         File param_config
         String dockerFile = "trinhanne/clin_report_annot:v2.5"
     }
