@@ -278,7 +278,7 @@ task ConvertSNVs {
         String? DPathogenic
 
     }
-        Int diskGB=6*ceil(size(inputSNV, "GB")+size(cosmicMut, "GB"))
+        Int diskGB=8*ceil(size(inputSNV, "GB")+size(cosmicMut, "GB")+size(cosmicGenes, "GB")+size(MsigDBAnnotation, "GB"))
         String AAb = select_first([AAlist, "/annotFiles/AminoAcid_table.csv"])
         String CNs = select_first([columnEntries, "/annotFiles/ColumnIDs.csv"])
         String PWF = select_first([pathwayFile, "/annotFiles/PathwayList.csv"])
