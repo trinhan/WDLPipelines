@@ -46,6 +46,7 @@ workflow runVariantCallers{
     # Options here: Pair TumorOnly, Germline
     String runMode = if defined(normalBam) then "Paired" else "TumOnly"
     String gatk_docker
+    Int? minCallerSupport
 
     }
 
@@ -551,9 +552,12 @@ task Merge_Variant_Calls {
 
     String runMode 
 
+    Int minCallers =2
+
     }
 
     # DEFAULT VALUES
+    Int minV = minCallers - 1
        
     Int diskGB = ceil(size(M2, "G"))*4  +  diskGB_buffer
     String runS2 =if defined(STRELKA2_INDELS) then "1" else "0"
@@ -591,25 +595,25 @@ CODE
         # MuTect2 files
         MUTECT2_CS_PASSED="~{pairName}.MuTect2.call_stats.passed.vcf"
         M2temp="~{pairName}.MuTect2.call_stats.vcf"
-
+        Vardict_PASSED="~{pairName}.Vardict.passed.vcf"
         python3 /usr/local/bin/merge_callstats.py "mutect1_cs_list.txt" $MUTECT1_CS
         # Filter MuTect1 mutation calls that passed filter
         python3 /usr/local/bin/filter_passed_mutations.py $MUTECT1_CS $MUTECT1_CS_PASSED $MUTECT1_CS_REJECTED "KEEP"
         # Convert MuTect1 call stats to VCF # can revert to the previous verison of this?
         python3 /usr/local/bin/M1_txt2vcf.py $MUTECT1_CS_PASSED $MUTECT1_CS_VCF "~{caseName}" "~{ctrlName}" -VC "None" --runMode ~{runMode}
-
         bgzip $MUTECT1_CS_VCF
         tabix -p vcf $MUTECT1_CS_VCF.gz
           
-        Vardict_PASSED="~{pairName}.Vardict.passed.vcf"
+        # Name all the merged files
         MERGED_VCF="~{pairName}.M1_M2_S2_vardict.passed.merged.vcf.gz"
         RENAME_MERGED_VCF="~{pairName}.M1_M2_S2_vardict.passed.merged2.vcf.gz"
+        RENAME_MERGED_VCF_decomp="~{pairName}.M1_M2_S2_vardict.passed.merged2.vcf"
+        RENAME_MERGED_VCF_ANN="~{pairName}.M1_M2_S2_vardict.merged.ann.vcf"
+        RENAME_MERGED_VCF_FILT="~{pairName}.M1_M2_S2_vardict.merged.filt.vcf"
 
         echo 'merge vardict files'
-
         bgzip ~{Vardict}
         tabix -p vcf ~{Vardict}.gz
-
 
     if [ ~{runMode} == "Paired" ];
         then
@@ -637,7 +641,7 @@ CODE
         STRELKA2_SNV_REFORMATTED_VCF="~{pairName}.Strelka2.call_stats.snv.re_formatted.vcf"
         STRELKA2_MERGE="~{pairName}.Strelka2.call_stats.merged.vcf.gz"
 
-        bcftools view -f PASS  ~{STRELKA2_INDELS} > $STRELKA2_INDEL_PASSED
+        bcftools view -f PASS ~{STRELKA2_INDELS} > $STRELKA2_INDEL_PASSED
         bcftools view -f PASS ~{STRELKA2_SNVS} > $STRELKA2_SNV_PASSED 
 
         python3 /usr/local/bin/strelka_allelic_count_snv.py $STRELKA2_SNV_PASSED $STRELKA2_SNV_REFORMATTED_VCF "~{caseName}" "~{ctrlName}" -VC "None"
@@ -658,17 +662,24 @@ CODE
         bcftools merge $MUTECT1_CS_VCF.gz $MUTECT2_CS_PASSED.gz $Vardict_PASSED.gz -O vcf -o $MERGED_VCF --force-samples 
     fi;
 
-
         bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF
-
-        RENAME_MERGED_VCF_decomp="~{pairName}.M1_M2_S2_vardict.passed.merged2.vcf"
-
-        gunzip -c $RENAME_MERGED_VCF > $RENAME_MERGED_VCF_decomp
-
         tabix -p vcf $RENAME_MERGED_VCF
-        # extract the variant locations for mutect2
-        python3 /usr/local/bin/vcf2mafbed.py $RENAME_MERGED_VCF_decomp "~{pairName}.M1_M2_S2_vardict.passed.merged2.maf" "~{pairName}.intervals.bed" 150 "~{runMode}"
 
+        echo 'filter based on the number of callers'
+        bcftools query --format '%CHROM\t%POS\t%POS\n' $RENAME_MERGED_VCF > test.output 
+        bcftools query -f '[\t%SAMPLE=%AF]\n' $RENAME_MERGED_VCF | awk '{print 4-gsub(/./, "")}' > output
+        paste test.output output > annots.tab 
+        bgzip annots.tab
+        tabix -s1 -b2 -e2 annots.tab.gz
+        echo '##INFO=<ID=NCALLS,Number=1,Type=Integer,Description="Number of callers">' > annots.hdr
+        bcftools annotate -a annots.tab.gz -h annots.hdr -c CHROM,FROM,TO,NCALLS $RENAME_MERGED_VCF > $RENAME_MERGED_VCF_ANN
+        bcftools filter -i'NCALLS>~{minV}' $RENAME_MERGED_VCF_ANN -o $RENAME_MERGED_VCF_FILT
+        bgzip $RENAME_MERGED_VCF_FILT
+        tabix -p vcf $RENAME_MERGED_VCF_FILT.gz
+
+        # extract the variant locations for mutect2
+        ##gunzip -c $RENAME_MERGED_VCF > $RENAME_MERGED_VCF_decomp
+        python3 /usr/local/bin/vcf2mafbed.py $RENAME_MERGED_VCF_FILT "~{pairName}.M1_M2_S2_vardict.passed.filt.maf" "~{pairName}.intervals.bed" 150 "~{runMode}"
         # run picard to change the input 
         java -jar /tmp/picard.jar BedToIntervalList -I "~{pairName}.intervals.bed" -O "~{pairName}.variantList.interval_list" -SD ~{refFastaDict}
 
@@ -684,10 +695,10 @@ CODE
         }
 
     output {
-        File MergedVcfGz="~{pairName}.M1_M2_S2_vardict.passed.merged2.vcf.gz"
-        File MergedVcf="~{pairName}.M1_M2_S2_vardict.passed.merged2.vcf"
-        File MergedVcfIdx="~{pairName}.M1_M2_S2_vardict.passed.merged2.vcf.gz.tbi"
-        File MergedMaf="~{pairName}.M1_M2_S2_vardict.passed.merged2.maf"
+        File MergedVcfGz="~{pairName}.M1_M2_S2_vardict.merged.filt.vcf.gz"
+        File MergedVcf="~{pairName}.M1_M2_S2_vardict.merged.filt.vcf"
+        File MergedVcfIdx="~{pairName}.M1_M2_S2_vardict.merged.filt.vcf.gz.tbi"
+        File MergedMaf="~{pairName}.M1_M2_S2_vardict.passed.filt.maf"
         File LocBed="~{pairName}.intervals.bed"
         File Interval_list="~{pairName}.variantList.interval_list"
         }

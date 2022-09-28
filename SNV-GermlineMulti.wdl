@@ -66,6 +66,8 @@ workflow runGermlineVariants{
     String tensor_type = "reference"
     String cnn_extra_args = "-stand-call-conf 0 -A Coverage -A ChromosomeCounts -A BaseQuality -A FragmentLength -A MappingQuality -A ReadPosition "
     Int? HC_shard_counts
+
+    Int? minCallerSupport
     }
 
     String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
@@ -205,7 +207,8 @@ workflow runGermlineVariants{
             Haplotype=CNNScoreVariantsWorkflow.cnn_filtered_vcf,
             STRELKA2=Strelka2Germline_Task.strelka2GermlineVCF,
             PISCES_NORMAL=CombineVariants.merged_vcfPN,
-            Vardict=CombineVariants.merged_vcfVD
+            Vardict=CombineVariants.merged_vcfVD,
+            minCallers=minCallerSupport
     }
 
     call VEP.variant_effect_predictor as vep {
