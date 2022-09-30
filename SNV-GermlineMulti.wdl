@@ -518,7 +518,7 @@ task Merge_Variants_Germline {
         tabix -p vcf $Vardict_PASSED.gz
 
         #merge vcfs
-        bcftools merge $STRELKA_pass.gz $PISCES_pass.gz $HP_pass.gz $Vardict_PASSED.gz  -O vcf -o $MERGED_VCF --force-samples
+        bcftools merge $STRELKA_pass.gz $PISCES_pass.gz $HP_pass.gz $Vardict_PASSED.gz -O vcf -o $MERGED_VCF --force-samples
         echo -e "~{ctrlName}.Pisces\n~{ctrlName}.Strelka\n~{ctrlName}.Haplotype\n~{ctrlName}.Vardict\n" > samples.txt
         bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF_ALL
         tabix -p vcf $RENAME_MERGED_VCF_ALL

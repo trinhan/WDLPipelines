@@ -122,7 +122,7 @@ workflow variantJudgement {
     call PassJudgement {
         input:
             blat_reject=blat.rejectMaf,
-            abra2_calls=somaticVC.Combined_raw_variants,
+            abra2_calls=somaticVC.Combined_raw_variants_gz,
             vcf=vcf,
             m2_pon=PoN,
             gnomad=gnomad,
@@ -138,7 +138,7 @@ workflow variantJudgement {
         File? abra2_tum_bam_idx=runabra2.Abra2TumourIdx
         File? abra2_norm_bam=runabra2.Abra2Normal
         File? abra2_norm_bam_idx=runabra2.Abra2NormalIdx
-        File? merged_abra2_calls=somaticVC.Combined_raw_variants
+        File? merged_abra2_calls=somaticVC.Combined_raw_variants_gz
         File judgement_vcf=PassJudgement.pass_judgement
         File judgement_maf=PassJudgement.pass_maf
     }

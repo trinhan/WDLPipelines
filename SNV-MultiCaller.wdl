@@ -227,7 +227,6 @@ workflow runVariantCallers{
        File Combined_raw_variants_gz=select_first([PairedCall.MergedVcfGz, TumCall.MergedVcfGz])
        File Combined_raw_variants_tbi=select_first([PairedCall.MergedVcfIdx, TumCall.MergedVcfIdx])
        File Combined_raw_variants_maf=select_first([PairedCall.MergedMaf, TumCall.MergedMaf])
-       File Combined_raw_variants=select_first([PairedCall.MergedVcf, TumCall.MergedVcf])
        File VariantSitesBed=select_first([PairedCall.LocBed, TumCall.LocBed])
         }
 }
@@ -530,30 +529,23 @@ task IntervalToBed {
 }
 
 task Merge_Variant_Calls {
-
     input {
-    # TASK INPUT PARAMS
-    Array[File] mutect1_cs
-    File M2
-    File? STRELKA2_INDELS
-    File? STRELKA2_SNVS
-    File Vardict
-    String pairName
-    String caseName
-    String? ctrlName
-    File refFastaDict
-    
-    # RUNTIME INPUT PARAMS
-    String? preemptible = "2"
-    String? diskGB_boot = "10"
-    String? diskGB_buffer ="5"
-    String? memoryGB ="4"
-    String? cpu ="1"
-
-    String runMode 
-
-    Int minCallers =2
-
+        Array[File] mutect1_cs
+        File M2
+        File? STRELKA2_INDELS
+        File? STRELKA2_SNVS
+        File Vardict
+        String pairName
+        String caseName
+        String? ctrlName
+        File refFastaDict
+        String? preemptible = "2"
+        String? diskGB_boot = "10"
+        String? diskGB_buffer ="5"
+        String? memoryGB ="4"
+        String? cpu ="1"
+        String runMode 
+        Int minCallers =2
     }
 
     # DEFAULT VALUES
@@ -562,7 +554,7 @@ task Merge_Variant_Calls {
     Int diskGB = ceil(size(M2, "G"))*4  +  diskGB_buffer
     String runS2 =if defined(STRELKA2_INDELS) then "1" else "0"
     
-     parameter_meta {
+    parameter_meta {
         mutect1_cs : "list of mutect variants"
         M2 : "list of mutect2 variants"
         STRELKA2_INDELS : "list of strelka2 variants"
@@ -617,10 +609,12 @@ CODE
 
     if [ ~{runMode} == "Paired" ];
         then
-        echo -e "~{ctrlName}.M1\n~{caseName}.M1\n~{ctrlName}.M2\n~{caseName}.M2\n~{ctrlName}.S2\n~{caseName}.S2\n~{caseName}.Vardict\n~{ctrlName}.Vardict\n"> samples.txt     ##~{ctrlName}.P\n~{caseName}.P\n   
+        echo -e "~{ctrlName}.M1\n~{caseName}.M1\n~{ctrlName}.M2\n~{caseName}.M2\n~{ctrlName}.S2\n~{caseName}.S2\n~{caseName}.Vardict\n~{ctrlName}.Vardict\n"> samples.txt
+        echo -e "~{caseName}.M1\n~{caseName}.M2\n~{caseName}.S2\n~{caseName}.Vardict\n"> samples_tum.txt
         elif [ ~{runMode} == "TumOnly" ] ;
         then
         echo -e "~{caseName}.M1\n~{caseName}.M2\n~{caseName}.Vardict\n"> samples.txt ##~{caseName}.P\n
+        cp samples.txt samples_tum.txt
     fi;
 
         echo 'filter out failed variants'
@@ -667,15 +661,14 @@ CODE
 
         echo 'filter based on the number of callers'
         bcftools query --format '%CHROM\t%POS\t%POS\n' $RENAME_MERGED_VCF > test.output 
-        bcftools query -f '[\t%SAMPLE=%AF]\n' $RENAME_MERGED_VCF | awk '{print 4-gsub(/./, "")}' > output
+        bcftools query -f '[\t%AF]\n' $RENAME_MERGED_VCF -S samples_tum.txt | awk '{print gsub(/0\./, "")}' > output
         paste test.output output > annots.tab 
         bgzip annots.tab
         tabix -s1 -b2 -e2 annots.tab.gz
         echo '##INFO=<ID=NCALLS,Number=1,Type=Integer,Description="Number of callers">' > annots.hdr
         bcftools annotate -a annots.tab.gz -h annots.hdr -c CHROM,FROM,TO,NCALLS $RENAME_MERGED_VCF > $RENAME_MERGED_VCF_ANN
         bcftools filter -i'NCALLS>~{minV}' $RENAME_MERGED_VCF_ANN -o $RENAME_MERGED_VCF_FILT
-        bgzip $RENAME_MERGED_VCF_FILT
-        tabix -p vcf $RENAME_MERGED_VCF_FILT.gz
+
 
         # extract the variant locations for mutect2
         ##gunzip -c $RENAME_MERGED_VCF > $RENAME_MERGED_VCF_decomp
@@ -683,25 +676,27 @@ CODE
         # run picard to change the input 
         java -jar /tmp/picard.jar BedToIntervalList -I "~{pairName}.intervals.bed" -O "~{pairName}.variantList.interval_list" -SD ~{refFastaDict}
 
+        # compress the VCF file as last step
+        bgzip $RENAME_MERGED_VCF_FILT
+        tabix -p vcf $RENAME_MERGED_VCF_FILT.gz
         >>>
         
-        runtime {
+    runtime {
         docker         : "trinhanne/sambcfhts:v1.13.3"
         bootDiskSizeGb : diskGB_boot 
         preemptible    : preemptible
         cpu            : cpu
         disks          : "local-disk ~{diskGB} HDD"
         memory         : memoryGB + "GB"
-        }
+    }
 
     output {
         File MergedVcfGz="~{pairName}.M1_M2_S2_vardict.merged.filt.vcf.gz"
-        File MergedVcf="~{pairName}.M1_M2_S2_vardict.merged.filt.vcf"
         File MergedVcfIdx="~{pairName}.M1_M2_S2_vardict.merged.filt.vcf.gz.tbi"
         File MergedMaf="~{pairName}.M1_M2_S2_vardict.passed.filt.maf"
         File LocBed="~{pairName}.intervals.bed"
         File Interval_list="~{pairName}.variantList.interval_list"
-        }
+    }
 }
 
 task CombineVariants {
