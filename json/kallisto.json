@@ -1,0 +1,14 @@
+{
+    "KallistoWF.Trimmomaticsettings": "${}",
+    "KallistoWF.adapterPath": "${}",
+    "KallistoWF.adapters": "${}",
+    "KallistoWF.cpu": "${}",
+    "KallistoWF.fq1": "${this.fastq1}",
+    "KallistoWF.fq2": "${this.fastq2}",
+    "KallistoWF.kallistoindex": "gs://kccg-cb-annotation-files/RNAseq/homo_sapiens_GRCh38_kallisto_transcriptome.idx",
+    "KallistoWF.len": "${}",
+    "KallistoWF.mem_gb": "${}",
+    "KallistoWF.preemptible": "${}",
+    "KallistoWF.sample_name": "${this.sample_id}",
+    "KallistoWF.sd": "${}"
+}

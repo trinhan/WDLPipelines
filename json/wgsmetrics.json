@@ -1,0 +1,12 @@
+{
+    "WgsMetrics.ByChromosome": "${true}",
+    "WgsMetrics.FastMode": "${false}",
+    "WgsMetrics.Intervals": "gs://kccg-cb-annotation-files/BedIntervals/hg38/wgs_per_chrom_list",
+    "WgsMetrics.bam": "${this.bam}",
+    "WgsMetrics.bam_index": "${this.bam_index}",
+    "WgsMetrics.docker": "broadinstitute/gatk:4.2.6.1",
+    "WgsMetrics.opts": "${}",
+    "WgsMetrics.refFasta": "${workspace.referenceData_hg38_ref_fasta}",
+    "WgsMetrics.refFastaIdx": "${workspace.referenceData_hg38_ref_fasta_index}",
+    "WgsMetrics.sampleName": "${this.sample_id}"
+}
