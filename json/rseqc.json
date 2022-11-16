@@ -1,0 +1,14 @@
+{
+    "RSeQC.RunQCChecks.bam": "${this.STAR_bam}",
+    "RSeQC.RunQCChecks.bamidx": "${this.STAR_bam_index}",
+    "RSeQC.RunQCChecks.gencodeannotationGtf": "gs://kccg-cb-annotation-files/RNAseq/RSeQC/gencode.v22.annotation.gtf.gz",
+    "RSeQC.RunQCChecks.gencodegeneinfoTsv": "gs://kccg-cb-annotation-files/RNAseq/RSeQC/gencode.gene.info.v22.tsv",
+    "RSeQC.RunQCChecks.housekeepBed": "gs://kccg-cb-annotation-files/RNAseq/RSeQC/hg38.HouseKeepingGenes.bed.gz",
+    "RSeQC.RunQCChecks.refBed": "gs://kccg-cb-annotation-files/RNAseq/RSeQC/hg38_RefSeq.bed.gz",
+    "RSeQC.RunQCChecks.run_bam_stat": "false",
+    "RSeQC.RunQCChecks.run_fpkm_uq": "false",
+    "RSeQC.RunQCChecks.run_gene_body": "false",
+    "RSeQC.RunQCChecks.run_read_dist": "true",
+    "RSeQC.RunQCChecks.run_read_dup": "false",
+    "RSeQC.RunQCChecks.sampleName": "${this.sample_id}"
+}

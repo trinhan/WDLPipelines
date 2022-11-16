@@ -1,0 +1,7 @@
+{
+    "Fastqc.adap": "gs://kccg-cb-annotation-files/FastqcInputs/fastqc_contaminant_Fastqc.fa",
+    "Fastqc.f1": "${this.fastq1}",
+    "Fastqc.f2": "${this.fastq2}",
+    "Fastqc.runTrimmomatic": "",
+    "Fastqc.sampleName": "${this.sample_id}"
+}

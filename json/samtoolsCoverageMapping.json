@@ -1,0 +1,8 @@
+{
+    "HeaderMaprateDepth.cpu": "${2}",
+    "HeaderMaprateDepth.filename": "${this.sample_id}",
+    "HeaderMaprateDepth.index_bam": "${this.bam_index}",
+    "HeaderMaprateDepth.input_bam": "${this.bam}",
+    "HeaderMaprateDepth.memoryGB": "${30}",
+    "HeaderMaprateDepth.preemptible": "${1}"
+}
