@@ -15,7 +15,8 @@ workflow pisces_workflow {
     String runMode
    }
 
-     call runpisces {
+ if (runMode =="Tumour"){
+     call runpiscesSomatic {
         input:
             refFasta=refFasta,
             refFastaFai=refFastaFai,
@@ -29,20 +30,138 @@ workflow pisces_workflow {
             interval=interval,
             runMode=runMode
         }
+    }
+
+if (runMode == "Germline"){
+     call runpiscesGermline {
+        input:
+            refFasta=refFasta,
+            refFastaFai=refFastaFai,
+            refFastaDict=refFastaDict,
+            normalBam=normalBam,
+            normalBai=normalBai,
+            pairName=pairName,
+            pisces_reference=pisces_reference,
+            interval=interval,
+            runMode=runMode
+        }
+    }
 
     output {
-        File? tumor_unique_variants_phased=runpisces.tumor_unique_variants_phased
-        File? tumor_unique_variants=runpisces.tumor_unique_variants
-        File? normal_variants_same_site=runpisces.normal_variants_same_site
-        File? normal_variants=runpisces.normal_variants
-        File? tumor_variants=runpisces.tumor_variants
-        File? venn_zip=runpisces.venn_zip
-        File? refzip=runpisces.refzip
+        File tumor_unique_variants_phased=select_first([runpiscesSomatic.tumor_unique_variants_phased, "NULL"])
+        File tumor_unique_variants=select_first([runpiscesSomatic.tumor_unique_variants, "NULL"])
+        File normal_variants=select_first([runpiscesSomatic.normal_variants_same_site, runpiscesGermline.normal_variants])
+        File? venn_zip=select_first([runpiscesSomatic.venn_zip, runpiscesGermline.venn_zip])
+        File? refzip=select_first([runpiscesSomatic.refzip, runpiscesGermline.refzip])
 
     }
 }
 
-task runpisces {
+task runpiscesGermline {
+    input {
+    File? refFasta
+    File? refFastaFai
+    File? refFastaDict
+    File? pisces_reference
+    File? normalBam
+    File? normalBai
+    String pairName
+    File? interval
+    Boolean MNVcall = true
+    Boolean scatterchr = true
+    Int? nthreads =2
+    String mem =8
+    Int preemptible =3
+    String saveDict = "0"
+    String runMode
+    String runScylla = "0"
+    }
+
+
+    String normP = select_first([ normalBam ,""])
+    String normPrefix= if (normP!="") then basename(sub(normP,"\\.bam$", "")) else ""
+    String buildRef = if defined(pisces_reference) then "0" else "1"
+
+    Int disk_size=2*(ceil(size(normalBam, "G")+size(normalBai, "G")+size(refFasta, "G")+size(pisces_reference, "G")))
+   
+    command <<<
+        set -e
+
+        mkdir somatic_~{pairName}
+        sname=~{pisces_reference}
+
+        ## Build the reference libraries here if they do not exist
+
+        if [ ~{buildRef} -eq "1" ];
+        then
+        echo 'create the reference'
+        sname=`basename ~{refFasta}`
+        sname=$(echo $sname| cut -f 1 -d '.')
+        echo $sname
+        mkdir $sname
+        cp ~{refFasta} $sname
+        cp ~{refFastaFai} $sname
+        cp ~{refFastaDict} $sname
+        dotnet /app/CreateGenomeSizeFile_5.2.10.49/CreateGenomeSizeFile.dll -g $sname -s "Homo sapien $sname" -o $sname
+        fi 
+        
+        if [ ~{buildRef} -eq "0" ];
+        then
+        ## to unpack the tar file
+        tar xvzf ~{pisces_reference}
+        ## use this when using a reference file
+        ## cp -r ~{pisces_reference} . 
+        sname=`basename ~{pisces_reference}`
+        sname=$(echo $sname| cut -f 1 -d '.')
+        fi
+
+        dotnet /app/Pisces_5.2.10.49/Pisces.dll -g $sname -b ~{normalBam} -CallMNVs ~{MNVcall} -gVCF false --threadbychr ~{scatterchr} --collapse true -ploidy diploid \
+        --filterduplicates true --maxthreads ~{nthreads} -o somatic_~{pairName} ~{"-i " + interval}
+
+        dotnet /app/VariantQualityRecalibration_5.2.10.49/VariantQualityRecalibration.dll --vcf somatic_~{pairName}/~{normPrefix}.vcf --out somatic_~{pairName}
+
+        if [[ -f somatic_~{pairName}/~{normPrefix}.vcf.recal ]];
+            then
+              cp somatic_~{pairName}/~{normPrefix}.vcf.recal somatic_~{pairName}/~{normPrefix}.recal.vcf
+            elif [[ -f somatic_~{pairName}/~{normPrefix}.vcf ]];
+            then
+              cp somatic_~{pairName}/~{normPrefix}.vcf somatic_~{pairName}/~{normPrefix}.recal.vcf
+        fi
+        ## dotnet /app/Scylla_5.2.10.49/Scylla.dll -g $sname --vcf somatic_~{pairName}/~{normPrefix}.recal.vcf --bam ~{normalBam}
+        
+
+        if [ ~{runScylla} -eq "1" ];
+        then  
+        ## perform phasing here
+        dotnet /app/Scylla_5.2.10.49/Scylla.dll -g $sname --vcf ~{normPrefix}.somatic.unique.recal.vcf --bam ~{normalBam}
+        fi
+
+        if [ ~{saveDict} -eq "1" ];
+        then
+            tar -zvcf refPisces.tar.gz $sname
+        fi
+        
+    >>>
+
+    output {
+        File normal_variants =  select_first(["somatic_${pairName}/~{normPrefix}.recal.vcf", "somatic_~{pairName}/~{normPrefix}.vcf"])
+        File? venn_zip="~{pairName}_venn_pisces.tar.gz"
+        File? refzip="refPisces.tar.gz"
+
+    }
+
+    runtime {
+        docker: "trinhanne/pisces:5.2.10"
+        cpu: nthreads
+        preemptible: preemptible
+        memory: "${mem} GB"
+        disks: "local-disk ${disk_size} HDD"
+    }
+
+}
+
+
+task runpiscesSomatic {
     input {
     File? refFasta
     File? refFastaFai
@@ -61,6 +180,7 @@ task runpisces {
     Int preemptible =3
     String saveDict = "0"
     String runMode
+    String runScylla = "0"
     }
 
 
@@ -177,9 +297,9 @@ task runpisces {
             mv somatic_~{pairName}/~{tumPrefix}.recal.vcf ~{tumPrefix}.somatic.unique.recal.vcf
         fi; 
 
-        if [ ~{runTum} -eq "1" ];
+        if [ ~{runScylla} -eq "1" ];
         then  
-        # perform phasing here
+        ## perform phasing here
         dotnet /app/Scylla_5.2.10.49/Scylla.dll -g $sname --vcf ~{tumPrefix}.somatic.unique.recal.vcf --bam ~{tumorBam}
         fi
 
@@ -191,12 +311,9 @@ task runpisces {
     >>>
 
     output {
-        File? tumor_unique_variants= "~{tumPrefix}.somatic.unique.recal.vcf" 
-        File? tumor_unique_variants_phased= "~{tumPrefix}.somatic.unique.recal.phased.vcf" 
-        File? normal_variants_same_site= "variant2_~{pairName}/~{normPrefix}.genome.recal.vcf" 
-        File? normal_variants_recal =  "somatic_${pairName}/~{normPrefix}.recal.vcf" 
-        File? normal_variants =  "somatic_~{pairName}/~{normPrefix}.vcf" 
-        File? tumor_variants =  "somatic_${pairName}/~{tumPrefix}.recal.vcf" 
+        File tumor_unique_variants= select_first(["~{tumPrefix}.somatic.unique.recal.vcf", "somatic_~{pairName}/~{tumPrefix}.recal.vcf" ])
+        File tumor_unique_variants_phased= "~{tumPrefix}.somatic.unique.recal.phased.vcf" 
+        File? normal_variants_same_site= select_first(["variant2_~{pairName}/~{normPrefix}.genome.recal.vcf", "NULL"])
         File? venn_zip="~{pairName}_venn_pisces.tar.gz"
         File? refzip="refPisces.tar.gz"
 

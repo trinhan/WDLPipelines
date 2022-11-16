@@ -1,0 +1,25 @@
+README
+
+These scripts are used to transfer files from one bucket to another based on a Terra sample table.
+
+Intructions:
+1. Download a Terra sample.tsv table of existing repository (example here: SV_samples_upload.tsv)
+2. Populate the searchTerms.txt file for strings to grep search. Folders containing this string will be created in the 
+destination repository. E.g. "manta" will move files under the columns "manta_vcf", "manta_annotsv" etc to a "manta folder"
+3. run the python script:
+
+ python3 moveFiles.py -i SV_samples_upload.tsv -m searchTerms.txt -d outputDest -o SV_samples_new_repository.tsv
+ python3 moveFiles.py -i SV_samples_upload.tsv -m searchTerms.txt -d fc-a8ec39f9-838e-4fb9-9104-8b3feabbaf30 -o SV_samples_exResGermline.tsv
+ This should give a file "SV_samples_new_repository.tsv" that can be uploaded to Terra once the files have migrated
+ outputDest is your new bucket. Do not include gs. eg. 
+4. Run
+paste oldList.txt newList.txt > pathChanges.txt
+This will merge the list of old file paths and new file paths into a file called pathChanges.txt
+Check that the file pathChanges.txt looks decent before proceeding!! It should have two columns: one with old path and one with new.
+Note that empty entries in the existing table will turn up > provided that the 1st cell is empty, no operation will be performed.
+5. Run
+bash bash_transfer_gcp.sh pathChanges.txt
+Note that line 17 is by default commented out. Check the outputs to ensure that the file works and the moves make sense before uncommenting and starting the move!!
+6. Check the new repository to see if these files exist!
+
+Notes: currently cannot handle Array[File] formats: only one path per cell allowed

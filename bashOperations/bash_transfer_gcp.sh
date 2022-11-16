@@ -6,9 +6,14 @@
 ## bash bash_transfer_gcp.sh move_samples.txt
 
 while read -r -a line; do
-	echo 'sample 1'
-	echo "${line[0]}"
-	echo 'sample 2'
-	echo "${line[1]}"
-	gsutil mv "${line[0]}" "${line[1]}"
+	if [ -z ${line[1]} ]
+	then
+		:
+	else
+		echo 'sample 1'
+		echo "${line[0]}"
+		echo 'sample 2'
+		echo "${line[1]}"
+		gsutil mv "${line[0]}" "${line[1]}"
+	fi
 done < $1

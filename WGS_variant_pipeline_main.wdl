@@ -62,8 +62,7 @@ workflow WGS_SNV_CNV_Workflow {
         File gnomad
         File gnomadidx
         File PoN
-        File PoNidx    
-        File? pisces_reference
+        File PoNidx
         File? variants_for_contamination
         File? variants_for_contamination_idx
         File DB_SNP_VCF
@@ -106,6 +105,8 @@ workflow WGS_SNV_CNV_Workflow {
         Boolean run_absolute
         Boolean run_blat
         Boolean run_abra2
+        Boolean targetedRun
+        Float? fracContam
     }
     String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
     Int tumorBam_size=ceil(size(tumorBam, "G")+size(tumorBamIdx, "G"))
@@ -140,8 +141,10 @@ workflow WGS_SNV_CNV_Workflow {
             forceComputePicardMetrics_tumor=forceComputePicardMetrics_tumor,
             forceComputePicardMetrics_normal=forceComputePicardMetrics_normal,
             normalBam=normalBam,
+            fracContam=fracContam,
             normalBamIdx=normalBamIdx,
-            ctrlName=ctrlName
+            ctrlName=ctrlName,
+            targetedRun=targetedRun
      }
 
     call SomaticVC.runVariantCallers as somaticVC {
@@ -161,13 +164,12 @@ workflow WGS_SNV_CNV_Workflow {
             gnomad_idx=gnomadidx,
             m2_pon=PoN,
             m2_pon_idx=PoNidx,
-            pisces_reference=pisces_reference,
             variants_for_contamination=variants_for_contamination,
             variants_for_contamination_idx=variants_for_contamination_idx,
             DB_SNP_VCF=DB_SNP_VCF,
             DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
             cosmicVCF=cosmicVCF,
-            fracContam=QCChecks.fracContam,
+            fracContam=select_first([fracContam,QCChecks.fracContam]),
             runMode=runMode,
             gatk_docker=gatk_docker,
             strelka_config=strelka_config
@@ -198,13 +200,12 @@ workflow WGS_SNV_CNV_Workflow {
                 gnomadidx=gnomadidx,
                 PoN=PoN,
                 PoNidx=PoNidx,
-                pisces_reference=pisces_reference,
                 variants_for_contamination=variants_for_contamination,
                 variants_for_contamination_idx=variants_for_contamination_idx,
                 DB_SNP_VCF=DB_SNP_VCF,
                 DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
                 cosmicVCF=cosmicVCF, # can this be updated?
-                fracContam=QCChecks.fracContam,
+                fracContam=select_first([fracContam,QCChecks.fracContam]),
                 runMode=runMode,
                 gatk_docker=gatk_docker,
                 strelka_config=strelka_config,
@@ -308,17 +309,15 @@ workflow WGS_SNV_CNV_Workflow {
         Float ContEst_contam = QCChecks.fracContam
         File? cross_check_fingprt_metrics=QCChecks.cross_check_fingprt_metrics
         File? copy_number_qc_report=QCChecks.copy_number_qc_report
-        Array[File]? normal_picard_metrics=QCChecks.normal_bam_picard
-        Array[File]? tumor_picard_metrics=QCChecks.tumor_bam_picard
+        File? normal_picard_metrics=QCChecks.normal_bam_picard
+        File? tumor_picard_metrics=QCChecks.tumor_bam_picard
+        File? tumor_hsmetrics=QCChecks.tumor_bam_hsmetrics
+        File? normal_hsmetrics=QCChecks.normal_bam_hsmetrics
+        File? tumor_cleaned_unmapped_bam=QCChecks.tumor_cleaned_unmapped_bam
+        File? normal_cleaned_unmapped_bam=QCChecks.normal_cleaned_unmapped_bam
         ####### SNV outputs ##########
         File? strelka2SomaticSNVs = somaticVC.strelka2SomaticSNVs
         File? strelka2SomaticIndels = somaticVC.strelka2SomaticIndels
-        ####### pisces outputs ########
-        File? pisces_tum_phased=somaticVC.pisces_tum_phased
-        File? pisces_tum_unique=somaticVC.pisces_tum_unique
-        File? pisces_venn=somaticVC.pisces_venn
-        File? pisces_norm_same_site=somaticVC.pisces_norm_same_site
-        File? pisces_tumor_variants=somaticVC.pisces_tumor_variants
         ####### M2 workflow2 outputs #####
         File M2_filtered_vcf=somaticVC.M2_filtered_vcf
         File M2_filtered_vcf_idx=somaticVC.M2_filtered_vcf_idx

@@ -4,6 +4,8 @@
 ### reference genome data
 ### Intervals list optional 
 ### Boolean save evidence: do you want to save the evidence in a bam file?
+### Boolean save_logs: do you want to save output logs?
+
 version 1.0
 
 task MantaSomaticSV {
@@ -19,9 +21,10 @@ task MantaSomaticSV {
     File? region_bed_index
     Boolean is_cram = false
     Boolean save_evidence = false
+    Boolean save_logs = true
     Int disk_size
     Int cpu_num = 8 
-    Int mem_gb_per_job = 1
+    Int mem_gb_per_job = 3
     Int mem_size = cpu_num * mem_gb_per_job
     Int preemptible_attempts = 3
     }
@@ -56,7 +59,8 @@ task MantaSomaticSV {
         fi
         
         if [ ${save_evidence} == true ];then
-        tar -zcvf ${sample_name}evidence.tar.gz results/evidence/
+        mv results/evidence/*bam ${sample_name}.evidence.bam
+        mv results/evidence/*bai ${sample_name}.evidence.bam.bai
         fi 
         
         mv results/variants/candidateSV.vcf.gz ${sample_name}.candidateSV.vcf.gz
@@ -71,13 +75,15 @@ task MantaSomaticSV {
         preemptible: preemptible_attempts
     }
     output {
+        File? error_log="./workspace/pyflow.data/logs/pyflow_log.txt"
         File? germline_sv_vcf = "${sample_name}.diploidSV.vcf.gz"
         File? germline_sv_vcf_tbi = "${sample_name}.diploidSV.vcf.gz.tbi"
         File somatic_sv_vcf = "${sample_name}.somaticSV.vcf.gz"
         File somatic_sv_vcf_tbi = "${sample_name}.somaticSV.vcf.gz.tbi"
         File candidate_sv_vcf = "${sample_name}.candidateSV.vcf.gz"
         File candidate_indel_vcf = "${sample_name}.candidateSmallIndels.vcf.gz"
-        File? compressed_evidence = "${sample_name}evidence.tar.gz"
+        File? evidence_bam = "${sample_name}.evidence.bam"
+        File? evidence_bai = "${sample_name}.evidence.bam.bai"
     }
 }
 
@@ -117,7 +123,9 @@ task MantaGermline{
         mv results/variants/diploidSV.vcf.gz.tbi ${sample_name}.diploidSV.vcf.gz.tbi
 
         if [ ${save_evidence} == true ]; then
-        tar -zcvf ${sample_name}evidence.tar.gz results/evidence/
+        mv results/evidence/*bam ${sample_name}.evidence.bam
+        mv results/evidence/*bai ${sample_name}.evidence.bam.bai
+        #tar -zcvf ${sample_name}evidence.tar.gz results/evidence/
         fi 
     }
     runtime {
@@ -130,7 +138,8 @@ task MantaGermline{
     output {
         File germline_sv_vcf = "${sample_name}.diploidSV.vcf.gz"
         File germline_sv_vcf_tbi = "${sample_name}.diploidSV.vcf.gz.tbi"
-        File? compressed_evidence = "${sample_name}evidence.tar.gz"
+        File? evidence_bam = "${sample_name}.evidence.bam"
+        File? evidence_bai = "${sample_name}.evidence.bam.bai"
     }
 }
 
@@ -150,7 +159,7 @@ workflow Manta {
     String runMode = "Tumour" ## "Tumour" or "Germline" 
     }
     
-    Int disk_size=4*ceil(size(bam, "GB")+ size(normal_bam, "GB") +size(ref_fasta, "GB")) 
+    Int disk_size=5*ceil(size(bam, "GB")+ size(normal_bam, "GB") +size(ref_fasta, "GB")) 
 
     if (runMode =="Tumour"){
     call MantaSomaticSV {
@@ -191,6 +200,7 @@ workflow Manta {
         File? somatic_sv_vcf_tbi = MantaSomaticSV.somatic_sv_vcf_tbi
         File? candidate_sv_vcf = MantaSomaticSV.candidate_sv_vcf
         File? candidate_indel_vcf = MantaSomaticSV.candidate_indel_vcf
-        File? evidence = select_first([MantaSomaticSV.compressed_evidence, MantaGermline.compressed_evidence]) 
+        File? evidence_bam = select_first([MantaSomaticSV.evidence_bam, MantaGermline.evidence_bam]) 
+        File? evidence_bai = select_first([MantaSomaticSV.evidence_bai, MantaGermline.evidence_bai]) 
     }
 }

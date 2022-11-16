@@ -28,7 +28,7 @@ task runtitan {
     String mem =3
     Int numCores =1
     Int preemptible =3
-    String genomeBuild = "hg19"
+    String genomeBuild
     }
 
     command <<<
@@ -60,8 +60,14 @@ task runtitan {
               done
 
         Rscript /TitanCNA/scripts/selectSolution.R --ploidyRun2=run_ploidy2 --ploidyRun3=run_ploidy3 --ploidyRun4=run_ploidy4 --threshold=0.05 --outFile optimalClusters.txt
-      
-        zip -r ~{pairName}_titan_figures.zip run_ploidy2 run_ploidy3 run_ploidy4
+        
+        cp optimalClusters.txt ~{pairName}.optimalClusters.txt
+
+        ## Parse the correct solution for subsequent visualisation
+        Ploidy=`awk 'END {print $1}' optimalClusters.txt`
+        Nclust=`awk 'END {print $4}' optimalClusters.txt`
+
+        zip -r ~{pairName}_titan_figures.zip run_ploidy${Ploidy}/~{pairName}_cluster0${Nclust}*
 
     >>>
 
@@ -75,7 +81,7 @@ task runtitan {
 
     output {
         File cluster_figures = "${pairName}_titan_figures.zip"
-        File opt_params = "optimalClusters.txt"
+        File opt_params = "${pairName}.optimalClusters.txt"
     }
 }
 

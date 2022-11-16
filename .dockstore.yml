@@ -80,3 +80,33 @@ workflows:
   - name: GATKSelectVariants
     subclass: WDL
     primaryDescriptorPath: /GATKselectVariants.wdl
+  - name: CNVkit
+    subclass: WDL
+    primaryDescriptorPath: /cnvkit.wdl
+  - name: Fastq2uBam
+    subclass: WDL
+    primaryDescriptorPath: /alignment/PairedFastQ2UnmappedBAM.wdl
+  - name: WGSAlignment
+    subclass: WDL
+    primaryDescriptorPath: /alignment/WGSAlignmentPipeline.wdl
+  - name: FastQC
+    subclass: WDL
+    primaryDescriptorPath: /FastQC.wdl
+  - name: SamtoolsCoverageMapping
+    subclass: WDL
+    primaryDescriptorPath: /Samtools_Coverage_MapStats.wdl
+  - name: wgsMetrics
+    subclass: WDL
+    primaryDescriptorPath: /wgsmetrics.wdl
+  - name: jointGenotyping
+    subclass: WDL
+    primaryDescriptorPath: /jointGenotyping/JointGenotyping.wdl
+  - name: star
+    subclass: WDL
+    primaryDescriptorPath: /run_star.wdl
+  - name: kallisto
+    subclass: WDL
+    primaryDescriptorPath: /kallisto-workflow.wdl
+  - name: RSeQC
+    subclass: WDL
+    primaryDescriptorPath: /RSeQC.wdl

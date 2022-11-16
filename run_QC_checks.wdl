@@ -36,6 +36,7 @@ workflow QCChecks {
     # ContEst
     # CrossCheckLane
     File HaplotypeDBForCrossCheck
+    Float? fracContam
 
     # Does the sample already have picard metrics computed
     Boolean hasPicardMetrics_tumor = false
@@ -59,7 +60,7 @@ workflow QCChecks {
     File readGrpBL=select_first([readGroupBlackList, "null"])
 
     Boolean override_CNQC = if defined (normalBam) then run_CNQC else false
-    Boolean runContEst = if defined (normalBam) then true else false
+    Boolean runContEst = if defined(fracContam) || !defined(normalBam) then false else true
 
 
     if (override_CNQC){
@@ -172,8 +173,12 @@ workflow QCChecks {
         File? copy_number_qc_report_png=CopyNumberReportQC_Task.CopyNumQCReportPNG
         Int? copy_number_qc_mix_ups=CopyNumberReportQC_Task.CopyNumQCMixUps
         # Picard Multiple Metrics Task - NORMAL BAM
-        Array[File]? normal_bam_picard=normalMM_Task.picard_files
-        Array[File]? tumor_bam_picard=tumorMM_Task.picard_files
+        File? normal_bam_picard=normalMM_Task.picard_files
+        File? tumor_bam_picard=tumorMM_Task.picard_files
+        File? normal_bam_hsmetrics=normalMM_Task.hsMetrics
+        File? tumor_bam_hsmetrics=tumorMM_Task.hsMetrics
+        File? tumor_cleaned_unmapped_bam=tumorMM_Task.bam_unmapped_cleaned
+        File? normal_cleaned_unmapped_bam=normalMM_Task.bam_unmapped_cleaned
         # Cross-Sample Contamination Task
         File contamination_table=select_first([ContEST_Task.contamTable, "null"])
         File normalTable=select_first([ContEST_Task.normTable, "null"])
@@ -212,8 +217,8 @@ task CopyNumberReportQC_Task {
     Int command_memoryGB = floor(memoryGB) - 1
     
     # COMPUTE DISK SIZE
-    Int diskGB = ceil(tumorBam_size + normalBam_size + size(regionFile, 'G') + size(readGroupBlackList, 'G') 
-                    + size(captureNormalsDBRCLZip, 'G') * 2 + diskGB_buffer)
+    Int diskGB = ceil(2.5*ceil(tumorBam_size + normalBam_size + size(regionFile, 'G') + size(readGroupBlackList, 'G') 
+                    + size(captureNormalsDBRCLZip, 'G') + diskGB_buffer))
 
     parameter_meta {
         tumorBam : "sample tumor  BAM file"
@@ -336,8 +341,8 @@ task PicardMultipleMetrics_Task {
     String preemptible ="1"
     String diskGB_boot ="15"
     String diskGB_buffer = "20"
-    String memoryGB ="10"
-    String cpu ="1"
+    String memoryGB ="16"
+    String cpu ="4"
     String gatk_docker
     String targetedRun = true
     }
@@ -360,16 +365,16 @@ task PicardMultipleMetrics_Task {
 
     command {
 
-        gatk --java-options "-Xmx~{command_memoryGB}g" ValidateSamFile \
-        --INPUT ${bam} \
-        --OUTPUT "${sampleName}.bam_validation" \
-        --MODE VERBOSE \
-        --IGNORE_WARNINGS true \
-        --REFERENCE_SEQUENCE ${refFasta} \
-        --VALIDATION_STRINGENCY ${validationStringencyLevel}
-
         if [ "${run_clean_sam}" = true ] ;
-        then
+            then
+            gatk --java-options "-Xmx~{command_memoryGB}g" ValidateSamFile \
+            --INPUT ${bam} \
+            --OUTPUT "${sampleName}.bam_validation" \
+            --MODE VERBOSE \
+            --IGNORE_WARNINGS true \
+            --REFERENCE_SEQUENCE ${refFasta} \
+            --VALIDATION_STRINGENCY ${validationStringencyLevel}
+
             # Run bam through CleanSam to set MAPQ of unmapped reads to zero
             gatk --java-options "-Xmx~{command_memoryGB}g" CleanSam \
             --INPUT ${bam} \
@@ -408,7 +413,7 @@ task PicardMultipleMetrics_Task {
         tar -czvf ${sampleName}.picard_multiple_metrics.tar.gz ${sampleName}.Picard_Multiple_Metrics/
 
         # Collect WES HS metrics
-    if [ "${run_clean_sam}" = true ];
+    if [ "${targetedRun}" = true ];
     then
         gatk --java-options "-Xmx~{command_memoryGB}g" CollectHsMetrics \
         --INPUT ${bam} \
@@ -430,8 +435,9 @@ task PicardMultipleMetrics_Task {
     }
 
     output {
-        Array[File] picard_files=glob("${sampleName}.*")
-        #File bam_validation="${sampleName}.bam_validation"
+        File picard_files="${sampleName}.picard_multiple_metrics.tar.gz"
+        File? bam_validation="${sampleName}.bam_validation"
+        File? bam_unmapped_cleaned="${sampleName}.unmapped_reads_cleaned.bam"
         #File metricsReportsZip="${sampleName}.picard_multiple_metrics.zip"
         #File alignment_summary_metrics="${sampleName}.multiple_metrics.alignment_summary_metrics"
         #File bait_bias_detail_metrics="${sampleName}.multiple_metrics.bait_bias_detail_metrics"
@@ -451,7 +457,7 @@ task PicardMultipleMetrics_Task {
         #File quality_distribution_metrics="${sampleName}.multiple_metrics.quality_distribution_metrics"
         #File quality_yield_metrics="${sampleName}.multiple_metrics.quality_yield_metrics"
         #File converted_oxog_metrics="${sampleName}.multiple_metrics.converted.oxog_metrics"
-        #File hsMetrics="${sampleName}.HSMetrics.txt"
+        File? hsMetrics="${sampleName}.HSMetrics.txt"
     }
 }
 
@@ -485,7 +491,7 @@ task ContEST_Task {
     Int command_memoryGB = floor(memoryGB) - 1
 
     # COMPUTE DISK SIZE
-    Int diskGB = ceil(tumorBam_size + normalBam_size 
+    Int diskGB = ceil(1.1*(tumorBam_size + normalBam_size)+ 
                 + size(targetIntervals, "G") + size(gnomad, "G") + diskGB_buffer)
 
     parameter_meta {
