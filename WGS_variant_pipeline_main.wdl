@@ -95,6 +95,7 @@ workflow WGS_SNV_CNV_Workflow {
         String runMode
         String refGenome
         # Boolean optains
+        Boolean runQCCheck
         Boolean run_CNQC
         Boolean forceComputePicardMetrics_tumor
         Boolean run_CrossCheck
@@ -113,6 +114,7 @@ workflow WGS_SNV_CNV_Workflow {
     Boolean run_VC_check = if (run_blat || run_abra2) then true else false
 
 ## Run the QC checks step here if specified
+    if (runQCCheck){
     call runQC.QCChecks as QCChecks {
         input:
             tumorBam=tumorBam,
@@ -146,6 +148,9 @@ workflow WGS_SNV_CNV_Workflow {
             ctrlName=ctrlName,
             targetedRun=targetedRun
      }
+    }
+
+    Float new_contam_frac = select_first([fracContam,QCChecks.fracContam])
 
     call SomaticVC.runVariantCallers as somaticVC {
         input:
@@ -169,7 +174,7 @@ workflow WGS_SNV_CNV_Workflow {
             DB_SNP_VCF=DB_SNP_VCF,
             DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
             cosmicVCF=cosmicVCF,
-            fracContam=select_first([fracContam,QCChecks.fracContam]),
+            fracContam=new_contam_frac,
             runMode=runMode,
             gatk_docker=gatk_docker,
             strelka_config=strelka_config
@@ -205,7 +210,7 @@ workflow WGS_SNV_CNV_Workflow {
                 DB_SNP_VCF=DB_SNP_VCF,
                 DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
                 cosmicVCF=cosmicVCF, # can this be updated?
-                fracContam=select_first([fracContam,QCChecks.fracContam]),
+                fracContam=new_contam_frac,
                 runMode=runMode,
                 gatk_docker=gatk_docker,
                 strelka_config=strelka_config,
@@ -306,7 +311,7 @@ workflow WGS_SNV_CNV_Workflow {
 
     output {
         ####### QC check #######
-        Float ContEst_contam = QCChecks.fracContam
+        Float? ContEst_contam = QCChecks.fracContam
         File? cross_check_fingprt_metrics=QCChecks.cross_check_fingprt_metrics
         File? copy_number_qc_report=QCChecks.copy_number_qc_report
         File? normal_picard_metrics=QCChecks.normal_bam_picard
