@@ -152,6 +152,7 @@ workflow WGS_SNV_CNV_Workflow {
             captureNormalsDBRCLZip=captureNormalsDBRCLZip,
             regionFile=regionFile,
             readGroupBlackList=readGroupBlackList,
+            HaplotypeDBForCrossCheck=HaplotypeDBForCrossCheck,
             run_Picard_tumor=run_Picard_tumor, 
             run_CNQC=run_CNQC,
             run_CrossCheck=run_CrossCheck,
