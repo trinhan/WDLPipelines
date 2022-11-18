@@ -395,7 +395,7 @@ workflow WGS_SNV_CNV_Workflow {
         File vep_annot = vep.annotatedFile
         File? vep_summary_html=vep.summary_html
         ##### Manta outputs #####
-        File manta = AnnotSVWF.tsv_anotation
+        File manta = AnnotSVWF.sv_variants_tsv
         File? manta_evidence_bam = MantaWF.evidence_bam
         File? manta_evidence_bai = MantaWF.evidence_bai
     }
