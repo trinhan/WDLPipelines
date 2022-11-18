@@ -59,7 +59,7 @@ task annotsv {
     String sampleName
     String typeofAnnotation ="full"
     Int space_buffer 
-    Int memory
+    Int memory = 8
   }
 
   Int space_needed_gb = space_buffer + ceil( size(input_vcf, "GB")+ size(annotSVtar, "GB"))
