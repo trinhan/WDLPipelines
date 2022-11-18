@@ -21,7 +21,7 @@ workflow RunAnnotSV{
     String sampleName
     String? caller
     String typeofAnnotation ="full"
-    Int space_buffer= 10     
+    Int space_buffer=10
     Int memory
   }
 
@@ -54,11 +54,11 @@ task annotsv {
     String sampleName 
     String? caller
     Array[File]? snps_vcf
-    String snvIndelPASS
+    String snvIndelPASS ="1"
     File annotSVtar
     String sampleName
     String typeofAnnotation ="full"
-    Int space_buffer 
+    Int space_buffer = 10
     Int memory = 8
   }
 
