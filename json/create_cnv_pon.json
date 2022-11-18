@@ -1,0 +1,11 @@
+{
+    "CNVSomaticPanelWorkflow.do_explicit_gc_correction": "True",
+    "CNVSomaticPanelWorkflow.gatk_docker": "us.gcr.io/broad-gatk/gatk:4.2.6.0",
+    "CNVSomaticPanelWorkflow.intervals": "${workspace.referenceData_hg38_eval_interval_list}",
+    "CNVSomaticPanelWorkflow.normal_bais": "${this.samples.bam_index}",
+    "CNVSomaticPanelWorkflow.normal_bams": "${this.samples.bam}",
+    "CNVSomaticPanelWorkflow.pon_entity_id": "wgs-panel-gatk-22samples_PON",
+    "CNVSomaticPanelWorkflow.ref_fasta": "${workspace.referenceData_hg38_ref_fasta}",
+    "CNVSomaticPanelWorkflow.ref_fasta_dict": "${workspace.referenceData_hg38_ref_dict}",
+    "CNVSomaticPanelWorkflow.ref_fasta_fai": "${workspace.referenceData_hg38_ref_fasta_index}"
+}
