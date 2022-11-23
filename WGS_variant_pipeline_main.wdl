@@ -111,7 +111,6 @@ workflow WGS_SNV_CNV_Workflow {
         String runMode
         String refGenome
         # Boolean optains
-        Boolean runQCCheck
         Boolean run_CNQC
         Boolean run_Picard_tumor
         Boolean run_CrossCheck
@@ -129,6 +128,8 @@ workflow WGS_SNV_CNV_Workflow {
     Int tumorBam_size=ceil(size(tumorBam, "G")+size(tumorBamIdx, "G"))
     Int normalBam_size=ceil(size(normalBam, "G")+size(normalBamIdx, "G"))
     Boolean run_VC_check = if (run_blat || run_abra2) then true else false
+    Boolean runQCCheck = if (run_CNQC||run_Picard_tumor||run_CrossCheck||run_Picard_normal) then true else false
+    Boolean run_SV_paired2 = if (exist(normalBam)) then run_SV_paired else false
 
 ## Run the QC checks step here if specified
     if (runQCCheck){
@@ -324,7 +325,7 @@ workflow WGS_SNV_CNV_Workflow {
           biotype=true
      }
 
-    if (run_SV_paired){
+    if (run_SV_paired2){
     call Manta.MantaSomaticSV as MantaWFPaired {
         input:
           sample_name = caseName,
@@ -341,7 +342,7 @@ workflow WGS_SNV_CNV_Workflow {
     }
     }
 
-    if (!run_SV_paired){
+    if (!run_SV_paired2){
     call Manta.MantaSomaticSV as MantaWFSingle {
         input:
           sample_name = caseName,
