@@ -63,6 +63,9 @@ workflows:
     primaryDescriptorPath: /cnv_wdl/germline/modified_cnv_somatic_funcotate_seg_workflow.wdl
     testParameterFiles: 
     - /json/cnv_germline_funcotate_inputs.json
+  - name: CNV_germline_case
+    subclass: WDL
+    primaryDescriptorPath: /cnv_wdl/germline/cnv_germline_case_workflow.wdl
   - name: AnnotSV
     subclass: WDL
     primaryDescriptorPath: /annotsv.wdl
@@ -92,21 +95,31 @@ workflows:
   - name: FastQC
     subclass: WDL
     primaryDescriptorPath: /FastQC.wdl
+    testParameterFiles: 
+    - /json/fastqc.json
   - name: SamtoolsCoverageMapping
     subclass: WDL
     primaryDescriptorPath: /Samtools_Coverage_MapStats.wdl
   - name: wgsMetrics
     subclass: WDL
     primaryDescriptorPath: /wgsmetrics.wdl
+    testParameterFiles: 
+    - /json/wgsmetrics.json
   - name: jointGenotyping
     subclass: WDL
     primaryDescriptorPath: /jointGenotyping/JointGenotyping.wdl
   - name: star
     subclass: WDL
     primaryDescriptorPath: /run_star.wdl
+    testParameterFiles: 
+    - /json/star2.6.json
   - name: kallisto
     subclass: WDL
     primaryDescriptorPath: /kallisto-workflow.wdl
+    testParameterFiles: 
+    - /json/kallisto.json
   - name: RSeQC
     subclass: WDL
     primaryDescriptorPath: /RSeQC.wdl
+    testParameterFiles: 
+    - /json/rseqc.json
