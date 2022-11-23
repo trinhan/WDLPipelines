@@ -451,7 +451,6 @@ task PostprocessGermlineCNVCalls {
       File contig_ploidy_calls_tar
       Array[String]? allosomal_contigs
       Int ref_copy_number_autosomal_contigs
-      Int sample_index
       Int maximum_number_events
       Int maximum_number_pass_events
       File? intervals_vcf
