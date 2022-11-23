@@ -167,8 +167,8 @@ output {
         File? vep_summary_html=runSNV.vep_summary_html
         File oncokbMaf=runSNV.oncokbMaf
         ## MantaOutputs
-        File manta_evidence_bam = runManta.evidence_bam
-        File manta_evidence_bai = runManta.evidence_bai
+        File? manta_evidence_bam = runManta.evidence_bam
+        File? manta_evidence_bai = runManta.evidence_bai
         File mantaAnnotSV = runAnnotSVManta.sv_variants_tsv
     }
 
