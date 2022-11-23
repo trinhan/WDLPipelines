@@ -94,8 +94,8 @@ workflow WGS_SNV_CNV_Workflow {
         File common_snps
         File cnv_intervals
         ## SV region files
-        File SVRegionBed
-        File SVRegionBedTbi
+        File? SVRegionBed
+        File? SVRegionBedTbi
         File annotSVtar
         ## VEP input
         File vep_cache
@@ -324,25 +324,45 @@ workflow WGS_SNV_CNV_Workflow {
           biotype=true
      }
 
-    call Manta.MantaSomaticSV as MantaWF {
+    if (run_SV_paired){
+    call Manta.MantaSomaticSV as MantaWFPaired {
         input:
           sample_name = caseName,
           tumor_bam = tumorBam,
           tumor_bam_index = tumorBamIdx,
-          normal_bam = if (run_SV_paired) then normalBam else "null",
-          normal_bam_index = if (run_SV_paired) then normalBamIdx else "null",
+          normal_bam = normalBam,
+          normal_bam_index = normalBamIdx,
           ref_fasta = refFasta,
           ref_fasta_index = refFastaIdx,
           region_bed=SVRegionBed,
-          disk_size=5*ceil(tumorBam_size + (if (run_SV_paired) then normalBam_size else 0)),
+          disk_size=5*ceil(tumorBam_size + normalBam_size ),
           region_bed_index=SVRegionBedTbi,
           save_evidence=save_manta_evidence
-    } 
+    }
+    }
+
+    if (!run_SV_paired){
+    call Manta.MantaSomaticSV as MantaWFSingle {
+        input:
+          sample_name = caseName,
+          tumor_bam = tumorBam,
+          tumor_bam_index = tumorBamIdx,
+          ref_fasta = refFasta,
+          ref_fasta_index = refFastaIdx,
+          region_bed=SVRegionBed,
+          disk_size=5*ceil(tumorBam_size),
+          region_bed_index=SVRegionBedTbi,
+          save_evidence=save_manta_evidence
+    }
+    }
+
+    File manta_sv = select_first([MantaWFPaired.somatic_sv_vcf, MantaWFSingle.somatic_sv_vcf])
+    File manta_sv_tbi = select_first([MantaWFPaired.somatic_sv_vcf_tbi, MantaWFSingle.somatic_sv_vcf_tbi])
 
     call AnnotSV.annotsv as AnnotSVWF {
         input:
-          input_vcf=MantaWF.somatic_sv_vcf,
-          input_vcf_idx=MantaWF.somatic_sv_vcf_tbi,
+          input_vcf=manta_sv,
+          input_vcf_idx=manta_sv_tbi,
           genome_build=assembly,
           annotSVtar=annotSVtar,
           sampleName=caseName,
@@ -397,8 +417,8 @@ workflow WGS_SNV_CNV_Workflow {
         File? vep_summary_html=vep.summary_html
         ##### Manta outputs #####
         File manta = AnnotSVWF.sv_variants_tsv
-        File? manta_evidence_bam = MantaWF.evidence_bam
-        File? manta_evidence_bai = MantaWF.evidence_bai
+        File? manta_evidence_bam = select_first([MantaWFPaired.evidence_bam, MantaWFSingle.evidence_bam])
+        File? manta_evidence_bai = select_first([MantaWFPaired.evidence_bai, MantaWFSingle.evidence_bai])
     }
 }
 
