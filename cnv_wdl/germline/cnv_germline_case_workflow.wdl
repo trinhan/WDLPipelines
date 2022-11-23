@@ -464,6 +464,10 @@ task GermlineCNVCallerCaseMode {
 
         tar czf case-gcnv-tracking-shard-~{scatter_index}.tar.gz -C ~{output_dir_}/case-tracking .
 
+        tar czf case-gcnv-calls-shard-~{scatter_index}.tar.gz -C ~{output_dir_}/case-calls/SAMPLE_0 .
+
+        ls .
+
 #        CURRENT_SAMPLE=0
 #        NUM_SAMPLES=~{num_samples}
 #        NUM_DIGITS=${#NUM_SAMPLES}
@@ -473,8 +477,8 @@ task GermlineCNVCallerCaseMode {
 #            let CURRENT_SAMPLE=CURRENT_SAMPLE+1
 #        done
 
-        rm -rf contig-ploidy-calls
-        rm -rf gcnv-model
+#        rm -rf contig-ploidy-calls
+#        rm -rf gcnv-model
     >>>
 
     runtime {
