@@ -130,8 +130,8 @@ workflow CNVGermlineCaseWorkflow {
       ##########################
       #### arguments for QC ####
       ##########################
-      Int maximum_number_events_per_sample
-      Int maximum_number_pass_events_per_sample
+      Int maximum_number_events
+      Int maximum_number_pass_events
     }
 
 #    Array[Pair[String, String]] normal_bams_and_bais = zip(normal_bams, normal_bais)
@@ -252,15 +252,17 @@ workflow CNVGermlineCaseWorkflow {
                 sample_index = sample_name,
                 gatk4_jar_override = gatk4_jar_override,
                 gatk_docker = gatk_docker,
-                preemptible_attempts = preemptible_attempts
+                preemptible_attempts = preemptible_attempts,
+                maximum_number_events=maximum_number_events,
+                maximum_number_pass_events=maximum_number_pass_events
         }
 
         call CNVTasks.CollectSampleQualityMetrics {
             input:
                 genotyped_segments_vcf = PostprocessGermlineCNVCalls.genotyped_segments_vcf,
                 entity_id = CollectCounts.entity_id,
-                maximum_number_events = maximum_number_events_per_sample,
-                maximum_number_pass_events = maximum_number_pass_events_per_sample,
+                maximum_number_events = maximum_number_events,
+                maximum_number_pass_events = maximum_number_pass_events,
                 bash_docker = gatk_docker,
                 preemptible_attempts = preemptible_attempts
         }
