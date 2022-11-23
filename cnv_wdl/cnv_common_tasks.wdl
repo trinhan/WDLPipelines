@@ -526,7 +526,6 @@ task PostprocessGermlineCNVCalls {
             ~{sep=" " allosomal_contigs_args} \
             --autosomal-ref-copy-number ~{ref_copy_number_autosomal_contigs} \
             --contig-ploidy-calls contig-ploidy-calls \
-            --sample-index ~{sample_index} \
             --output-genotyped-intervals ~{genotyped_intervals_vcf_filename} \
             --output-genotyped-segments ~{genotyped_segments_vcf_filename} \
             --output-denoised-copy-ratios ~{denoised_copy_ratios_filename} \

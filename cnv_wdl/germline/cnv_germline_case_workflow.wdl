@@ -249,7 +249,6 @@ workflow CNVGermlineCaseWorkflow {
                 allosomal_contigs = allosomal_contigs,
                 ref_copy_number_autosomal_contigs = ref_copy_number_autosomal_contigs,
                 contig_ploidy_calls_tar = DetermineGermlineContigPloidyCaseMode.contig_ploidy_calls_tar,
-                sample_index = sample_name,
                 gatk4_jar_override = gatk4_jar_override,
                 gatk_docker = gatk_docker,
                 preemptible_attempts = preemptible_attempts,
