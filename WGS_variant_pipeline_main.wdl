@@ -129,7 +129,7 @@ workflow WGS_SNV_CNV_Workflow {
     Int normalBam_size=ceil(size(normalBam, "G")+size(normalBamIdx, "G"))
     Boolean run_VC_check = if (run_blat || run_abra2) then true else false
     Boolean runQCCheck = if (run_CNQC||run_Picard_tumor||run_CrossCheck||run_Picard_normal) then true else false
-    Boolean run_SV_paired2 = if (exist(normalBam)) then run_SV_paired else false
+    Boolean run_SV_paired2 = if (defined(normalBam)) then run_SV_paired else false
 
 ## Run the QC checks step here if specified
     if (runQCCheck){
