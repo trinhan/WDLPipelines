@@ -717,3 +717,52 @@ task ScatterPloidyCallsBySample {
         Array[File] sample_contig_ploidy_calls_tar = glob("sample_*.contig_ploidy_calls.tar.gz")
     }
 }
+
+task CollectSampleQualityMetrics {
+    input {
+      File genotyped_segments_vcf
+      String entity_id
+      Int maximum_number_events
+      Int maximum_number_pass_events
+
+      # Runtime parameters
+      String bash_docker
+      Int? mem_gb
+      Int? disk_space_gb
+      Boolean use_ssd = false
+      Int? cpu
+      Int? preemptible_attempts
+    }
+
+    Int machine_mem_mb = select_first([mem_gb, 1]) * 1000
+
+    command <<<
+        set -eu
+        #use wc instead of grep -c so zero count isn't non-zero exit
+        #use grep -P to recognize tab character
+        NUM_SEGMENTS=$(zgrep '^[^#]' ~{genotyped_segments_vcf} | grep -v '0/0' | grep -v -P '\t0:1:' | grep '' | wc -l)
+        NUM_PASS_SEGMENTS=$(zgrep '^[^#]' ~{genotyped_segments_vcf} | grep -v '0/0' | grep -v -P '\t0:1:' | grep 'PASS' | wc -l)
+        if [ $NUM_SEGMENTS -lt ~{maximum_number_events} ]; then
+            if [ $NUM_PASS_SEGMENTS -lt ~{maximum_number_pass_events} ]; then
+              echo "PASS" >> ~{entity_id}.qcStatus.txt
+            else
+              echo "EXCESSIVE_NUMBER_OF_PASS_EVENTS" >> ~{entity_id}.qcStatus.txt
+            fi
+        else
+            echo "EXCESSIVE_NUMBER_OF_EVENTS" >> ~{entity_id}.qcStatus.txt
+        fi
+    >>>
+
+    runtime {
+        docker: bash_docker
+        memory: machine_mem_mb + " MB"
+        disks: "local-disk " + select_first([disk_space_gb, 20]) + if use_ssd then " SSD" else " HDD"
+        cpu: select_first([cpu, 1])
+        preemptible: select_first([preemptible_attempts, 5])
+    }
+
+    output {
+        File qc_status_file = "~{entity_id}.qcStatus.txt"
+        String qc_status_string = read_string("~{entity_id}.qcStatus.txt")
+    }
+}
