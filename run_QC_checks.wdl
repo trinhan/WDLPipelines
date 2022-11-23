@@ -1,5 +1,30 @@
+## Author: Anne Trinh
+## Last Modified: 18/11/2022
+## This pipeline is a modification of the QC metrics in Getz somatic variant pipeline modified for hg38
+## Legacy features have been retained in this pipeline and can be turned off using Boolean input
+##
+## main mod: 
+## - override cross check lane for hg19 only
+## - one boolean for running picard for normal and tumour
+##
+## COMPONENTS:
+## 1. Copy Number QC: Quick QC based on CN to ensure normal and tumour are not mixed up
+## 2. ContEst: Estimate the estimated amount of normal 
+## 3. CrossCheckFingerprint: check that all read groups within the set of BAM files appear to come from the same individual
+## 4. Picard Metrics
+## 
+############################################
+## DEFAULT OPTIONS (In the listed .json file)
+#############################################
+## refGenome = "hg38" (also works with "hg19")
+## runMode = "Paired" (can also be "TumOnly")
+## run_CNQC = false. Run copy number QC in QC step?
+## run_Picard_tumor = true
+## run_Picard_normal = false
+## run_CrossCheck = false. Run Cross Check Fingerprints?
+
 version 1.0
-## quick mod: override cross check lane for hg19 only
+
 workflow QCChecks {
     input {
     File tumorBam
@@ -39,13 +64,11 @@ workflow QCChecks {
     Float? fracContam
 
     # Does the sample already have picard metrics computed
-    Boolean hasPicardMetrics_tumor = false
-    Boolean hasPicardMetrics_normal = false
+    Boolean run_Picard_tumor = false
+    Boolean run_Picard_normal = false
     # Forceto compute picard metrics anyway, even if they exist
-    Boolean forceComputePicardMetrics_tumor = true
     Boolean run_CNQC = false
     Boolean run_CrossCheck = true
-    Boolean forceComputePicardMetrics_normal = if defined (normalBam) then true else false
     # Is the run WGS (false) or a targeted hybrid capture panel (true)
     Boolean targetedRun
     }
@@ -122,7 +145,7 @@ workflow QCChecks {
     # CollectHSMetrics adds coverage statistics for WES files, on top of CollectMultipleMetrics.
 
     # tumor
-    if (forceComputePicardMetrics_tumor || !hasPicardMetrics_tumor) {
+    if (run_Picard_tumor) {
         call PicardMultipleMetrics_Task as tumorMM_Task {
             input:
                 bam=tumorBam,
@@ -142,7 +165,7 @@ workflow QCChecks {
     }
 
     #normal
-    if (forceComputePicardMetrics_normal || !hasPicardMetrics_normal && defined(normalBam)) {
+    if (run_Picard_normal && defined(normalBam)) {
         call PicardMultipleMetrics_Task as normalMM_Task {
             input:
                 bam=normalBam,
@@ -341,7 +364,7 @@ task PicardMultipleMetrics_Task {
     String preemptible ="1"
     String diskGB_boot ="15"
     String diskGB_buffer = "20"
-    String memoryGB ="8"
+    String memoryGB ="7"
     String cpu ="1"
     String gatk_docker
     String targetedRun = true

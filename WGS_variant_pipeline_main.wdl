@@ -1,10 +1,16 @@
+## Author: Anne Trinh
+## Last Modified: 18/11/2022
+## This pipeline is a modification of the Getz somatic variant pipeline modified for hg38
+## Legacy features have been retained in this pipeline and can be turned off using Boolean input
+##
 ## Overall pipeline for the following
 ## - QC checks
 ## - SNV calling
 ## - CNV calling
+## - SV valling
 ## - judgement (Indel realigner)
-## TITAN and/or ABSOLUTE
-## vep of the final outputs
+## - TITAN and/or ABSOLUTE
+## - vep of the final outputs
 ##
 ## MODIFICATIONS:
 ##  1. Run Strelka2 somatic and germline
@@ -15,21 +21,25 @@
 ##  6. include titan
 ##  7. consolidate gatk docker files and .jar files
 ##  8. allow hg38 compatibility
+##  9. Include Manta and AnnotSV
 ##
-## TODO MODIFICATIONS:
-##  4. include varscan
 ## 
 ############################################
 ## DEFAULT OPTIONS (In the listed .json file)
 #############################################
 ## refGenome = "hg38" (also works with "hg19")
 ## runMode = "Paired" (can also be "TumOnly")
+## runQCCheck = false (Omit this step if picard metrics etc have already been run for this sample)
 ## run_CNQC = false. Run copy number QC in QC step?
 ## run_CrossCheck = false. Run Cross Check Fingerprints?
-## run_blat = false. Run blat (hg19 only) or indel realigner (abra2)?
+## run_CNQC = false. Run copy number QC in QC step?
+## run_CrossCheck = false. Run Cross Check Fingerprints?
+## run_blat = false. Run blat (hg19 only)?
 ## run_abra2 = false. Run the indel realigner (abra2)?
 ## run_absolute = false. Run Absolute to determine ploidy/purity?
 ## run_functotar_cnv = false. Annotae the CNVs with funcotator?
+## run_SV_paired = false. Run paired SV-calling (no point if matched normal is blood)
+## targetedrun = false. Is a target panel used?
 
 version 1.0
 
@@ -41,6 +51,8 @@ import "cnv_wdl/somatic/cnv_somatic_pair_workflow.wdl" as GATKCNVWorkflow
 import "combine_tracks_version_modified.wdl" as CombineTracks
 import "titan_workflow.wdl" as titan_workflow
 import "VEP104.wdl" as VEP
+import "Manta1.6.wdl" as Manta
+import "annotsv.wdl" as AnnotSV
 
 workflow WGS_SNV_CNV_Workflow {
     input {
@@ -81,6 +93,10 @@ workflow WGS_SNV_CNV_Workflow {
         File cnv_pon
         File common_snps
         File cnv_intervals
+        ## SV region files
+        File? SVRegionBed
+        File? SVRegionBedTbi
+        File annotSVtar
         ## VEP input
         File vep_cache
         File? caddSnv
@@ -95,23 +111,25 @@ workflow WGS_SNV_CNV_Workflow {
         String runMode
         String refGenome
         # Boolean optains
-        Boolean runQCCheck
         Boolean run_CNQC
-        Boolean forceComputePicardMetrics_tumor
+        Boolean run_Picard_tumor
         Boolean run_CrossCheck
-        Boolean hasPicardMetrics_normal
-        Boolean hasPicardMetrics_tumor
-        Boolean forceComputePicardMetrics_normal
+        Boolean run_Picard_normal
         Boolean run_functotar_cnv
         Boolean run_absolute
         Boolean run_blat
         Boolean run_abra2
         Boolean targetedRun
-        Float? fracContam
+        Boolean run_SV_paired
+        Boolean save_manta_evidence=true
+        Float? fracContam =0.01 # by default set at 0.01
     }
     String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
     Int tumorBam_size=ceil(size(tumorBam, "G")+size(tumorBamIdx, "G"))
+    Int normalBam_size=ceil(size(normalBam, "G")+size(normalBamIdx, "G"))
     Boolean run_VC_check = if (run_blat || run_abra2) then true else false
+    Boolean runQCCheck = if (run_CNQC||run_Picard_tumor||run_CrossCheck||run_Picard_normal) then true else false
+    Boolean run_SV_paired2 = if (defined(normalBam)) then run_SV_paired else false
 
 ## Run the QC checks step here if specified
     if (runQCCheck){
@@ -135,13 +153,11 @@ workflow WGS_SNV_CNV_Workflow {
             captureNormalsDBRCLZip=captureNormalsDBRCLZip,
             regionFile=regionFile,
             readGroupBlackList=readGroupBlackList,
-            HaplotypeDBForCrossCheck=HaplotypeDBForCrossCheck, 
+            HaplotypeDBForCrossCheck=HaplotypeDBForCrossCheck,
+            run_Picard_tumor=run_Picard_tumor, 
             run_CNQC=run_CNQC,
             run_CrossCheck=run_CrossCheck,
-            hasPicardMetrics_tumor=hasPicardMetrics_tumor,
-            hasPicardMetrics_normal=hasPicardMetrics_normal,
-            forceComputePicardMetrics_tumor=forceComputePicardMetrics_tumor,
-            forceComputePicardMetrics_normal=forceComputePicardMetrics_normal,
+            run_Picard_normal=run_Picard_normal,
             normalBam=normalBam,
             fracContam=fracContam,
             normalBamIdx=normalBamIdx,
@@ -309,6 +325,53 @@ workflow WGS_SNV_CNV_Workflow {
           biotype=true
      }
 
+    if (run_SV_paired2){
+    call Manta.MantaSomaticSV as MantaWFPaired {
+        input:
+          sample_name = caseName,
+          tumor_bam = tumorBam,
+          tumor_bam_index = tumorBamIdx,
+          normal_bam = normalBam,
+          normal_bam_index = normalBamIdx,
+          ref_fasta = refFasta,
+          ref_fasta_index = refFastaIdx,
+          region_bed=SVRegionBed,
+          disk_size=5*ceil(tumorBam_size + normalBam_size ),
+          region_bed_index=SVRegionBedTbi,
+          save_evidence=save_manta_evidence
+    }
+    }
+
+    if (!run_SV_paired2){
+    call Manta.MantaSomaticSV as MantaWFSingle {
+        input:
+          sample_name = caseName,
+          tumor_bam = tumorBam,
+          tumor_bam_index = tumorBamIdx,
+          ref_fasta = refFasta,
+          ref_fasta_index = refFastaIdx,
+          region_bed=SVRegionBed,
+          disk_size=5*ceil(tumorBam_size),
+          region_bed_index=SVRegionBedTbi,
+          save_evidence=save_manta_evidence
+    }
+    }
+
+    File manta_sv = select_first([MantaWFPaired.somatic_sv_vcf, MantaWFSingle.somatic_sv_vcf])
+    File manta_sv_tbi = select_first([MantaWFPaired.somatic_sv_vcf_tbi, MantaWFSingle.somatic_sv_vcf_tbi])
+
+    call AnnotSV.annotsv as AnnotSVWF {
+        input:
+          input_vcf=manta_sv,
+          input_vcf_idx=manta_sv_tbi,
+          genome_build=assembly,
+          annotSVtar=annotSVtar,
+          sampleName=caseName,
+          typeofAnnotation="both",
+          caller="Manta"
+    }
+
+
     output {
         ####### QC check #######
         Float? ContEst_contam = QCChecks.fracContam
@@ -353,6 +416,10 @@ workflow WGS_SNV_CNV_Workflow {
         File new_variants_gz=new_variants_vcf
         File vep_annot = vep.annotatedFile
         File? vep_summary_html=vep.summary_html
+        ##### Manta outputs #####
+        File manta = AnnotSVWF.sv_variants_tsv
+        File? manta_evidence_bam = select_first([MantaWFPaired.evidence_bam, MantaWFSingle.evidence_bam])
+        File? manta_evidence_bai = select_first([MantaWFPaired.evidence_bai, MantaWFSingle.evidence_bai])
     }
 }
 

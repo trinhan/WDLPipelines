@@ -2,6 +2,7 @@ version 1.0
 
 ## Pipeline for running mutation calling from germline samples
 ## Steps:
+## 0. Optional QC using picard
 ## 1. Strelka2
 ## 2. Pisces
 ## 3. CNN variant filer on haplotype caller 
@@ -21,7 +22,7 @@ workflow runGermlineVariants{
     # sample normal BAI file (BAM indexed) (see samtools index command http://www.htslib.org/doc/samtools.html)
     File normalBamIdx
     # a string for the name of the pair under analysis used for naming output files
-    String pairName
+    ##String pairName
     # a string for the name of the tumor sample under analysis used for naming output files
     String ctrlName
     # list of read groups to exclude from the analysis in MuTect1 and MuTect_FC tasks
@@ -45,15 +46,14 @@ workflow runGermlineVariants{
     File? clinvarTbi
     String refGenome
 
-    File DB_SNP_VCF
-    File DB_SNP_VCF_IDX
+#    File DB_SNP_VCF
+#    File DB_SNP_VCF_IDX
 
-    Boolean runQC
-    Boolean targetedRun
+#    Boolean runQC
+#    Boolean targetedRun
 
     String oncotree
     File AAlist
-    String? canonical
     String? grepRm
     String OncoKBtoken
 
@@ -62,7 +62,7 @@ workflow runGermlineVariants{
     Array[File] HC_resources_index
     File gnomad
     File gnomadidx
-    String info_key
+    String info_key = "CNN_1D"
     String tensor_type = "reference"
     String cnn_extra_args = "-stand-call-conf 0 -A Coverage -A ChromosomeCounts -A BaseQuality -A FragmentLength -A MappingQuality -A ReadPosition "
     Int? HC_shard_counts
@@ -76,28 +76,28 @@ workflow runGermlineVariants{
 
     Int normalBam_size  = ceil(size(normalBam,  "G") + size(normalBamIdx,   "G")) 
     Int refFasta_size   = ceil(size(refFasta,   "G") + size(refFastaDict,   "G") + size(refFastaIdx, "G")) 
-    Int db_snp_vcf_size = ceil(size(DB_SNP_VCF, "G")+size(DB_SNP_VCF_IDX, "G"))
+#    Int db_snp_vcf_size = ceil(size(DB_SNP_VCF, "G")+size(DB_SNP_VCF_IDX, "G"))
 
 
-    if (runQC){
-        call runQC.PicardMultipleMetrics_Task as normalMM_Task {
-            input:
-                bam=normalBam,
-                bamIndex=normalBamIdx,
-                sampleName=ctrlName,
-                refFasta=refFasta,
-                DB_SNP_VCF=DB_SNP_VCF,
-                DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
-                targetIntervals=targetIntervals,
-                baitIntervals=targetIntervals,
-                gatk_docker=gatk_docker,
-                refFasta_size=refFasta_size,
-                db_snp_vcf_size=db_snp_vcf_size,
-                bam_size=normalBam_size,
-                targetedRun=targetedRun
-
-        }
-    }
+#    if (runQC){
+#        call runQC.PicardMultipleMetrics_Task as normalMM_Task {
+#            input:
+#                bam=normalBam,
+#                bamIndex=normalBamIdx,
+#                sampleName=ctrlName,
+#                refFasta=refFasta,
+#                DB_SNP_VCF=DB_SNP_VCF,
+#                DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
+#                targetIntervals=targetIntervals,
+#                baitIntervals=targetIntervals,
+#                gatk_docker=gatk_docker,
+#                refFasta_size=refFasta_size,
+#                db_snp_vcf_size=db_snp_vcf_size,
+#                bam_size=normalBam_size,
+#                targetedRun=targetedRun
+#
+#        }
+#    }
 
         # PREPARE FOR SCATTER
     call CallSomaticMutations_Prepare_Task {
@@ -133,7 +133,7 @@ workflow runGermlineVariants{
             refFasta_size=refFasta_size,
             callRegionsBED=IntervalToBed.output_bed,
             callRegionsBEDTBI=IntervalToBed.output_bed_tbi,
-            name=pairName
+            name=ctrlName
     }
 
  scatter (idx in CallSomaticMutations_Prepare_Task.scatterIndices) {
@@ -144,7 +144,7 @@ workflow runGermlineVariants{
             refFastaDict=refFastaDict,
             normalBam=normalBam,
             normalBai=normalBamIdx,
-            pairName=pairName,
+            pairName=ctrlName,
             pisces_reference=pisces_reference,
             interval=CallSomaticMutations_Prepare_Task.bed_list[idx],
             runMode="Germline" 
@@ -156,9 +156,9 @@ workflow runGermlineVariants{
                 referenceFastaFai=refFastaIdx,
                 tumorBam=normalBam,
                 tumorBamIndex=normalBamIdx,
-                outputName=pairName,
+                outputName=ctrlName,
                 bedFile=CallSomaticMutations_Prepare_Task.bed_list[idx],
-                tumorSampleName=pairName
+                tumorSampleName=ctrlName
         }
 }
 
@@ -178,7 +178,7 @@ workflow runGermlineVariants{
             ref_fai = refFastaIdx,
             ref_dict = refFastaDict,
             gatk_docker = gatk_docker,
-            sample_name = pairName
+            sample_name = ctrlName
     }
 
     call CNNFilter.Cram2FilteredVcf as CNNScoreVariantsWorkflow {
@@ -190,7 +190,7 @@ workflow runGermlineVariants{
             reference_fasta_index=refFastaIdx,
             resources = HC_resources,
             resources_index =HC_resources_index,
-            output_prefix = pairName,
+            output_prefix = ctrlName,
             info_key=info_key,                 # The score key for the INFO field of the vcf (e.g. CNN_1D, CNN_2D)
             tensor_type=tensor_type,              # What kind of tensors the Neural Net expects (e.g. reference, read_tensor)
             scatter_count =select_first([HC_shard_counts, 4]),              # Number of shards for parallelization of HaplotypeCaller and CNNScoreVariants
@@ -214,7 +214,7 @@ workflow runGermlineVariants{
     call VEP.variant_effect_predictor as vep {
         input:
           inputFile =Merge_Variants_Germline.MergedGermlineVcf,
-          sample_name = pairName,
+          sample_name = ctrlName,
           assembly=assembly,
           species = "homo_sapiens",
           input_format = "vcf",
@@ -254,15 +254,14 @@ workflow runGermlineVariants{
         token = OncoKBtoken,
         searchby = "HGVSp_Short",
         AAlist = AAlist,
-        canonical=canonical,
         grepRm=grepRm
     }    
 
     output {
         # Strelka2Germline
-       File? Picard_QC_Output=normalMM_Task.picard_files
-       File? Picard_HsMetrics=normalMM_Task.hsMetrics
-       File? bam_cleaned = normalMM_Task.bam_unmapped_cleaned
+       #File? Picard_QC_Output=normalMM_Task.picard_files
+       #File? Picard_HsMetrics=normalMM_Task.hsMetrics
+       #File? bam_cleaned = normalMM_Task.bam_unmapped_cleaned
        File strelka2GermlineVCF=Strelka2Germline_Task.strelka2GermlineVCF
        # pisces outputs
        File pisces_normal_variants=CombineVariants.merged_vcfPN

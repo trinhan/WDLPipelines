@@ -19,6 +19,9 @@
 #
 #       java -jar cromwell.jar run cnv_germline_case_workflow.wdl -i my_parameters.json
 #
+# MODIFICATIONS 23/11/2022
+# remove batch mode: replace normal_bams array with single sample
+#
 #############
 
 version 1.0
@@ -34,8 +37,9 @@ workflow CNVGermlineCaseWorkflow {
       File intervals
       File? blacklist_intervals
       File filtered_intervals
-      Array[String]+ normal_bams
-      Array[String]+ normal_bais
+      File normal_bams
+      File normal_bais
+      String sample_name
       File contig_ploidy_model_tar
       Array[File]+ gcnv_model_tars
       Int num_intervals_per_scatter
@@ -126,11 +130,11 @@ workflow CNVGermlineCaseWorkflow {
       ##########################
       #### arguments for QC ####
       ##########################
-      Int maximum_number_events_per_sample
-      Int maximum_number_pass_events_per_sample
+      Int maximum_number_events
+      Int maximum_number_pass_events
     }
 
-    Array[Pair[String, String]] normal_bams_and_bais = zip(normal_bams, normal_bais)
+#    Array[Pair[String, String]] normal_bams_and_bais = zip(normal_bams, normal_bais)
 
     call CNVTasks.PreprocessIntervals {
         input:
@@ -146,12 +150,12 @@ workflow CNVGermlineCaseWorkflow {
             preemptible_attempts = preemptible_attempts
     }
 
-    scatter (normal_bam_and_bai in normal_bams_and_bais) {
+#    scatter (normal_bam_and_bai in normal_bams_and_bais) {
         call CNVTasks.CollectCounts {
             input:
                 intervals = PreprocessIntervals.preprocessed_intervals,
-                bam = normal_bam_and_bai.left,
-                bam_idx = normal_bam_and_bai.right,
+                bam = normal_bams,
+                bam_idx = normal_bais,
                 ref_fasta = ref_fasta,
                 ref_fasta_fai = ref_fasta_fai,
                 ref_fasta_dict = ref_fasta_dict,
@@ -164,7 +168,7 @@ workflow CNVGermlineCaseWorkflow {
                 preemptible_attempts = preemptible_attempts,
                 gcs_project_for_requester_pays = gcs_project_for_requester_pays
         }
-    }
+#    }
 
     call DetermineGermlineContigPloidyCaseMode {
         input:
@@ -231,13 +235,12 @@ workflow CNVGermlineCaseWorkflow {
         }
     }
 
-    Array[Array[File]] call_tars_sample_by_shard = transpose(GermlineCNVCallerCaseMode.gcnv_call_tars)
+    Array[File] call_tars_sample_by_shard = GermlineCNVCallerCaseMode.gcnv_call_tars
 
-    scatter (sample_index in range(length(normal_bams))) {
         call CNVTasks.PostprocessGermlineCNVCalls {
             input:
-                entity_id = CollectCounts.entity_id[sample_index],
-                gcnv_calls_tars = call_tars_sample_by_shard[sample_index],
+                entity_id = CollectCounts.entity_id,
+                gcnv_calls_tars = call_tars_sample_by_shard ,
                 gcnv_model_tars = gcnv_model_tars,
                 calling_configs = GermlineCNVCallerCaseMode.calling_config_json,
                 denoising_configs = GermlineCNVCallerCaseMode.denoising_config_json,
@@ -246,43 +249,49 @@ workflow CNVGermlineCaseWorkflow {
                 allosomal_contigs = allosomal_contigs,
                 ref_copy_number_autosomal_contigs = ref_copy_number_autosomal_contigs,
                 contig_ploidy_calls_tar = DetermineGermlineContigPloidyCaseMode.contig_ploidy_calls_tar,
-                sample_index = sample_index,
-                maximum_number_events = maximum_number_events_per_sample,
-                maximum_number_pass_events = maximum_number_pass_events_per_sample,
                 gatk4_jar_override = gatk4_jar_override,
                 gatk_docker = gatk_docker,
+                preemptible_attempts = preemptible_attempts,
+                maximum_number_events=maximum_number_events,
+                maximum_number_pass_events=maximum_number_pass_events
+        }
+
+        call CNVTasks.CollectSampleQualityMetrics {
+            input:
+                genotyped_segments_vcf = PostprocessGermlineCNVCalls.genotyped_segments_vcf,
+                entity_id = CollectCounts.entity_id,
+                maximum_number_events = maximum_number_events,
+                maximum_number_pass_events = maximum_number_pass_events,
+                bash_docker = gatk_docker,
                 preemptible_attempts = preemptible_attempts
         }
-    }
 
-    call CNVTasks.ScatterPloidyCallsBySample {
-        input :
-            contig_ploidy_calls_tar = DetermineGermlineContigPloidyCaseMode.contig_ploidy_calls_tar,
-            samples = CollectCounts.entity_id,
-            docker = gatk_docker,
-            preemptible_attempts = preemptible_attempts
-    }
+#    call CNVTasks.ScatterPloidyCallsBySample {
+#        input :
+#            contig_ploidy_calls_tar = DetermineGermlineContigPloidyCaseMode.contig_ploidy_calls_tar,
+#            samples = CollectCounts.entity_id,
+#            docker = gatk_docker,
+#            preemptible_attempts = preemptible_attempts
+#    }
 
     output {
         File preprocessed_intervals = PreprocessIntervals.preprocessed_intervals
-        Array[File] read_counts_entity_id = CollectCounts.entity_id
-        Array[File] read_counts = CollectCounts.counts
-        Array[File] sample_contig_ploidy_calls_tars = ScatterPloidyCallsBySample.sample_contig_ploidy_calls_tar
-        Array[Array[File]] gcnv_calls_tars = GermlineCNVCallerCaseMode.gcnv_call_tars
+        File read_counts = CollectCounts.counts
+        File sample_contig_ploidy_calls_tars = DetermineGermlineContigPloidyCaseMode.contig_ploidy_calls_tar
+        Array[File] gcnv_calls_tars = GermlineCNVCallerCaseMode.gcnv_call_tars
         Array[File] gcnv_tracking_tars = GermlineCNVCallerCaseMode.gcnv_tracking_tar
-        Array[File] genotyped_intervals_vcfs = PostprocessGermlineCNVCalls.genotyped_intervals_vcf
-        Array[File] genotyped_intervals_vcf_indexes = PostprocessGermlineCNVCalls.genotyped_intervals_vcf_index
-        Array[File] genotyped_segments_vcfs = PostprocessGermlineCNVCalls.genotyped_segments_vcf
-        Array[File] genotyped_segments_vcf_indexes = PostprocessGermlineCNVCalls.genotyped_segments_vcf_index
-        Array[File] qc_status_files = PostprocessGermlineCNVCalls.qc_status_file
-        Array[String] qc_status_strings = PostprocessGermlineCNVCalls.qc_status_string
-        Array[File] denoised_copy_ratios = PostprocessGermlineCNVCalls.denoised_copy_ratios
+        File genotyped_intervals_vcfs = PostprocessGermlineCNVCalls.genotyped_intervals_vcf
+        File genotyped_intervals_vcf_indexes = PostprocessGermlineCNVCalls.genotyped_intervals_vcf_index
+        File genotyped_segments_vcfs = PostprocessGermlineCNVCalls.genotyped_segments_vcf
+        File genotyped_segments_vcf_indexes = PostprocessGermlineCNVCalls.genotyped_segments_vcf_index
+        File qc_status_files = CollectSampleQualityMetrics.qc_status_file
+        File denoised_copy_ratios = PostprocessGermlineCNVCalls.denoised_copy_ratios
     }
 }
 
 task DetermineGermlineContigPloidyCaseMode {
     input {
-      Array[File] read_count_files
+      File read_count_files
       File contig_ploidy_model_tar
       String? output_dir
       File? gatk4_jar_override
@@ -347,7 +356,7 @@ task DetermineGermlineContigPloidyCaseMode {
 task GermlineCNVCallerCaseMode {
     input {
       Int scatter_index
-      Array[File] read_count_files
+      File read_count_files
       File contig_ploidy_calls_tar
       File gcnv_model_tar
       String? output_dir
@@ -401,7 +410,7 @@ task GermlineCNVCallerCaseMode {
 
     # If optional output_dir not specified, use "out"
     String output_dir_ = select_first([output_dir, "out"])
-    Int num_samples = length(read_count_files)
+    Int num_samples = 1
 
     command <<<
         set -eu
@@ -454,17 +463,21 @@ task GermlineCNVCallerCaseMode {
 
         tar czf case-gcnv-tracking-shard-~{scatter_index}.tar.gz -C ~{output_dir_}/case-tracking .
 
-        CURRENT_SAMPLE=0
-        NUM_SAMPLES=~{num_samples}
-        NUM_DIGITS=${#NUM_SAMPLES}
-        while [ $CURRENT_SAMPLE -lt $NUM_SAMPLES ]; do
-            CURRENT_SAMPLE_WITH_LEADING_ZEROS=$(printf "%0${NUM_DIGITS}d" $CURRENT_SAMPLE)
-            tar czf case-gcnv-calls-shard-~{scatter_index}-sample-$CURRENT_SAMPLE_WITH_LEADING_ZEROS.tar.gz -C ~{output_dir_}/case-calls/SAMPLE_$CURRENT_SAMPLE .
-            let CURRENT_SAMPLE=CURRENT_SAMPLE+1
-        done
+        tar czf case-gcnv-calls-shard-~{scatter_index}.tar.gz -C ~{output_dir_}/case-calls/SAMPLE_0 .
 
-        rm -rf contig-ploidy-calls
-        rm -rf gcnv-model
+        ls .
+
+#        CURRENT_SAMPLE=0
+#        NUM_SAMPLES=~{num_samples}
+#        NUM_DIGITS=${#NUM_SAMPLES}
+#        while [ $CURRENT_SAMPLE -lt $NUM_SAMPLES ]; do
+#            CURRENT_SAMPLE_WITH_LEADING_ZEROS=$(printf "%0${NUM_DIGITS}d" $CURRENT_SAMPLE)
+#            tar czf case-gcnv-calls-shard-~{scatter_index}-sample-$CURRENT_SAMPLE_WITH_LEADING_ZEROS.tar.gz -C ~{output_dir_}/case-calls/SAMPLE_$CURRENT_SAMPLE .
+#            let CURRENT_SAMPLE=CURRENT_SAMPLE+1
+#        done
+
+#        rm -rf contig-ploidy-calls
+#        rm -rf gcnv-model
     >>>
 
     runtime {
@@ -476,7 +489,7 @@ task GermlineCNVCallerCaseMode {
     }
 
     output {
-        Array[File] gcnv_call_tars = glob("case-gcnv-calls-shard-~{scatter_index}-sample-*.tar.gz")
+        File gcnv_call_tars = "case-gcnv-calls-shard-~{scatter_index}.tar.gz"
         File gcnv_tracking_tar = "case-gcnv-tracking-shard-~{scatter_index}.tar.gz"
         File calling_config_json = "~{output_dir_}/case-calls/calling_config.json"
         File denoising_config_json = "~{output_dir_}/case-calls/denoising_config.json"
