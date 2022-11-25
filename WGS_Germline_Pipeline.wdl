@@ -33,17 +33,17 @@ import "SNV-GermlineMulti.wdl" as SNV
 import "Manta1.6.wdl" as Manta
 import "annotsv.wdl" as AnnotSV
 import "run_QC_checks.wdl" as runQC
+import "cnv_wdl/germline/cnv_germline_case_workflow.wdl" as CNV
 
 workflow WGS_Germline_Workflow {
     input {
     File normalBam
     File normalBamIdx
-    String pairName
     String ctrlName
     File refFasta
     File refFastaIdx
     File refFastaDict
-    File targetIntervals
+    File snvtargetIntervals
     File? pisces_reference
     String gatk_docker
     ## VEP input
@@ -70,6 +70,18 @@ workflow WGS_Germline_Workflow {
     Int? HC_shard_counts
     ## Manta requirements
     File annotSVtar
+    ## CNV requirements
+    File cnv_contig_ploidy_model_tar
+    File cnv_filtered_intervals
+    Array[File]+ gcnv_model_tars
+    File cnvIntervals
+    Int cnv_max_number_events
+    Int cnv_max_number_events_passed
+    Int cnv_num_intervals_per_Scatter
+    Int ref_copy_number_autosomal_contigs
+    File cnv_blacklist_intervals
+    Int gcnv_max_copy_number
+
     ## Other Options
     Boolean runQC
     Boolean targetedRun
@@ -77,7 +89,7 @@ workflow WGS_Germline_Workflow {
     }
 
     String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
-    String targName=basename(sub(targetIntervals,"\\.interval_list", ""))
+    String targName=basename(sub(snvtargetIntervals,"\\.interval_list", ""))
     Int normalBam_size  = ceil(size(normalBam,  "G") + size(normalBamIdx,   "G")) 
     Int refFasta_size   = ceil(size(refFasta,   "G") + size(refFastaDict,   "G") + size(refFastaIdx, "G")) 
     Int db_snp_vcf_size = ceil(size(DB_SNP_VCF, "G")+size(DB_SNP_VCF_IDX, "G"))
@@ -91,8 +103,8 @@ workflow WGS_Germline_Workflow {
                 refFasta=refFasta,
                 DB_SNP_VCF=DB_SNP_VCF,
                 DB_SNP_VCF_IDX=DB_SNP_VCF_IDX,
-                targetIntervals=targetIntervals,
-                baitIntervals=targetIntervals,
+                targetIntervals=snvtargetIntervals,
+                baitIntervals=snvtargetIntervals,
                 gatk_docker=gatk_docker,
                 refFasta_size=refFasta_size,
                 db_snp_vcf_size=db_snp_vcf_size,
@@ -110,7 +122,7 @@ workflow WGS_Germline_Workflow {
             refFasta=refFasta,
             refFastaIdx=refFastaIdx,
             refFastaDict=refFastaDict,
-            targetIntervals=targetIntervals,
+            targetIntervals=snvtargetIntervals,
             pisces_reference=pisces_reference,
             gatk_docker=gatk_docker,
             vep_cache=vep_cache,
@@ -155,6 +167,27 @@ workflow WGS_Germline_Workflow {
           caller="Manta"
     }
 
+    call CNV.CNVGermlineCaseWorkflow as runCNV {
+        input:
+            intervals=cnvIntervals,
+            blacklist_intervals=cnv_blacklist_intervals,
+            filtered_intervals=cnv_filtered_intervals,
+            normal_bams=normalBam,
+            normal_bais=normalBamIdx,
+            sample_name=ctrlName,
+            contig_ploidy_model_tar=cnv_contig_ploidy_model_tar,
+            gcnv_model_tars=gcnv_model_tars,
+            num_intervals_per_scatter=50000,
+            ref_fasta_dict=refFastaDict,
+            ref_fasta_fai=refFastaIdx,
+            ref_fasta=refFasta,
+            gatk_docker=gatk_docker,
+            ref_copy_number_autosomal_contigs=ref_copy_number_autosomal_contigs,
+            allosomal_contigs=["X","Y"],
+            maximum_number_events=cnv_max_number_events,
+            maximum_number_pass_events=cnv_max_number_events_passed,
+            gcnv_max_copy_number=gcnv_max_copy_number
+    }
 
 output {
         ## Picard outputs
@@ -170,6 +203,13 @@ output {
         File? manta_evidence_bam = runManta.evidence_bam
         File? manta_evidence_bai = runManta.evidence_bai
         File mantaAnnotSV = runAnnotSVManta.sv_variants_tsv
+        ## CNV outputs
+        File denoised_copy_ratios = runCNV.denoised_copy_ratios
+        File genotyped_intervals_vcf_indexes =runCNV.genotyped_intervals_vcf_indexes
+        File genotyped_intervals_vcfs = runCNV.genotyped_intervals_vcfs
+        File genotyped_segments_vcf_indexes=runCNV.genotyped_segments_vcf_indexes
+        File genotyped_segments_vcfs=runCNV.genotyped_segments_vcfs
+        File sample_contig_ploidy_calls_tars=runCNV.sample_contig_ploidy_calls_tars
     }
 
 }
