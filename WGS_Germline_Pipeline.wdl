@@ -183,7 +183,7 @@ workflow WGS_Germline_Workflow {
             ref_fasta=refFasta,
             gatk_docker=gatk_docker,
             ref_copy_number_autosomal_contigs=ref_copy_number_autosomal_contigs,
-            allosomal_contigs=["X","Y"],
+            allosomal_contigs=["chrX","chrY"],
             maximum_number_events=cnv_max_number_events,
             maximum_number_pass_events=cnv_max_number_events_passed,
             gcnv_max_copy_number=gcnv_max_copy_number
