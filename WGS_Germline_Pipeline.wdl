@@ -5,20 +5,8 @@
 ## Overall pipeline for the following
 ## - QC checks
 ## - SNV calling (consensus with Haplotypecaller, strelka2, pisces, vardict )
-## - CNV calling
+## - CNV calling (GATK, using an existing panel of normals)
 ## - SV valling
-##
-## MODIFICATIONS:
-##  1. Run Strelka2 somatic and germline
-##  2. Merge VCF from all callers (Mutect 1/2, Strelka 2) prior to Oncotator and VEP. Annotated with INFO ME field: method used
-##  3. Removed existing strelka implementation
-##  4. Include option to run gatk4 and gatk3 
-##  5. Test gatk4 outputs into absolute
-##  6. include titan
-##  7. consolidate gatk docker files and .jar files
-##  8. allow hg38 compatibility
-##  9. Include Manta and AnnotSV
-##
 ## 
 ############################################
 ## DEFAULT OPTIONS (In the listed .json file)
@@ -187,6 +175,17 @@ workflow WGS_Germline_Workflow {
             maximum_number_events=cnv_max_number_events,
             maximum_number_pass_events=cnv_max_number_events_passed,
             gcnv_max_copy_number=gcnv_max_copy_number
+    }
+
+    call AnnotSV.annotsv as runAnnotSVCNV {
+        input:
+          input_vcf=runCNV.genotyped_segments_vcfs,
+          input_vcf_idx=runCNV.genotyped_segments_vcf_indexes,
+          genome_build=assembly,
+          annotSVtar=annotSVtar,
+          sampleName=ctrlName,
+          typeofAnnotation="both",
+          caller="gCNV"
     }
 
 output {
