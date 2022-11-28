@@ -123,3 +123,7 @@ workflows:
     primaryDescriptorPath: /RSeQC.wdl
     testParameterFiles: 
     - /json/rseqc.json
+  - name: WGS_Germline_pipeline
+    subclass: WDL
+    primaryDescriptorPath: /WGS_Germline_Pipeline.wdl
+
