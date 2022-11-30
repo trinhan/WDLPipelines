@@ -3,6 +3,8 @@
 
 version 1.0
 
+import "oncokb.wdl" as oncokb
+
 workflow ClinicalReport {
 # inputs and their types specified here
     input {
@@ -27,10 +29,24 @@ workflow ClinicalReport {
         Boolean canonical = true
         File? AAlist
         File param_config
+        Boolean runOncokb = false
         String dockerFile = "trinhanne/clin_report_annot:v2.5"
     }
 
         Map[String, String] filt_params=read_json(param_config)
+
+    if (runOncokb & SNVvcfformat) {
+        call oncokb.oncokb as Oncokb {
+            input:
+            vcf = inputSNV,
+            oncotree = oncotree,
+            samplename = sampleName,
+            token = token,
+            searchby = searchby,
+            AAlist = AAlist,
+            canonical=canonical
+        }
+    }
 
     call ConvertSNVs {
         input:
@@ -63,7 +79,6 @@ workflow ClinicalReport {
         DOnlyCoding=filt_params["TierDOnlyCoding"],
         BPathogenic=filt_params["TierBPathogenic"],
         DPathogenic=filt_params["TierDPathogenic"]
-
     }
 
 
@@ -148,7 +163,7 @@ task CreateClinical {
         cp ~{CNV} .
         cp ~{SV} .
         cp ~{SVsplit} .
-        cp /template/*.Rmd . 
+        cp /germline_inserts/*.Rmd . 
         cp ~{param_config} ./parameter.json
         ##cp ~/Documents/ER_pilot/New_Clin_Reports/*.Rmd .
         mv Template_Germline_Report.Rmd ~{sampleName}_Germline_Report.Rmd
@@ -276,7 +291,6 @@ task ConvertSNVs {
         String? DOnlyCoding
         String? BPathogenic
         String? DPathogenic
-
     }
         Int diskGB=8*ceil(size(inputSNV, "GB")+size(cosmicMut, "GB")+size(cosmicGenes, "GB")+size(MsigDBAnnotation, "GB"))
         String AAb = select_first([AAlist, "/annotFiles/AminoAcid_table.csv"])
