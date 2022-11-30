@@ -29,24 +29,24 @@ workflow ClinicalReport {
         Boolean canonical = true
         File? AAlist
         File param_config
-        Boolean runOncokb = false
+#        Boolean runOncokb = false
         String dockerFile = "trinhanne/clin_report_annot:v2.5"
     }
 
         Map[String, String] filt_params=read_json(param_config)
 
-    if (runOncokb & SNVvcfformat) {
-        call oncokb.oncokb as Oncokb {
-            input:
-            vcf = inputSNV,
-            oncotree = oncotree,
-            samplename = sampleName,
-            token = token,
-            searchby = searchby,
-            AAlist = AAlist,
-            canonical=canonical
-        }
-    }
+#    if (runOncokb & SNVvcfformat) {
+#        call oncokb.oncokb as Oncokb {
+#            input:
+#            vcf = inputSNV,
+#            oncotree = oncotree,
+#            samplename = sampleName,
+#            token = token,
+#            searchby = searchby,
+#            AAlist = AAlist,
+#            canonical=canonical
+#        }
+#    }
 
     call ConvertSNVs {
         input:
