@@ -209,6 +209,7 @@ output {
         File genotyped_segments_vcf_indexes=runCNV.genotyped_segments_vcf_indexes
         File genotyped_segments_vcfs=runCNV.genotyped_segments_vcfs
         File sample_contig_ploidy_calls_tars=runCNV.sample_contig_ploidy_calls_tars
+        File gCNV_annotSV = runAnnotSVCNV.sv_variants_tsv
     }
 
 }
