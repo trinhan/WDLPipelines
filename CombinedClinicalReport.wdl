@@ -189,6 +189,7 @@ task CreateClinical {
         if [ ~{runMode} == "Germline" ]; then
         echo 'prepare for germline mode'
         tar -C . -xvf ~{ploidyTar}
+        mv ./SAMPLE_0/contig_ploidy.tsv .
         mv Template_Germline_Report.Rmd ~{sampleName}_Germline_Report.Rmd
         else 
         echo 'prepare for tumour mode'
