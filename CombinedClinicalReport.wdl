@@ -150,7 +150,7 @@ workflow ClinicalReport {
     output {
       File? yaml=CreateClinical.yamlOut
       File CNV = CNVFormat.CNV
-      File? htmlFile = CreateClinical.html
+      File? htmlFile = select_first([CreateClinical.germline_html, CreateClinical.tumour_html])
       File FinalannotMafGz = ConvertSNVs.annotMafGz
       File SupportingSNVs = ConvertSNVs.SNV
     }
