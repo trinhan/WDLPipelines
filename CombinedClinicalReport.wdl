@@ -13,6 +13,9 @@ workflow ClinicalReport {
         File inputSV
         File ploidyTar
         String sampleName
+        String token
+        String searchby
+        String oncotree
         File cosmicMut
         File cosmicGenes
         File MsigDBAnnotation
@@ -20,6 +23,8 @@ workflow ClinicalReport {
         File pirsf
         File ACMG
         File? AddList
+        String? grepRm
+        File? CNVplot
         File inputYaml
         File GTex
         Int memoryGB = 10
@@ -27,35 +32,41 @@ workflow ClinicalReport {
         String runMode ="Germline"
         Boolean SNVvcfformat =true
         Boolean canonical = true
-        File? AAlist
+        Boolean runOncokb
+        File AAlist
         File param_config
 #        Boolean runOncokb = false
-        String dockerFile = "trinhanne/clin_report_annot:v2.5"
+        String dockerFile = "trinhanne/clin_report_annot:v2.7"
     }
 
         Map[String, String] filt_params=read_json(param_config)
 
-#    if (runOncokb & SNVvcfformat) {
-#        call oncokb.oncokb as Oncokb {
-#            input:
-#            vcf = inputSNV,
-#            oncotree = oncotree,
-#            samplename = sampleName,
-#            token = token,
-#            searchby = searchby,
-#            AAlist = AAlist,
-#            canonical=canonical
-#        }
-#    }
+    if (runOncokb && SNVvcfformat) {
+        call oncokb.oncokb as OncokbWF {
+            input:
+            vcf = inputSNV,
+            oncotree = oncotree,
+            samplename = sampleName,
+            token = token,
+            searchby = searchby,
+            AAlist = AAlist,
+            canonical=canonical,
+            runMode=runMode,
+            grepRm=grepRm
+        }
+    }
+
+    Boolean SNVvcfformat2 = if (defined(OncokbWF.oncokbout) || SNVvcfformat ) then false else SNVvcfformat
+    File SNVin = select_first([OncokbWF.oncokbout, inputSNV])
 
     call ConvertSNVs {
         input:
-        inputSNV = inputSNV,
+        inputSNV = SNVin,
         sampleName = sampleName,
         cosmicMut = cosmicMut,
         cosmicGenes = cosmicGenes,
         MsigDBAnnotation = MsigDBAnnotation,
-        SNVvcfformat=SNVvcfformat,
+        SNVvcfformat=SNVvcfformat2,
         pfam=pfam,
         pirsf=pirsf,
         memoryGB=memoryGB,
@@ -81,7 +92,6 @@ workflow ClinicalReport {
         DPathogenic=filt_params["TierDPathogenic"]
     }
 
-
     call ConvertSVs as CNVFormat {
         input:
         inputSV=inputCV,
@@ -95,8 +105,10 @@ workflow ClinicalReport {
         ACMGcutoff=filt_params["AnnotSVACMGcutoff"],
         CNV=true,
         dockerFile=dockerFile,
-        Passfilt=filt_params["SVPass"]
+        Passfilt=filt_params["SVPass"],
+        runMode=runMode
     }
+
 
      call ConvertSVs as SVFormat {
         input:
@@ -113,10 +125,11 @@ workflow ClinicalReport {
         dockerFile=dockerFile,
         SRcounts=filt_params["SVSRfilter"],
         PRcounts=filt_params["SVPRfilter"],
-        Passfilt=filt_params["SVPass"]
+        Passfilt=filt_params["SVPass"],
+        runMode="Germline"
     }
 
-    call CreateClinical{
+    call CreateClinical {
         input:
         FormatSNV=ConvertSNVs.SNV,
         sampleName=sampleName,
@@ -127,14 +140,17 @@ workflow ClinicalReport {
         yaml=inputYaml,
         dockerFile=dockerFile,
         ploidyTar=ploidyTar,
-        param_config=param_config
+        param_config=param_config,
+        CNVplot=CNVplot,
+        runMode=runMode
     }
+
 
 # outputs and their types specified here
     output {
-      File yaml=CreateClinical.yamlOut
-      File CNV = CNVFormat.CNV
-      File htmlFile = CreateClinical.html
+      ##File? yaml=CreateClinical.yamlOut
+      ##File CNV = CNVFormat.CNV
+      ##File? htmlFile = CreateClinical.html
       File FinalannotMafGz = ConvertSNVs.annotMafGz
       File SupportingSNVs = ConvertSNVs.SNV
     }
@@ -153,21 +169,36 @@ task CreateClinical {
         Int memoryGB
         String dockerFile
         File param_config
+        String runMode
+        File? CNVplot
     }
 
     command <<<
         echo 'move items' 
         tar -C . -xvf ~{FormatSNV}
-        tar -C . -xvf ~{ploidyTar}
         ###tar {FormatSNV}
         cp ~{CNV} .
         cp ~{SV} .
         cp ~{SVsplit} .
-        cp /germline_inserts/*.Rmd . 
+        cp /templates/*.Rmd . 
         cp ~{param_config} ./parameter.json
         ##cp ~/Documents/ER_pilot/New_Clin_Reports/*.Rmd .
-        mv Template_Germline_Report.Rmd ~{sampleName}_Germline_Report.Rmd
         echo 'export items and edit yaml' 
+        ## Mode for Germline cases
+
+        if [ ~{runMode} == "Germline" ]; then
+        echo 'prepare for germline mode'
+        tar -C . -xvf ~{ploidyTar}
+        mv Template_Germline_Report.Rmd ~{sampleName}_Germline_Report.Rmd
+        else 
+        echo 'prepare for tumour mode'
+        cp ~{CNVplot} ~{sampleName}.modeled.png
+        cp ~{ploidyTar} ~{sampleName}.optimalclusters.txt
+        export CNVplot="~{sampleName}.modeled.png"
+        export titanParams="~{sampleName}.optimalclusters.txt"
+        mv Template_Somatic_Report.Rmd ~{sampleName}_Somatic_Report.Rmd
+        fi
+
         # export everything and edit the yaml file
         export cnvAnnot="~{sampleName}.CNV.formated.tsv"
         export svAnnot="~{sampleName}.SV.formated.tsv"
@@ -188,7 +219,11 @@ task CreateClinical {
         cat final.yml
         # Now use this yaml and use it in the Rmd
         ## How to use whethere pandoc exists?>/Applications/RStudio.app/Contents/MacOS/pandoc # /usr/local/bin/pandoc
+        if [ ~{runMode} == "Germline" ]; then
         Rscript -e 'library(rmarkdown);Sys.setenv(RSTUDIO_PANDOC="/Applications/RStudio.app/Contents/MacOS/pandoc"); rmarkdown::render("./~{sampleName}_Germline_Report.Rmd")'   
+        else 
+        Rscript -e 'library(rmarkdown);Sys.setenv(RSTUDIO_PANDOC="/Applications/RStudio.app/Contents/MacOS/pandoc"); rmarkdown::render("./~{sampleName}_Somatic_Report.Rmd")'   
+        fi
         mv final.yml ~{sampleName}.final.yml
     >>>
 
@@ -201,7 +236,8 @@ task CreateClinical {
     }
 
     output {
-        File html = "~{sampleName}_Germline_Report.html"
+        File? germline_html = "~{sampleName}_Germline_Report.html"
+        File? tumour_html = "~{sampleName}_Somatic_Report.html"
         File yamlOut = "~{sampleName}.final.yml"
     }
 
@@ -223,9 +259,11 @@ task ConvertSVs {
         Int? PRcounts 
         String? Passfilt
         String dockerFile
+        String runMode 
     }
 
     Boolean is_compressed = sub(basename(inputSV), ".*\\.", "") == "gz"
+    Boolean isGermline = if (runMode=="Germline") then true else false
 
     command <<<
 
@@ -233,9 +271,16 @@ task ConvertSVs {
         keyWd=`grep "TreatmentKeywords" ~{inputYaml}| cut -d' ' -f2 `
 
         ## ~/gitLibs/DockerRepository/clinRep
+        if [ ~{isGermline} == true ]; then
+        echo 'Run germline mode annotations'
         Rscript /opt/SummarizeAnnotSV.R --AnnotSVtsv ~{inputSV} --outputname ~{sampleName} --MSigDB ~{MsigDBAnnotation} \
         --GTex ~{GTex} --CosmicList ~{cosmicGenes} ~{"--AddList " + AddList} --pathwayList "$keyWd" --ACMGCutoff ~{ACMGcutoff} --Tissue "$TissueWd" --CNV ~{CNV} \
         ~{"--SRfilter " + SRcounts} ~{"--PRfilter " + PRcounts} --PASSfilt ~{Passfilt}
+        else 
+        echo 'Run tumour mode annotations'
+        Rscript /opt/AnnotateTumCNV.R --tsv ~{inputSV} --outputname ~{sampleName} --MSigDB ~{MsigDBAnnotation} \
+        --GTex ~{GTex} --CosmicList ~{cosmicGenes} ~{"--AddList " + AddList} --pathwayList "$keyWd" --Tissue "$TissueWd" 
+        fi
 
         if [ ~{CNV} == true ]; then
             touch "~{sampleName}.SV.formated.tsv"
@@ -356,5 +401,4 @@ task ConvertSNVs {
         memory: memoryGB + "GB"
         disks: "local-disk ~{diskGB} HDD"
     }
-
 }
