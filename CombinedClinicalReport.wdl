@@ -148,9 +148,9 @@ workflow ClinicalReport {
 
 # outputs and their types specified here
     output {
-      ##File? yaml=CreateClinical.yamlOut
-      ##File CNV = CNVFormat.CNV
-      ##File? htmlFile = CreateClinical.html
+      File? yaml=CreateClinical.yamlOut
+      File CNV = CNVFormat.CNV
+      File? htmlFile = CreateClinical.html
       File FinalannotMafGz = ConvertSNVs.annotMafGz
       File SupportingSNVs = ConvertSNVs.SNV
     }
