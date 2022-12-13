@@ -11,7 +11,7 @@ workflow ClinicalReport {
         File inputSNV
         File inputCV
         File inputSV
-        File ploidyTar
+        File? ploidyTar
         String sampleName
         String token
         String searchby
@@ -126,7 +126,7 @@ workflow ClinicalReport {
         SRcounts=filt_params["SVSRfilter"],
         PRcounts=filt_params["SVPRfilter"],
         Passfilt=filt_params["SVPass"],
-        runMode="Germline"
+        runMode=runMode
     }
 
     call CreateClinical {
@@ -162,7 +162,7 @@ task CreateClinical {
         File FormatSNV
         File CNV 
         File SV
-        File ploidyTar
+        File? ploidyTar
         File SVsplit
         String sampleName
         File yaml
@@ -272,15 +272,15 @@ task ConvertSVs {
         keyWd=`grep "TreatmentKeywords" ~{inputYaml}| cut -d' ' -f2 `
 
         ## ~/gitLibs/DockerRepository/clinRep
-        if [ ~{isGermline} == true ]; then
-        echo 'Run germline mode annotations'
-        Rscript /opt/SummarizeAnnotSV.R --AnnotSVtsv ~{inputSV} --outputname ~{sampleName} --MSigDB ~{MsigDBAnnotation} \
-        --GTex ~{GTex} --CosmicList ~{cosmicGenes} ~{"--AddList " + AddList} --pathwayList "$keyWd" --ACMGCutoff ~{ACMGcutoff} --Tissue "$TissueWd" --CNV ~{CNV} \
-        ~{"--SRfilter " + SRcounts} ~{"--PRfilter " + PRcounts} --PASSfilt ~{Passfilt}
-        else 
+        if [ ~{CNV} == true && ~{isGermline} == true ]; then
         echo 'Run tumour mode annotations'
         Rscript /opt/AnnotateTumCNV.R --tsv ~{inputSV} --outputname ~{sampleName} --MSigDB ~{MsigDBAnnotation} \
         --GTex ~{GTex} --CosmicList ~{cosmicGenes} ~{"--AddList " + AddList} --pathwayList "$keyWd" --Tissue "$TissueWd" 
+        else
+        echo 'Run germline mode annotations'
+        Rscript /opt/SummarizeAnnotSV.R --AnnotSVtsv ~{inputSV} --outputname ~{sampleName} --MSigDB ~{MsigDBAnnotation} \
+        --GTex ~{GTex} --CosmicList ~{cosmicGenes} ~{"--AddList " + AddList} --pathwayList "$keyWd" --ACMGCutoff ~{ACMGcutoff} --Tissue "$TissueWd" --CNV ~{CNV} \
+        ~{"--SRfilter " + SRcounts} ~{"--PRfilter " + PRcounts} --PASSfilt ~{Passfilt} --germline ~{isGermline}
         fi
 
         if [ ~{CNV} == true ]; then
