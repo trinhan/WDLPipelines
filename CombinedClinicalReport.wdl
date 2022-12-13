@@ -33,6 +33,7 @@ workflow ClinicalReport {
         Boolean SNVvcfformat =true
         Boolean canonical = true
         Boolean runOncokb
+        Boolean CNVfunco = true
         File AAlist
         File param_config
 #        Boolean runOncokb = false
@@ -106,7 +107,8 @@ workflow ClinicalReport {
         CNV=true,
         dockerFile=dockerFile,
         Passfilt=filt_params["SVPass"],
-        runMode=runMode
+        runMode=runMode,
+        funco=CNVfunco
     }
 
 
@@ -126,7 +128,8 @@ workflow ClinicalReport {
         SRcounts=filt_params["SVSRfilter"],
         PRcounts=filt_params["SVPRfilter"],
         Passfilt=filt_params["SVPass"],
-        runMode=runMode
+        runMode=runMode,
+        funco=false
     }
 
     call CreateClinical {
@@ -261,6 +264,7 @@ task ConvertSVs {
         String? Passfilt
         String dockerFile
         String runMode 
+        Boolean funco
     }
 
     Boolean is_compressed = sub(basename(inputSV), ".*\\.", "") == "gz"
@@ -272,7 +276,7 @@ task ConvertSVs {
         keyWd=`grep "TreatmentKeywords" ~{inputYaml}| cut -d' ' -f2 `
 
         ## ~/gitLibs/DockerRepository/clinRep
-        if [ ~{CNV} == true && ~{isGermline} == true ]; then
+        if [ ~{CNV} == true && ~{funco} == true ]; then
         echo 'Run tumour mode annotations'
         Rscript /opt/AnnotateTumCNV.R --tsv ~{inputSV} --outputname ~{sampleName} --MSigDB ~{MsigDBAnnotation} \
         --GTex ~{GTex} --CosmicList ~{cosmicGenes} ~{"--AddList " + AddList} --pathwayList "$keyWd" --Tissue "$TissueWd" 
