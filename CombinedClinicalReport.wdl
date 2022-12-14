@@ -13,6 +13,7 @@ workflow ClinicalReport {
         File? inputSV
         File? ploidyTar
         String sampleName
+        String caseName
         String token
         String searchby
         String oncotree
@@ -63,6 +64,7 @@ workflow ClinicalReport {
     call ConvertSNVs {
         input:
         inputSNV = SNVin,
+        caseName=caseName,
         sampleName = sampleName,
         cosmicMut = cosmicMut,
         cosmicGenes = cosmicGenes,
@@ -359,6 +361,7 @@ task ConvertSNVs {
     input {
         File inputSNV
         String sampleName
+        String caseName
         File cosmicMut
         File cosmicGenes
         File MsigDBAnnotation
@@ -417,7 +420,7 @@ task ConvertSNVs {
         paste $annotMaf $tempOut > $annotM2
         echo 'create filtered lists'
         Rscript /opt/SummarizeVariants.R --maffile $annotM2 --outputname ~{sampleName} ~{"--caddscore " + caddScore} ~{"--gnomadcutoff " + gnomadcutoff} \
-        ~{"--AddList " + AddList } ~{"--columnEntries " + CNs}
+        ~{"--AddList " + AddList } ~{"--columnEntries " + CNs} --caseName ~{caseName}
         echo 'run ACMG filter'
         Rscript /opt/FindACMG.R --maffile ~{sampleName}variantsAll.maf  --outputname ~{sampleName} --ACMG ~{ACMG}
         echo 'run COSMIC filter'
