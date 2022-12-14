@@ -9,8 +9,8 @@ workflow ClinicalReport {
 # inputs and their types specified here
     input {
         File inputSNV
-        File inputCV
-        File inputSV
+        File? inputCV
+        File? inputSV
         File? ploidyTar
         String sampleName
         String token
@@ -93,9 +93,12 @@ workflow ClinicalReport {
         DPathogenic=filt_params["TierDPathogenic"]
     }
 
+
+    if (defined(inputCV)){
+    File inputDataCV = select_first([inputCV, 'NULL'])
     call ConvertSVs as CNVFormat {
         input:
-        inputSV=inputCV,
+        inputSV=inputDataCV,
         sampleName=sampleName,
         AddList=AddList,
         MsigDBAnnotation=MsigDBAnnotation,
@@ -110,11 +113,13 @@ workflow ClinicalReport {
         runMode=runMode,
         funco=CNVfunco
     }
+    }
 
-
+    if (defined(inputSV)){
+    File inputDataSV = select_first([inputSV, 'NULL'])
      call ConvertSVs as SVFormat {
         input:
-        inputSV=inputSV,
+        inputSV=inputDataSV,
         sampleName=sampleName,
         AddList=AddList,
         MsigDBAnnotation=MsigDBAnnotation,
@@ -130,7 +135,7 @@ workflow ClinicalReport {
         Passfilt=filt_params["SVPass"],
         runMode=runMode,
         funco=false
-    }
+    }}
 
     call CreateClinical {
         input:
@@ -152,7 +157,7 @@ workflow ClinicalReport {
 # outputs and their types specified here
     output {
       File? yaml=CreateClinical.yamlOut
-      File CNV = CNVFormat.CNV
+      File? CNV = CNVFormat.CNV
       File? htmlFile = select_first([CreateClinical.germline_html, CreateClinical.tumour_html])
       File FinalannotMafGz = ConvertSNVs.annotMafGz
       File SupportingSNVs = ConvertSNVs.SNV
@@ -163,10 +168,10 @@ workflow ClinicalReport {
 task CreateClinical {
     input {
         File FormatSNV
-        File CNV 
-        File SV
+        File? CNV 
+        File? SV
         File? ploidyTar
-        File SVsplit
+        File? SVsplit
         String sampleName
         File yaml
         Int memoryGB
@@ -177,50 +182,91 @@ task CreateClinical {
     }
 
     command <<<
-        echo 'move items' 
-        tar -C . -xvf ~{FormatSNV}
-        ###tar {FormatSNV}
-        cp ~{CNV} .
-        cp ~{SV} .
-        cp ~{SVsplit} .
+        set -euxo pipefail
+        echo 'move items and export names if they exist' 
+        export runMode="~{runMode}"
+        ## SNV data
+        if [ -f ~{FormatSNV} ]; then
+            tar -C . -xvf ~{FormatSNV}
+             export snvsummary="~{sampleName}variantSummary.filt.maf"
+                export snvcancer="~{sampleName}cancerVariants.filt.maf"
+                export snvvus="~{sampleName}pathogenicVUS.filt.maf"
+                export snvdrug="~{sampleName}drugprotective.filt.maf"
+                export snvhallmark="~{sampleName}PathwayVariants.filt.maf"
+                export snvacmg="~{sampleName}ACMG.filt.maf"
+        else 
+            export snvsummary=""
+            export snvcancer=""
+            export snvvus=""
+            export snvdrug=""
+            export snvhallmark=""
+            export snvacmg=""
+        fi
+        ## CNV data
+        if [ -f "~{CNV}" ]; then
+            echo 'CNV file exists'
+            cp ~{CNV} .
+            export cnvAnnot="~{sampleName}.CNV.formated.tsv"
+        else
+            echo 'CNV file does not exists'
+            export cnvAnnot=""
+        fi
+        ## SV data
+        if [ -f "~{SV}" ]; then
+            echo 'SV file exists'
+            cp ~{SV} .
+            export svAnnot="~{sampleName}.SV.formated.tsv"
+        else
+            echo 'SV file does not exist'
+            export svAnnot=""
+        fi
+        if [ -f "~{SVsplit}" ]; then
+            echo 'SV split file exists'
+            cp ~{SVsplit} .
+            export SVsplit="~{sampleName}.SV.split.formated.tsv"
+        else 
+            echo 'SV split file does not exists'
+            export SVsplit=""
+        fi
+        ## CNV plot
+        if [ -f "~{CNVplot}" ]; then
+            echo 'Tumour CNV plot exists'
+            cp ~{CNVplot} ~{sampleName}.modeled.png
+            export CNVplot="~{sampleName}.modeled.png"
+        else
+            echo 'Tumour CNV plot does not exists'
+            export CNVplot=""
+        fi
+        # copy template files over
         cp /templates/*.Rmd . 
         cp ~{param_config} ./parameter.json
-        ##cp ~/Documents/ER_pilot/New_Clin_Reports/*.Rmd .
-        echo 'export items and edit yaml' 
-        ## Mode for Germline cases
 
         if [ ~{runMode} == "Germline" ]; then
         echo 'prepare for germline mode'
         tar -C . -xvf ~{ploidyTar}
-        mv ./SAMPLE_0/contig_ploidy.tsv .
+            if [ -d SAMPLE_0 ]; then
+                mv ./SAMPLE_0/contig_ploidy.tsv .
+            fi
         mv Template_Germline_Report.Rmd ~{sampleName}_Germline_Report.Rmd
+        export titanParams=""
         else 
         echo 'prepare for tumour mode'
-        cp ~{CNVplot} ~{sampleName}.modeled.png
         cp ~{ploidyTar} ~{sampleName}.optimalclusters.txt
-        export CNVplot="~{sampleName}.modeled.png"
         export titanParams="~{sampleName}.optimalclusters.txt"
         mv Template_Somatic_Report.Rmd ~{sampleName}_Somatic_Report.Rmd
         fi
 
+
         # export everything and edit the yaml file
-        export cnvAnnot="~{sampleName}.CNV.formated.tsv"
-        export svAnnot="~{sampleName}.SV.formated.tsv"
-        export SVsplit="~{sampleName}.SV.split.formated.tsv"
         #echo $SVsplit
        ## create a yaml file for the outputs
-        export snvsummary="~{sampleName}variantSummary.filt.maf"
-        export snvcancer="~{sampleName}cancerVariants.filt.maf"
-        export snvvus="~{sampleName}pathogenicVUS.filt.maf"
-        export snvdrug="~{sampleName}drugprotective.filt.maf"
-        export snvhallmark="~{sampleName}PathwayVariants.filt.maf"
-        export snvacmg="~{sampleName}ACMG.filt.maf"
         echo 'edit yaml' 
         rm -f final.yml temp.yml
-        ( echo "cat <<EOF >final.yml"; cat ~{yaml}) > temp.yml
+        ( echo "cat > final.yml <<EOF"; cat "~{yaml}"; echo "EOF";)>temp.yml
+        ##( echo "cat <<EOF >final.yml"; cat ~{yaml}) > temp.yml
         . temp.yml
         # print the input file
-        cat final.yml
+         cat final.yml
         # Now use this yaml and use it in the Rmd
         ## How to use whethere pandoc exists?>/Applications/RStudio.app/Contents/MacOS/pandoc # /usr/local/bin/pandoc
         if [ ~{runMode} == "Germline" ]; then
@@ -271,13 +317,13 @@ task ConvertSVs {
     Boolean isGermline = if (runMode=="Germline") then true else false
 
     command <<<
-
+        set -euxo pipefail
         TissueWd=`grep "Tissue" ~{inputYaml}| cut -d' ' -f2 `
         keyWd=`grep "TreatmentKeywords" ~{inputYaml}| cut -d' ' -f2 `
 
         ## ~/gitLibs/DockerRepository/clinRep
-        if [ ~{CNV} == true && ~{funco} == true ]; then
-        echo 'Run tumour mode annotations'
+        if [ ~{CNV} == true ] && [ ~{funco} == true ]; then
+        echo 'Run tumour mode annotations funco annotated'
         Rscript /opt/AnnotateTumCNV.R --tsv ~{inputSV} --outputname ~{sampleName} --MSigDB ~{MsigDBAnnotation} \
         --GTex ~{GTex} --CosmicList ~{cosmicGenes} ~{"--AddList " + AddList} --pathwayList "$keyWd" --Tissue "$TissueWd" 
         else
@@ -350,13 +396,10 @@ task ConvertSNVs {
     command <<<
         ## modify the SNV files here:
         #unzip files
-
+        set -euxo pipefail
         annotMaf="~{sampleName}_oncokb.maf"
         tempOut="~{sampleName}_newannot.maf"
         annotM2="~{sampleName}_oncokb_final.maf"
-
-        ext="${inputSNV#*.}"
-        echo $ext 
 
         if [ ~{SNVvcfformat} == true ]; then
             echo 'convert vcf to maf'
