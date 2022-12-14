@@ -46,9 +46,9 @@ workflow WGS_Germline_Workflow {
     String refGenome
     File DB_SNP_VCF
     File DB_SNP_VCF_IDX
-    String oncotree
-    File AAlist
-    String OncoKBtoken
+#    String oncotree
+#    File AAlist
+#    String OncoKBtoken
     ## jointdiscovery inputs
     Array[File] HC_resources
     Array[File] HC_resources_index
@@ -122,9 +122,6 @@ workflow WGS_Germline_Workflow {
             clinvar=clinvar,
             clinvarTbi=clinvarTbi,
             refGenome=refGenome,
-            oncotree=oncotree,
-            OncoKBtoken=OncoKBtoken,
-            AAlist=AAlist,
             HC_resources=HC_resources,
             HC_resources_index=HC_resources_index,
             gnomad=gnomad,
@@ -197,7 +194,7 @@ output {
         File Merged_germlineIdx=runSNV.Merged_germlineIdx
         File vep_annot = runSNV.vep_annot
         File? vep_summary_html=runSNV.vep_summary_html
-        File oncokbMaf=runSNV.oncokbMaf
+        #File oncokbMaf=runSNV.oncokbMaf
         ## MantaOutputs
         File? manta_evidence_bam = runManta.evidence_bam
         File? manta_evidence_bai = runManta.evidence_bai

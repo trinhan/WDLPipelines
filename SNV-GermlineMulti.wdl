@@ -13,7 +13,7 @@ import "cnn_variant_wdl/cram2filtered.wdl" as CNNFilter
 import "pisces_task.wdl" as pisces
 import "VEP104.wdl" as VEP
 import "run_QC_checks.wdl" as runQC
-import "oncokb.wdl" as oncokb
+#import "oncokb.wdl" as oncokb
 import "vardict.wdl" as vardict
 
 workflow runGermlineVariants{
@@ -52,10 +52,10 @@ workflow runGermlineVariants{
 #    Boolean runQC
 #    Boolean targetedRun
 
-    String oncotree
-    File AAlist
-    String? grepRm
-    String OncoKBtoken
+#    String oncotree
+#    File AAlist
+#    String? grepRm
+#    String OncoKBtoken
 
     ## jointdiscovery inputs
     Array[File] HC_resources
@@ -246,16 +246,16 @@ workflow runGermlineVariants{
           pick=true 
     }
 
-    call oncokb.oncokb as oncokbCalls {
-        input:
-        vcf=vep.annotatedFile,
-        oncotree = oncotree,
-        samplename = ctrlName,
-        token = OncoKBtoken,
-        searchby = "HGVSp_Short",
-        AAlist = AAlist,
-        grepRm=grepRm
-    }    
+#    call oncokb.oncokb as oncokbCalls {
+#        input:
+#        vcf=vep.annotatedFile,
+#        oncotree = oncotree,
+#        samplename = ctrlName,
+#        token = OncoKBtoken,
+#        searchby = "HGVSp_Short",
+#        AAlist = AAlist,
+#        grepRm=grepRm
+#    }    
 
     output {
         # Strelka2Germline
@@ -274,7 +274,7 @@ workflow runGermlineVariants{
        ## CNN
        File vep_annot = vep.annotatedFile
        File? vep_summary_html=vep.summary_html
-       File oncokbMaf=oncokbCalls.oncokbout
+#       File oncokbMaf=oncokbCalls.oncokbout
 
      }
 }
