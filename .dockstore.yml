@@ -126,4 +126,7 @@ workflows:
   - name: WGS_Germline_pipeline
     subclass: WDL
     primaryDescriptorPath: /WGS_Germline_Pipeline.wdl
+  - name: SomaticVariants
+    subclass: WDL
+    primaryDescriptorPath: /SNV-MultiCaller.wdl
 
