@@ -239,24 +239,26 @@ task CreateClinical {
             echo 'Tumour CNV plot does not exists'
             export CNVplot=""
         fi
-        # copy template files over
-        cp /templates/*.Rmd . 
-        cp ~{param_config} ./parameter.json
-
-        if [ ~{runMode} == "Germline" ]; then
-        echo 'prepare for germline mode'
-        tar -C . -xvf ~{ploidyTar}
+        ## Titan params file
+        if [ -f "~{ploidyTar}" ] && [ ~{runMode} == "Germline" ]; then
+            echo 'prepare germline ploidy files'
+            tar -C . -xvf ~{ploidyTar}
             if [ -d SAMPLE_0 ]; then
                 mv ./SAMPLE_0/contig_ploidy.tsv .
             fi
-        mv Template_Germline_Report.Rmd ~{sampleName}_Germline_Report.Rmd
-        export titanParams=""
-        else 
-        echo 'prepare for tumour mode'
-        cp ~{ploidyTar} ~{sampleName}.optimalclusters.txt
-        export titanParams="~{sampleName}.optimalclusters.txt"
-        mv Template_Somatic_Report.Rmd ~{sampleName}_Somatic_Report.Rmd
+            export titanParams=""
+        elif [ -f "~{ploidyTar}" ] && [ ~{runMode} == "Tumour" ]; then
+            echo 'prepare for ploidy tumour mode'
+            cp ~{ploidyTar} ~{sampleName}.optimalclusters.txt
+            export titanParams="~{sampleName}.optimalclusters.txt"
+        else
+            echo 'no input ploidy file'
+            export titanParams=""
         fi
+
+        # copy template files over
+        cp /templates/*.Rmd . 
+        cp ~{param_config} ./parameter.json
 
 
         # export everything and edit the yaml file
@@ -268,12 +270,16 @@ task CreateClinical {
         ##( echo "cat <<EOF >final.yml"; cat ~{yaml}) > temp.yml
         . temp.yml
         # print the input file
-         cat final.yml
+        # cat final.yml
         # Now use this yaml and use it in the Rmd
         ## How to use whethere pandoc exists?>/Applications/RStudio.app/Contents/MacOS/pandoc # /usr/local/bin/pandoc
         if [ ~{runMode} == "Germline" ]; then
+        echo 'Running germline report'
+        mv Template_Germline_Report.Rmd ~{sampleName}_Germline_Report.Rmd
         Rscript -e 'library(rmarkdown);Sys.setenv(RSTUDIO_PANDOC="/Applications/RStudio.app/Contents/MacOS/pandoc"); rmarkdown::render("./~{sampleName}_Germline_Report.Rmd")'   
         else 
+        echo 'Running tumour report'
+        mv Template_Somatic_Report.Rmd ~{sampleName}_Somatic_Report.Rmd
         Rscript -e 'library(rmarkdown);Sys.setenv(RSTUDIO_PANDOC="/Applications/RStudio.app/Contents/MacOS/pandoc"); rmarkdown::render("./~{sampleName}_Somatic_Report.Rmd")'   
         fi
         mv final.yml ~{sampleName}.final.yml
