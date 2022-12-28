@@ -47,11 +47,11 @@ workflow runGermlineVariants{
     String refGenome
 
     ## List which callers to use
-    Boolean callVardict = true
-    Boolean callHaplotype = true
-    Boolean callStrelka = true
-    Boolean callPisces = false
-    Boolean runVEP = false
+    Boolean callVardict 
+    Boolean callHaplotype     
+    Boolean callStrelka 
+    Boolean callPisces 
+    Boolean runVEP 
 #    File DB_SNP_VCF
 #    File DB_SNP_VCF_IDX
 
@@ -176,33 +176,55 @@ workflow runGermlineVariants{
     }
 }
 
-    Array[File] VardictFiles=select_first([runvardict.vcfFile, "NULL"])
-    Array[File] PiscesFiles=select_first([runpisces.normal_variants, "NULL"])
+if ( callVardict ){
 
-if ( callVardict || callPisces ){
-    call UpdateHeaders {
+    Array[File] VardictFiles = select_first([runvardict.vcfFile, "NULL"])
+
+    call UpdateHeaders as VDHeader {
         input:
-            input_vcfsVar =VardictFiles,
-            input_vcfsPN = PiscesFiles,
+            input_vcfs = VardictFiles,
             ref_dict=refFastaDict,
             gatk_docker = gatk_docker,
-            callVardict=callVardict,
-            callPisces=callPisces
+            caller = "Vardict"
     }
 
-    call CombineVariants {
+    call CombineVariants as VDCombine{
         input:
-            input_VD=UpdateHeaders.VDhead_vcf,
-            input_PN=UpdateHeaders.PNhead_vcf,
+            input_header=VDHeader.head_vcf,
             ref_fasta = refFasta,
             ref_fai = refFastaIdx,
             ref_dict = refFastaDict,
             gatk_docker = gatk_docker,
             sample_name = ctrlName,
-            callVardict=callVardict,
-            callPisces=callPisces
+            caller="Vardict"
     }
 }    
+
+if ( callPisces ){
+
+    Array[File] PiscesFiles = select_first([runpisces.normal_variants, "NULL"])
+
+    call UpdateHeaders as PSHeader {
+        input:
+            input_vcfs = PiscesFiles,
+            ref_dict=refFastaDict,
+            gatk_docker = gatk_docker,
+            caller = "Pisces"
+    }
+
+    call CombineVariants as PSCombine {
+        input:
+            input_header=PSHeader.head_vcf,
+            ref_fasta = refFasta,
+            ref_fai = refFastaIdx,
+            ref_dict = refFastaDict,
+            gatk_docker = gatk_docker,
+            sample_name = ctrlName,
+            caller="Pisces"
+    }
+}    
+
+
 
     if ( callHaplotype ){
     call CNNFilter.Cram2FilteredVcf as CNNScoreVariantsWorkflow {
@@ -231,8 +253,8 @@ if ( callVardict || callPisces ){
             ctrlName=ctrlName,
             Haplotype=CNNScoreVariantsWorkflow.cnn_filtered_vcf,
             STRELKA2=Strelka2Germline_Task.strelka2GermlineVCF,
-            PISCES_NORMAL=CombineVariants.merged_vcfPN,
-            Vardict=CombineVariants.merged_vcfVD,
+            PISCES_NORMAL=PSCombine.merged_vcf,
+            Vardict=VDCombine.merged_vcf,
             minCallers=minCallerSupport,
             callVardict=callVardict,
             callStrelka=callStrelka,
@@ -284,8 +306,8 @@ if ( callVardict || callPisces ){
        #File? bam_cleaned = normalMM_Task.bam_unmapped_cleaned
        File? strelka2GermlineVCF=Strelka2Germline_Task.strelka2GermlineVCF
        # pisces outputs
-       File? pisces_normal_variants=CombineVariants.merged_vcfPN
-       File? vardict=CombineVariants.merged_vcfVD
+       File? pisces_normal_variants=PSCombine.merged_vcf
+       File? vardict=VDCombine.merged_vcf
        File? HaplotypeVcf=CNNScoreVariantsWorkflow.cnn_filtered_vcf
        File? HaplotypeVcfTbi=CNNScoreVariantsWorkflow.cnn_filtered_vcf_index
       # merged germline output
@@ -601,8 +623,8 @@ task Merge_Variants_Germline {
 
 task CombineVariants {
     input {
-        Array[File]? input_VD
-        Array[File]? input_PN
+        Array[File] input_header
+        String caller
         File ref_fasta
         File ref_fai
         File ref_dict
@@ -610,20 +632,11 @@ task CombineVariants {
         String gatk_docker
         String sample_name
         Int mem_gb= 6
-        Boolean callPisces
-        Boolean callVardict
     }
-        Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_VD, "GB"))
+        Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_header, "GB"))
 
     command <<<
-
-        if [ ~{callVardict} == true ]; then 
-            gatk GatherVcfs -I ~{sep=' -I ' input_VD} -R ~{ref_fasta} -O ~{sample_name}.VD.vcf
-        fi
-
-        if [ ~{callPisces} == true ]; then 
-        gatk GatherVcfs -I ~{sep=' -I ' input_PN} -R ~{ref_fasta} -O ~{sample_name}.PiscesNorm.vcf
-        fi
+       gatk GatherVcfs -I ~{sep=' -I ' input_header} -R ~{ref_fasta} -O ~{sample_name}.~{caller}.vcf
     >>>
 
     runtime {
@@ -633,54 +646,34 @@ task CombineVariants {
     }
 
     output {
-    File? merged_vcfVD = "~{sample_name}.VD.vcf"
-    File? merged_vcfPN = "~{sample_name}.PiscesNorm.vcf"
+    File merged_vcf = "~{sample_name}.~{caller}.vcf"
     }
 }
 
 task UpdateHeaders {
     input {
-        Array[File]? input_vcfsVar
-        Array[File]? input_vcfsPN
+        Array[File] input_vcfs
         File ref_dict
         # runtime
         String gatk_docker
-        Int mem_gb= 6
-        Boolean callVardict
-        Boolean callPisces
+        String caller
+        Int mem_gb=6
     }
         Int diskGB = 4*ceil(size(ref_dict, "GB"))
 
     command <<<
 
-        # vardict
-    if [ ~{callVardict} == true ]; then 
         count=0
-        for i in ~{sep=' ' input_vcfsVar}; 
+        for i in ~{sep=' ' input_vcfs}; 
         do 
          newstr=`basename $i`
          gatk UpdateVCFSequenceDictionary \
             -V $i \
             --source-dictionary ~{ref_dict} \
-            --output $newstr.$count.reheaderVD.vcf \
+            --output $newstr.$count.reheader.~{caller}.vcf \
             --replace true
          count+=1
         done
-    fi
-
-    if [ ~{callPisces} == true ]; then
-        count=0
-        for i in ~{sep=' ' input_vcfsPN}; 
-        do 
-         newstr=`basename $i`
-         gatk UpdateVCFSequenceDictionary \
-            -V $i \
-            --source-dictionary ~{ref_dict} \
-            --output $newstr.$count.reheaderPN.vcf \
-            --replace true
-          count+=1
-        done
-    fi
 
     >>>
 
@@ -691,8 +684,7 @@ task UpdateHeaders {
     }
 
     output {
-    Array[File]? VDhead_vcf = glob("*.reheaderVD.vcf")
-    Array[File]? PNhead_vcf = glob("*.reheaderPN.vcf")
+    Array[File] head_vcf = glob("*.reheader.~{caller}.vcf")
     }
 }
 
