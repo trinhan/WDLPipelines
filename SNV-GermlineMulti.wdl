@@ -176,12 +176,14 @@ workflow runGermlineVariants{
     }
 }
 
+    Array[File] VardictFiles=select_first([runvardict.vcfFile, "NULL"])
+    Array[File] PiscesFiles=select_first([runpisces.normal_variants, "NULL"])
 
 if ( callVardict || callPisces ){
     call UpdateHeaders {
         input:
-            input_vcfsVar =runvardict.vcfFile,
-            input_vcfsPN = runpisces.normal_variants,
+            input_vcfsVar =VardictFiles,
+            input_vcfsPN = PiscesFiles,
             ref_dict=refFastaDict,
             gatk_docker = gatk_docker,
             callVardict=callVardict,
@@ -599,8 +601,8 @@ task Merge_Variants_Germline {
 
 task CombineVariants {
     input {
-        Array[File?] input_VD
-        Array[File?] input_PN
+        Array[File]? input_VD
+        Array[File]? input_PN
         File ref_fasta
         File ref_fai
         File ref_dict
@@ -638,8 +640,8 @@ task CombineVariants {
 
 task UpdateHeaders {
     input {
-        Array[File?] input_vcfsVar
-        Array[File?] input_vcfsPN
+        Array[File]? input_vcfsVar
+        Array[File]? input_vcfsPN
         File ref_dict
         # runtime
         String gatk_docker
@@ -689,8 +691,8 @@ task UpdateHeaders {
     }
 
     output {
-    Array[File?] VDhead_vcf = glob("*.reheaderVD.vcf")
-    Array[File?] PNhead_vcf = glob("*.reheaderPN.vcf")
+    Array[File]? VDhead_vcf = glob("*.reheaderVD.vcf")
+    Array[File]? PNhead_vcf = glob("*.reheaderPN.vcf")
     }
 }
 
