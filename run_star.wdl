@@ -114,7 +114,8 @@ task star {
 
         STAR \
             --genomeDir star_index \
-            --readFilesIn $fastq1_abs $fastq2_abs ${prefix} \
+            --readFilesIn $fastq1_abs $fastq2_abs \
+            --outFileNamePrefix ${prefix} \
             ${"--outFilterMultimapNmax " + outFilterMultimapNmax} \
             ${"--alignSJoverhangMin " + alignSJoverhangMin} \
             ${"--alignSJDBoverhangMin " + alignSJDBoverhangMin} \
@@ -141,7 +142,7 @@ task star {
             ${"--chimMainSegmentMultNmax " + chimMainSegmentMultNmax} \
             ${"--chimOutJunctionFormat " + chimOutJunctionFormat} \
             ${"--sjdbFileChrStartEnd " + sjdbFileChrStartEnd} \
-            ${"--readFilesCommand " + readFilesCommand}\
+            ${"--readFilesCommand " + readFilesCommand} \
             --runThreadN ${num_threads}
 
         ls .

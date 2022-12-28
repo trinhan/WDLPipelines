@@ -176,9 +176,10 @@ workflow runGermlineVariants{
     }
 }
 
-if ( callVardict ){
-
     Array[File] VardictFiles = select_first([runvardict.vcfFile, "NULL"])
+    Array[File] PiscesFiles = select_first([runpisces.normal_variants, "NULL"])
+
+if ( callVardict ){
 
     call UpdateHeaders as VDHeader {
         input:
@@ -201,8 +202,6 @@ if ( callVardict ){
 }    
 
 if ( callPisces ){
-
-    Array[File] PiscesFiles = select_first([runpisces.normal_variants, "NULL"])
 
     call UpdateHeaders as PSHeader {
         input:
