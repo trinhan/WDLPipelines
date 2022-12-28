@@ -24,6 +24,7 @@ task star_generate_index {
         String? disk_space
         Int? preemptible
         File annotation
+        String docker
 
     }
 
@@ -47,7 +48,7 @@ task star_generate_index {
     }
 
      runtime {
-        docker: "us-docker.pkg.dev/depmap-omics/public/gtex-rnaseq:V9"
+        docker: select_first([docker, "broadinstitute/gtex_rnaseq:V10"])
         memory: "${memory}GB"
         disks: "local-disk ${disk_space} HDD"
         cpu: "~{nthreads}"
