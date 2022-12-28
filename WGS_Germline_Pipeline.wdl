@@ -1,5 +1,5 @@
 ## Author: Anne Trinh
-## Last Modified: 23/11/2022
+## Last Modified: 28/12/2022
 ## This pipeline runs QCcheck, SNV, CNV and Manta
 ##
 ## Overall pipeline for the following
@@ -54,7 +54,7 @@ workflow WGS_Germline_Workflow {
     Array[File] HC_resources_index
     File gnomad
     File gnomadidx
-    Int? minCallerSupport
+
     Int? HC_shard_counts
     ## Manta requirements
     File annotSVtar
@@ -74,6 +74,12 @@ workflow WGS_Germline_Workflow {
     Boolean runQC
     Boolean targetedRun
     Boolean save_manta_evidence
+
+    Boolean callStrelka
+    Boolean callPisces
+    Boolean callVardict
+    Boolean callHaplotype
+    Int SNVminCallerSupport
     }
 
     String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
@@ -127,7 +133,11 @@ workflow WGS_Germline_Workflow {
             gnomad=gnomad,
             gnomadidx=gnomadidx,
             HC_shard_counts=HC_shard_counts,
-            minCallerSupport=minCallerSupport
+            minCallerSupport=SNVminCallerSupport,
+            callPisces=callPisces,
+            callStrelka=callStrelka,
+            callHaplotype=callHaplotype,
+            callVardict=callVardict
     }
 
     call Manta.MantaGermline as runManta {

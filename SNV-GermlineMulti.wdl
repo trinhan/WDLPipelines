@@ -51,7 +51,7 @@ workflow runGermlineVariants{
     Boolean callHaplotype     
     Boolean callStrelka 
     Boolean callPisces 
-    Boolean runVEP 
+
 #    File DB_SNP_VCF
 #    File DB_SNP_VCF_IDX
 
@@ -262,7 +262,6 @@ if ( callPisces ){
             callHaplotype=callHaplotype
     }
 
-    if ( runVEP ){
     call VEP.variant_effect_predictor as vep {
         input:
           inputFile =Merge_Variants_Germline.MergedGermlineVcf,
@@ -297,7 +296,6 @@ if ( callPisces ){
           biotype=true,
           pick=true 
     }
-    }
 
     output {
         # Strelka2Germline
@@ -314,7 +312,7 @@ if ( callPisces ){
        File Merged_germline=Merge_Variants_Germline.MergedGermlineVcf
        File Merged_germlineIdx=Merge_Variants_Germline.MergedGermlineVcfIdx
        ## CNN
-       File? vep_annot = vep.annotatedFile
+       File vep_annot = vep.annotatedFile
        File? vep_summary_html=vep.summary_html
      }
 }
