@@ -126,5 +126,8 @@ workflows:
   - name: WGS_Germline_pipeline
     subclass: WDL
     primaryDescriptorPath: /WGS_Germline_Pipeline.wdl
+  - name: STARFusion
+    subclass: WDL
+    primaryDescriptorPath: /STARfusion.wdl
 
 
