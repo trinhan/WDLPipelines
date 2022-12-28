@@ -122,7 +122,7 @@ task ChimFusion {
 
     runtime {
       docker: docker
-      memory: select_first([machine_mem_gb, 50]) + " GB"
+      memory: select_first([machine_mem_gb, "50G"])
       cpu: num_cpu
       disks: "local-disk " + disk_space_gb + " HDD"
       preemptible: select_first([preemptible, 3])
