@@ -142,7 +142,7 @@ task star {
             ${"--chimOutJunctionFormat " + chimOutJunctionFormat} \
             ${"--sjdbFileChrStartEnd " + sjdbFileChrStartEnd} \
             ${"--readFilesCommand " + readFilesCommand}\
-            --threads ${num_threads}
+            --runThreadN ${num_threads}
 
         ls .
     }
