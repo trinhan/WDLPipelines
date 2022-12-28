@@ -107,10 +107,18 @@ task ChimFusion {
 
     tar xf ~{genome} -C genome_dir --strip-components 1
 
+    Input="ChimericInput.Chimeric.out.junction"
+
+    if [[ ~{ChimericJunction} == *.gz ]]; then
+        gunzip -c ~{ChimericJunction} > $Input
+    else
+        cp ~{ChimericJunction} > $Input
+    fi
+
     # Identify the fusions from chimericjunction file
 
     /usr/local/src/STAR-Fusion/STAR-Fusion --genome_lib_dir `pwd`/genome_dir/ctat_genome_lib_build_dir \
-             -J ~{ChimericJunction} \
+             -J $Input \
              --output_dir ~{sample_id} --CPU ~{num_cpu} ~{true='--examine_coding_effect' false='' examine_coding_effect}
 
     >>>

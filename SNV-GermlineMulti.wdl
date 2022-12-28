@@ -10,7 +10,7 @@ version 1.0
 
 #import "https://raw.githubusercontent.com/gatk-workflows/gatk4-germline-snps-indels/master/haplotypecaller-gvcf-gatk4.wdl" as HaplotypeCaller
 import "cnn_variant_wdl/cram2filtered.wdl" as CNNFilter
-import "pisces_task.wdl" as pisces
+import "pisces_Germline_parallel.wdl" as pisces
 import "VEP104.wdl" as VEP
 import "run_QC_checks.wdl" as runQC
 #import "oncokb.wdl" as oncokb
@@ -171,10 +171,9 @@ workflow runGermlineVariants{
             normalBai=normalBamIdx,
             pairName=ctrlName,
             pisces_reference=pisces_reference,
-            runMode="Germline",
             gatk_docker=gatk_docker,
-            scatterIndices = CallSomaticMutations_Prepare_Task.scatterIndices,
-            bed_list = CallSomaticMutations_Prepare_Task.bed_list
+            scatterIndices_in = CallSomaticMutations_Prepare_Task.scatterIndices,
+            bed_list_in = CallSomaticMutations_Prepare_Task.bed_list
     }
     }
 
