@@ -1,4 +1,4 @@
-## This WDL pipeline runs star (STAR-2.6.1d, GTex-9 docker image) from single and paired-end fastq files.
+## This WDL pipeline runs star from single and paired-end fastq files.
 ## See https://github.com/alexdobin/STAR for more details
 ##
 ## 1. (Optional) Run fastqc (v0.11.8) to check quality of fastqs.
@@ -68,6 +68,7 @@ task star {
     File? sjdbFileChrStartEnd
     String? readFilesCommand
 
+    String? docker
     Int memory
     Int disk_space
     Int num_threads
@@ -111,8 +112,9 @@ task star {
         touch star_out/${prefix}.Chimeric.out.sorted.bam.bai
         touch star_out/${prefix}.ReadsPerGene.out.tab  # run_STAR.py will gzip
 
-        /src/run_STAR.py \
-            star_index $fastq1_abs $fastq2_abs ${prefix} \
+        STAR \
+            --genomeDir star_index \
+            --readFilesIn $fastq1_abs $fastq2_abs ${prefix} \
             --output_dir star_out \
             ${"--outFilterMultimapNmax " + outFilterMultimapNmax} \
             ${"--alignSJoverhangMin " + alignSJoverhangMin} \
@@ -158,7 +160,7 @@ task star {
     }
 
     runtime {
-        docker: "us-docker.pkg.dev/depmap-omics/public/gtex-rnaseq:V9"
+        docker: select_first([docker, "broadinstitute/gtex_rnaseq:V10"])
         memory: "${memory}GB"
         disks: "local-disk ${disk_space} HDD"
         cpu: "${num_threads}"
