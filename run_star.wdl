@@ -105,17 +105,16 @@ task star {
         mkdir star_index
         tar -xvvf ${star_index} -C star_index --strip-components=1
 
-        mkdir star_out
+        #mkdir star_out
         # placeholders for optional outputs
-        touch star_out/${prefix}.Aligned.toTranscriptome.out.bam
-        touch star_out/${prefix}.Chimeric.out.sorted.bam
-        touch star_out/${prefix}.Chimeric.out.sorted.bam.bai
-        touch star_out/${prefix}.ReadsPerGene.out.tab  # run_STAR.py will gzip
+        #touch star_out/${prefix}.Aligned.toTranscriptome.out.bam
+        #touch star_out/${prefix}.Chimeric.out.sorted.bam
+        #touch star_out/${prefix}.Chimeric.out.sorted.bam.bai
+        #touch star_out/${prefix}.ReadsPerGene.out.tab  # run_STAR.py will gzip
 
         STAR \
             --genomeDir star_index \
             --readFilesIn $fastq1_abs $fastq2_abs ${prefix} \
-            --output_dir star_out \
             ${"--outFilterMultimapNmax " + outFilterMultimapNmax} \
             ${"--alignSJoverhangMin " + alignSJoverhangMin} \
             ${"--alignSJDBoverhangMin " + alignSJDBoverhangMin} \
@@ -144,19 +143,21 @@ task star {
             ${"--sjdbFileChrStartEnd " + sjdbFileChrStartEnd} \
             ${"--readFilesCommand " + readFilesCommand}\
             --threads ${num_threads}
+
+        ls .
     }
 
     output {
-        File bam_file = "star_out/${prefix}.Aligned.sortedByCoord.out.bam"
-        File bam_index = "star_out/${prefix}.Aligned.sortedByCoord.out.bam.bai"
+        File bam_file = "${prefix}.Aligned.sortedByCoord.out.bam"
+        File bam_index = "${prefix}.Aligned.sortedByCoord.out.bam.bai"
         ##File transcriptome_bam = "star_out/${prefix}.Aligned.toTranscriptome.out.bam"
-        File chimeric_junctions = "star_out/${prefix}.Chimeric.out.junction.gz"
+        File chimeric_junctions = "${prefix}.Chimeric.out.junction.gz"
         ##File chimeric_bam_file = "star_out/${prefix}.Chimeric.out.sorted.bam"
         ##File chimeric_bam_index = "star_out/${prefix}.Chimeric.out.sorted.bam.bai"
-        File read_counts = "star_out/${prefix}.ReadsPerGene.out.tab.gz"
-        File junctions = "star_out/${prefix}.SJ.out.tab.gz"
-        File junctions_pass1 = "star_out/${prefix}._STARpass1/${prefix}.SJ.pass1.out.tab.gz"
-        File Finallog = "star_out/${prefix}.Log.final.out"
+        File read_counts = "${prefix}.ReadsPerGene.out.tab.gz"
+        File junctions = "${prefix}.SJ.out.tab.gz"
+        File junctions_pass1 = "${prefix}._STARpass1/${prefix}.SJ.pass1.out.tab.gz"
+        File Finallog = "${prefix}.Log.final.out"
     }
 
     runtime {
