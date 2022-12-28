@@ -2,9 +2,9 @@ version 1.0
 
 workflow pisces_workflow {
   input {
-    File? refFasta
-    File? refFastaFai
-    File? refFastaDict
+    File refFasta
+    File refFastaIdx
+    File refFastaDict
     File? pisces_reference
     File? tumorBam
     File? tumorBai
@@ -13,13 +13,17 @@ workflow pisces_workflow {
     String pairName
     File? interval
     String runMode
+    Array[File] bed_list
+    Array[Int] scatterIndices 
+    String gatk_docker
    }
 
- if (runMode =="Tumour"){
+    if (runMode =="Tumour"){
+    scatter (idx in scatterIndices){
      call runpiscesSomatic {
         input:
             refFasta=refFasta,
-            refFastaFai=refFastaFai,
+            refFastaFai=refFastaIdx,
             refFastaDict=refFastaDict,
             tumorBam=tumorBam,
             normalBam=normalBam,
@@ -32,11 +36,32 @@ workflow pisces_workflow {
         }
     }
 
-if (runMode == "Germline"){
+    call UpdateHeaders as TumHeaders {
+        input:
+            input_vcfs = select_first([runpiscesSomatic.tumor_unique_variants_phased, runpiscesSomatic.tumor_unique_variants]),
+            ref_dict=refFastaDict,
+            gatk_docker = gatk_docker,
+            caller = "Pisces_Tum"
+    }
+
+    call CombineVariants as TumVariants {
+        input:
+            input_header=TumHeaders.head_vcf,
+            ref_fasta = refFasta,
+            ref_fai = refFastaIdx,
+            ref_dict = refFastaDict,
+            gatk_docker = gatk_docker,
+            sample_name = pairName,
+            caller="Pisces"
+    }
+    }
+
+    if (runMode == "Germline"){
+    scatter (idx in scatterIndices){
      call runpiscesGermline {
         input:
             refFasta=refFasta,
-            refFastaFai=refFastaFai,
+            refFastaFai=refFastaIdx,
             refFastaDict=refFastaDict,
             normalBam=normalBam,
             normalBai=normalBai,
@@ -47,12 +72,31 @@ if (runMode == "Germline"){
         }
     }
 
+    call UpdateHeaders as NormHeaders {
+        input:
+            input_vcfs =runpiscesGermline.normal_variants,
+            ref_dict=refFastaDict,
+            gatk_docker = gatk_docker,
+            caller = "Vardict"
+    }
+
+    call CombineVariants as NormVariants {
+        input:
+            input_header=NormHeaders.head_vcf,
+            ref_fasta = refFasta,
+            ref_fai = refFastaIdx,
+            ref_dict = refFastaDict,
+            gatk_docker = gatk_docker,
+            sample_name = pairName,
+            caller="Pisces"
+    }
+    }
+
     output {
-        File tumor_unique_variants_phased=select_first([runpiscesSomatic.tumor_unique_variants_phased, "NULL"])
-        File tumor_unique_variants=select_first([runpiscesSomatic.tumor_unique_variants, "NULL"])
-        File normal_variants=select_first([runpiscesSomatic.normal_variants_same_site, runpiscesGermline.normal_variants])
-        File? venn_zip=select_first([runpiscesSomatic.venn_zip, runpiscesGermline.venn_zip])
-        File? refzip=select_first([runpiscesSomatic.refzip, runpiscesGermline.refzip])
+        File? tumor_unique_variants_phased=TumVariants.merged_vcf
+        File? normal_variants=NormVariants.merged_vcf
+        ##File? venn_zip=select_first([runpiscesSomatic.venn_zip, runpiscesGermline.venn_zip])
+        ##File? refzip=select_first([runpiscesSomatic.refzip, runpiscesGermline.refzip])
 
     }
 }
@@ -328,3 +372,73 @@ task runpiscesSomatic {
     }
 
 }
+
+task CombineVariants {
+    input {
+        Array[File] input_header
+        String caller
+        File ref_fasta
+        File ref_fai
+        File ref_dict
+        # runtime
+        String gatk_docker
+        String sample_name
+        Int mem_gb= 6
+    }
+        Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_header, "GB"))
+
+    command <<<
+       gatk GatherVcfs -I ~{sep=' -I ' input_header} -R ~{ref_fasta} -O ~{sample_name}.~{caller}.vcf
+    >>>
+
+    runtime {
+        docker: gatk_docker
+        memory: "~{mem_gb} GB"
+        disk_space: "local-disk ~{diskGB} HDD"
+    }
+
+    output {
+    File merged_vcf = "~{sample_name}.~{caller}.vcf"
+    }
+}
+
+task UpdateHeaders {
+    input {
+        Array[File] input_vcfs
+        File ref_dict
+        # runtime
+        String gatk_docker
+        String caller
+        Int mem_gb=6
+    }
+        Int diskGB = 4*ceil(size(ref_dict, "GB"))
+
+    command <<<
+
+        count=0
+        for i in ~{sep=' ' input_vcfs}; 
+        do 
+         newstr=`basename $i`
+         gatk UpdateVCFSequenceDictionary \
+            -V $i \
+            --source-dictionary ~{ref_dict} \
+            --output $newstr.$count.reheader.~{caller}.vcf \
+            --replace true
+         count+=1
+        done
+
+    >>>
+
+    runtime {
+        docker: gatk_docker
+        memory: "~{mem_gb} GB"
+        disk_space: "local-disk ~{diskGB} HDD"
+    }
+
+    output {
+    Array[File] head_vcf = glob("*.reheader.~{caller}.vcf")
+    }
+}
+
+
+

@@ -146,84 +146,41 @@ workflow runGermlineVariants{
     }
     }
 
- scatter (idx in CallSomaticMutations_Prepare_Task.scatterIndices) {
-    if ( callPisces ){
-        call pisces.runpiscesGermline as runpisces {
+    if ( callVardict ) {
+        call vardict.VardictWF as VardictWF {
+            input: 
+            refFasta=refFasta,
+            refFastaIdx=refFastaIdx,
+            refFastaDict=refFastaDict,
+            normalBam=normalBam,
+            normalBamIdx=normalBamIdx,
+            ctrlName=ctrlName,
+            gatk_docker=gatk_docker,
+            scatterIndices = CallSomaticMutations_Prepare_Task.scatterIndices,
+            bed_list = CallSomaticMutations_Prepare_Task.bed_list
+        }
+    }
+
+    if ( callPisces ) {
+        call pisces.pisces_workflow as piscesWF {
         input:
             refFasta=refFasta,
-            refFastaFai=refFastaIdx,
+            refFastaIdx=refFastaIdx,
             refFastaDict=refFastaDict,
             normalBam=normalBam,
             normalBai=normalBamIdx,
             pairName=ctrlName,
             pisces_reference=pisces_reference,
-            interval=CallSomaticMutations_Prepare_Task.bed_list[idx],
-            runMode="Germline" 
+            runMode="Germline",
+            gatk_docker=gatk_docker,
+            scatterIndices = CallSomaticMutations_Prepare_Task.scatterIndices,
+            bed_list = CallSomaticMutations_Prepare_Task.bed_list
     }
     }
 
-    if ( callVardict ) {
-        call vardict.VarDict as runvardict {
-            input:
-                referenceFasta=refFasta,
-                referenceFastaFai=refFastaIdx,
-                tumorBam=normalBam,
-                tumorBamIndex=normalBamIdx,
-                outputName=ctrlName,
-                bedFile=CallSomaticMutations_Prepare_Task.bed_list[idx],
-                tumorSampleName=ctrlName
-        }
-    }
-}
 
-    Array[File] VardictFiles = select_first([runvardict.vcfFile, "NULL"])
-    Array[File] PiscesFiles = select_first([runpisces.normal_variants, "NULL"])
-
-if ( callVardict ){
-
-    call UpdateHeaders as VDHeader {
-        input:
-            input_vcfs = VardictFiles,
-            ref_dict=refFastaDict,
-            gatk_docker = gatk_docker,
-            caller = "Vardict"
-    }
-
-    call CombineVariants as VDCombine{
-        input:
-            input_header=VDHeader.head_vcf,
-            ref_fasta = refFasta,
-            ref_fai = refFastaIdx,
-            ref_dict = refFastaDict,
-            gatk_docker = gatk_docker,
-            sample_name = ctrlName,
-            caller="Vardict"
-    }
-}    
-
-if ( callPisces ){
-
-    call UpdateHeaders as PSHeader {
-        input:
-            input_vcfs = PiscesFiles,
-            ref_dict=refFastaDict,
-            gatk_docker = gatk_docker,
-            caller = "Pisces"
-    }
-
-    call CombineVariants as PSCombine {
-        input:
-            input_header=PSHeader.head_vcf,
-            ref_fasta = refFasta,
-            ref_fai = refFastaIdx,
-            ref_dict = refFastaDict,
-            gatk_docker = gatk_docker,
-            sample_name = ctrlName,
-            caller="Pisces"
-    }
-}    
-
-
+#    Array[File] VardictFiles = select_first([runvardict.vcfFile, "NULL"])
+#    Array[File] PiscesFiles = select_first([runpisces.normal_variants, "NULL"])
 
     if ( callHaplotype ){
     call CNNFilter.Cram2FilteredVcf as CNNScoreVariantsWorkflow {
@@ -252,8 +209,8 @@ if ( callPisces ){
             ctrlName=ctrlName,
             Haplotype=CNNScoreVariantsWorkflow.cnn_filtered_vcf,
             STRELKA2=Strelka2Germline_Task.strelka2GermlineVCF,
-            PISCES_NORMAL=PSCombine.merged_vcf,
-            Vardict=VDCombine.merged_vcf,
+            PISCES_NORMAL=piscesWF.normal_variants,
+            Vardict=VardictWF.vardict,
             minCallers=minCallerSupport,
             callVardict=callVardict,
             callStrelka=callStrelka,
@@ -303,8 +260,8 @@ if ( callPisces ){
        #File? bam_cleaned = normalMM_Task.bam_unmapped_cleaned
        File? strelka2GermlineVCF=Strelka2Germline_Task.strelka2GermlineVCF
        # pisces outputs
-       File? pisces_normal_variants=PSCombine.merged_vcf
-       File? vardict=VDCombine.merged_vcf
+       File? pisces_normal_variants=piscesWF.normal_variants
+       File? vardict=VardictWF.vardict
        File? HaplotypeVcf=CNNScoreVariantsWorkflow.cnn_filtered_vcf
        File? HaplotypeVcfTbi=CNNScoreVariantsWorkflow.cnn_filtered_vcf_index
       # merged germline output
