@@ -1,3 +1,6 @@
+## NOTE 29/12/22: To run pisces in paired tumour mode, both normal and the tumour needs to be run individually. The result of both of these are to be merged together
+## A module needs to be created in this pipeline to merge the two together
+
 version 1.0
 
 workflow pisces_workflow {
@@ -11,7 +14,6 @@ workflow pisces_workflow {
     File? normalBam
     File? normalBai
     String pairName
-    File? interval
     File? InputtargetInterval
     String runMode
     Array[File]? bed_list_in
@@ -54,7 +56,7 @@ if (buildIndices){
         }
     }
 
-    call UpdateHeaders {
+    call UpdateHeaders as TumHead {
         input:
             input_vcfs = runpiscesSomatic.tumor_unique_variants,
             ref_dict=refFastaDict,
@@ -62,9 +64,9 @@ if (buildIndices){
             caller = "Pisces_Tum"
     }
 
-    call CombineVariants {
+    call CombineVariants as TumComb {
         input:
-            input_header=UpdateHeaders.head_vcf,
+            input_header=TumHead.head_vcf,
             ref_fasta = refFasta,
             ref_fai = refFastaIdx,
             ref_dict = refFastaDict,
@@ -73,9 +75,44 @@ if (buildIndices){
             caller="Pisces"
     }
 
+    if (runMode=="Paired"){
+
+    Array[File] normalSamples=select_first([runpiscesSomatic.normal_variants_same_site, "NULL"])
+
+    call UpdateHeaders as NormHead {
+        input:
+            input_vcfs = normalSamples,
+            ref_dict=refFastaDict,
+            gatk_docker = gatk_docker,
+            caller = "Pisces_Tum"
+    }
+
+    call CombineVariants as NormComb {
+        input:
+            input_header=NormHead.head_vcf,
+            ref_fasta = refFasta,
+            ref_fai = refFastaIdx,
+            ref_dict = refFastaDict,
+            gatk_docker = gatk_docker,
+            sample_name = pairName,
+            caller="Pisces"
+    }
+
+    call MergeFinal {
+        input:
+            tumor = TumComb.merged_vcf,
+            tumorTbi= TumComb.merged_vcf_tbi,
+            normal = NormComb.merged_vcf,
+            normalTbi = NormComb.merged_vcf_tbi,
+            pairName=pairName
+    }
+
+    }
+
 
     output {
-        File tumor_variants=CombineVariants.merged_vcf
+        File tumor_variants=select_first([MergeFinal.vcf, TumComb.merged_vcf])
+        File tumor_variants_tbi=select_first([MergeFinal.vcf_tbi, TumComb.merged_vcf_tbi])
     }
 }
 
@@ -203,10 +240,10 @@ task runpiscesSomatic {
             dotnet /app/VariantQualityRecalibration_5.2.10.49/VariantQualityRecalibration.dll --vcf variant2_~{pairName}/~{normPrefix}.genome.vcf --out variant2_~{pairName}
             if [[ -f variant2_~{pairName}/~{normPrefix}.genome.vcf.recal ]];
             then 
-            mv variant2_~{pairName}/~{normPrefix}.genome.vcf.recal variant2_~{pairName}/~{normPrefix}.genome.recal.vcf
+            mv variant2_~{pairName}/~{normPrefix}.genome.vcf.recal ~{normPrefix}.genome.recal.vcf
             elif [[ -f variant2_~{pairName}/~{normPrefix}.genome.vcf ]];
             then
-            cp variant2_~{pairName}/~{normPrefix}.genome.vcf variant2_~{pairName}/~{normPrefix}.genome.recal.vcf
+            cp variant2_~{pairName}/~{normPrefix}.genome.vcf ~{normPrefix}.genome.recal.vcf
             fi
             
             mv venn/~{tumPrefix}.recal_not_~{normPrefix}.recal.vcf ~{tumPrefix}.somatic.unique.recal.vcf
@@ -220,12 +257,12 @@ task runpiscesSomatic {
         ## perform phasing here
         dotnet /app/Scylla_5.2.10.49/Scylla.dll -g $sname --vcf ~{tumPrefix}.somatic.unique.recal.vcf --bam ~{tumorBam}
         fi
-
         
     >>>
 
     output {
         File tumor_unique_variants= select_first(["~{tumPrefix}.somatic.unique.recal.vcf", "somatic_~{pairName}/~{tumPrefix}.recal.vcf" ])
+        File? normal_variants_same_site = "~{normPrefix}.genome.recal.vcf"
     }
 
     runtime {
@@ -253,7 +290,7 @@ task CombineVariants {
         Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_header, "GB"))
 
     command <<<
-       gatk GatherVcfs -I ~{sep=' -I ' input_header} -R ~{ref_fasta} -O ~{sample_name}.~{caller}.vcf
+       gatk GatherVcfs -I ~{sep=' -I ' input_header} -R ~{ref_fasta} -O ~{sample_name}.~{caller}.vcf.gz
     >>>
 
     runtime {
@@ -263,9 +300,11 @@ task CombineVariants {
     }
 
     output {
-    File merged_vcf = "~{sample_name}.~{caller}.vcf"
+    File merged_vcf = "~{sample_name}.~{caller}.vcf.gz"
+    File merged_vcf_tbi = "~{sample_name}.~{caller}.vcf.gz.tbi"
     }
 }
+
 
 task UpdateHeaders {
     input {
@@ -364,5 +403,40 @@ task CallSomaticMutations_Prepare_Task {
 }
 
 
+task MergeFinal {
+    input {
+        File tumor
+        File tumorTbi
+        File normal
+        File normalTbi
+        String pairName
+    }
 
+    command <<<
+        # list names
+        PISCES_MERGE="~{pairName}.Pisces.call_stats.tum.norm.vcf.gz"
+        PISCES_Filt="~{pairName}.Pisces.call_stats.tum.norm.filt.vcf"
+        # merge the tumor normal in pisces together
+        bcftools merge ~{tumor} ~{normal} -O vcf -o $PISCES_MERGE
+        tabix -p vcf $PISCES_MERGE
+        # not sure whether to run this - needs to find an intersect?
+        ## bcftools isec -p test -n=2 $PISCES_MERGE ~{tumor}
+        ##awk '{gsub(/SB/, "SBP")}1' test/0000.vcf > test/0000.mod.vcf
+        ##mv test/0000.mod.vcf $PISCES_Filt
+        ##bgzip $PISCES_MERGEu
+        ##tabix -p vcf $PISCES_MERGEu.gz 
+
+    >>>
+
+    runtime {
+        docker         : "trinhanne/sambcfhts:v1.13.3"
+        memory         : "1 GB"
+    }
+
+    output {
+        File vcf = "~{pairName}.Pisces.call_stats.tum.norm.vcf.gz"
+        File vcf_tbi = "~{pairName}.Pisces.call_stats.tum.norm.vcf.gz.tbi"
+    }
+
+}
 
