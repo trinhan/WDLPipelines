@@ -148,6 +148,14 @@ task star {
             --runThreadN ${num_threads}
 
         ls .
+
+        # post processing
+        samtools index ${prefix}.Aligned.sortedByCoord.out.bam
+        gzip ${prefix}.SJ.out.tab
+        gzip ${prefix}.Chimeric.out.junction
+        gzip ${prefix}.ReadsPerGene.out.tab
+        samtools sort  --threads ${num_threads} ${prefix}.Chimeric.out.sam -o ${prefix}.Chimeric.out.sorted.bam
+        samtools index ${prefix}.Chimeric.out.sorted.bam
     }
 
     output {
@@ -159,7 +167,7 @@ task star {
         ##File chimeric_bam_index = "star_out/${prefix}.Chimeric.out.sorted.bam.bai"
         File read_counts = "${prefix}.ReadsPerGene.out.tab.gz"
         File junctions = "${prefix}.SJ.out.tab.gz"
-        File junctions_pass1 = "${prefix}._STARpass1/${prefix}.SJ.pass1.out.tab.gz"
+        ##File junctions_pass1 = "${prefix}._STARpass1/${prefix}.SJ.pass1.out.tab.gz"
         File Finallog = "${prefix}.Log.final.out"
     }
 
