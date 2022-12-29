@@ -580,6 +580,7 @@ task Merge_Variant_Calls {
         set -x
 
         RenameFiles=""
+        TumSamples=""
 
 if [ ~{callM1} == true ]; then
 
@@ -614,6 +615,7 @@ CODE
         else
         RenameFiles="${RenameFiles}~{caseName}.M1\n"
     fi
+    TumSamples="${TumSamples}~{caseName}.M1\n"
     
 fi
         
@@ -632,6 +634,7 @@ if [ ~{callM2} == true ]; then
     else
         RenameFiles="${RenameFiles}~{caseName}.M2\n"
     fi
+    TumSamples="${TumSamples}~{caseName}.M2\n"
 
 fi
 
@@ -650,7 +653,7 @@ if [ ~{callVardict} == true ]; then
     else
         RenameFiles="${RenameFiles}~{caseName}.Vardict\n"
     fi
-
+    TumSamples="${TumSamples}~{caseName}.Vardict\n"
 fi 
 
           
@@ -678,6 +681,7 @@ if [ ~{callS2} == true ]; then
         tabix -p vcf $STRELKA2_MERGE
 
         RenameFiles="${RenameFiles}~{ctrlName}.S2\n~{caseName}.S2\n"
+        TumSamples="${TumSamples}~{caseName}.S2\n"
 fi
 
 if [ ~{callPisces} == true ]; then 
@@ -695,7 +699,7 @@ if [ ~{callPisces} == true ]; then
     else
         RenameFiles="${RenameFiles}~{caseName}.Pisces\n"
     fi
-
+    TumSamples="${TumSamples}~{caseName}.Pisces\n"
 fi 
 
 
@@ -706,6 +710,7 @@ fi
         RENAME_MERGED_VCF_ANN="~{pairName}.multicall.merged.ann.vcf"
         RENAME_MERGED_VCF_FILT="~{pairName}.multicall.merged.filt.vcf"
         echo -e $RenameFiles > samples.txt
+        echo -e $TumSamples > samples_tum.txt
 
         cat samples.txt
         # Strelka2 files
@@ -716,8 +721,9 @@ fi
                       ~{true="$STRELKA2_MERGE" false="" callS2} \
                        ~{true="$PISCES_MERGE.gz" false="" callPisces} \
                        -O vcf -o $MERGED_VCF --force-samples
-        bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF_ALL
-        tabix -p vcf $RENAME_MERGED_VCF_ALL
+
+        bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF
+        tabix -p vcf $RENAME_MERGED_VCF
 
         echo 'filter based on the number of callers'
         bcftools query --format '%CHROM\t%POS\t%POS\n' $RENAME_MERGED_VCF > test.output 
@@ -732,7 +738,7 @@ fi
 
         # extract the variant locations for mutect2
         ##gunzip -c $RENAME_MERGED_VCF > $RENAME_MERGED_VCF_decomp
-        python3 /usr/local/bin/vcf2mafbed.py $RENAME_MERGED_VCF_FILT "~{pairName}.M1_M2_S2_vardict.passed.filt.maf" "~{pairName}.intervals.bed" 150 "~{runMode}"
+        python3 /usr/local/bin/vcf2mafbed.py $RENAME_MERGED_VCF_FILT "~{pairName}.multicall.passed.filt.maf" "~{pairName}.intervals.bed" 150 "~{runMode}"
         # run picard to change the input 
         java -jar /tmp/picard.jar BedToIntervalList -I "~{pairName}.intervals.bed" -O "~{pairName}.variantList.interval_list" -SD ~{refFastaDict}
 
@@ -751,9 +757,9 @@ fi
     }
 
     output {
-        File MergedVcfGz="~{pairName}.M1_M2_S2_vardict.merged.filt.vcf.gz"
-        File MergedVcfIdx="~{pairName}.M1_M2_S2_vardict.merged.filt.vcf.gz.tbi"
-        File MergedMaf="~{pairName}.M1_M2_S2_vardict.passed.filt.maf"
+        File MergedVcfGz="~{pairName}.multicall.merged.filt.vcf.gz"
+        File MergedVcfIdx="~{pairName}.multicall.merged.filt.vcf.gz.tbi"
+        File MergedMaf="~{pairName}.multicall.passed.filt.maf"
         File LocBed="~{pairName}.intervals.bed"
         File Interval_list="~{pairName}.variantList.interval_list"
     }
