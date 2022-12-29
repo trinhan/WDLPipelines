@@ -11,13 +11,15 @@ workflow VardictWF {
         File refFastaIdx
         File refFasta
         File refFastaDict
-        File normalBam
-        File normalBamIdx
-        File ctrlName
+        File? normalBam
+        File? normalBamIdx
+        File tumorBam
+        File tumorBamIdx
+        String? ctrlName
+        String caseName
         Array[File] bed_list
         Array[Int] scatterIndices 
         String gatk_docker
-
     }
 
     scatter (idx in scatterIndices) {
@@ -25,11 +27,15 @@ workflow VardictWF {
             input:
                 referenceFasta=refFasta,
                 referenceFastaFai=refFastaIdx,
-                tumorBam=normalBam,
-                tumorBamIndex=normalBamIdx,
-                outputName=ctrlName,
+                tumorBam=tumorBam,
+                tumorBamIndex=tumorBamIdx,
+                normalBam=normalBam,
+                normalBamIndex=normalBamIdx,
+                outputName=caseName,
+                tumorSampleName=caseName,
                 bedFile=bed_list[idx],
-                tumorSampleName=ctrlName
+                tumorSampleName=caseName,
+                normalSampleName=ctrlName
         }
     }
 
@@ -48,7 +54,7 @@ workflow VardictWF {
             ref_fai = refFastaIdx,
             ref_dict = refFastaDict,
             gatk_docker = gatk_docker,
-            sample_name = ctrlName,
+            sample_name = caseName,
             caller="Vardict"
     }
 

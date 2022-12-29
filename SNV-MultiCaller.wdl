@@ -4,6 +4,7 @@ version 1.0
 
 import "mutect2_wdl/mutect2.wdl" as Mutect2WF
 import "vardict.wdl" as vardict
+import "pisces_Tumour_parallel.wdl" as pisces
 
 workflow runVariantCallers{
     input {
@@ -46,13 +47,19 @@ workflow runVariantCallers{
     # Options here: Pair TumorOnly, Germline
     String runMode = if defined(normalBam) then "Paired" else "TumOnly"
     String gatk_docker
-    Int? minCallerSupport
+    Int minCallerSupport
+
+    Boolean callM2
+    Boolean callStrelka
+    Boolean callVardict
+    Boolean callM1
+    Boolean callPisces = false
 
     }
 
     String targName=basename(sub(targetIntervals,"\\.interval_list", ""))
 
-    Boolean runS2 = if (runMode =="Paired") then true else false
+    Boolean runS2 = if (runMode =="Paired") then callStrelka else false
 
     Int tumorBam_size   = ceil(size(tumorBam,   "G") + size(tumorBamIdx,    "G")) 
     Int normalBam_size  = if defined (normalBam) then ceil(size(normalBam,  "G") + size(normalBamIdx,   "G")) else 0
@@ -112,22 +119,29 @@ workflow runVariantCallers{
                 tumorBam_size=tumorBam_size,
                 normalBam_size=normalBam_size
         }
-
-        call vardict.VarDict as runvardict {
-            input:
-                referenceFasta=refFasta,
-                referenceFastaFai=refFastaIdx,
-                tumorBam=tumorBam,
-                normalBam=normalBam,
-                normalBamIndex=normalBamIdx,
-                tumorBamIndex=tumorBamIdx,
-                outputName=pairName,
-                bedFile=CallSomaticMutations_Prepare_Task.bed_list[idx],
-                tumorSampleName=caseName,
-                normalSampleName=ctrlName
-        }
     }
 
+    if (callVardict){
+        call vardict.VardictWF as VardictWF {
+            input: 
+            refFasta=refFasta,
+            refFastaIdx=refFastaIdx,
+            refFastaDict=refFastaDict,
+            normalBam=normalBam,
+            normalBamIdx=normalBamIdx,
+            tumorBam=tumorBam,
+            tumorBamIdx=tumorBamIdx,
+            ctrlName=ctrlName,
+            caseName=caseName,
+            gatk_docker=gatk_docker,
+            scatterIndices = CallSomaticMutations_Prepare_Task.scatterIndices,
+            bed_list = CallSomaticMutations_Prepare_Task.bed_list
+    }
+    }
+
+
+
+    if (callM2){
     call Mutect2WF.Mutect2 as M2WF {
         input:
             intervals=targetIntervals,
@@ -148,23 +162,7 @@ workflow runVariantCallers{
             m2_extra_args=m2_extra_args,
             gatk_docker=gatk_docker
         }
-
-    call UpdateHeaders {
-        input:
-            input_vcfsVar =runvardict.vcfFile,
-            ref_dict=refFastaDict,
-            gatk_docker = gatk_docker
     }
-
-    call CombineVariants {
-        input:
-            input_VD=UpdateHeaders.VDhead_vcf,
-            ref_fasta = refFasta,
-            ref_fai = refFastaIdx,
-            ref_dict = refFastaDict,
-            gatk_docker = gatk_docker,
-            sample_name = caseName
-    }    
 
     if (runS2){
     call Strelka2Somatic_Task {
@@ -186,48 +184,38 @@ workflow runVariantCallers{
     }
 
 
-    if (runMode=="Paired") {
-        call Merge_Variant_Calls as PairedCall {
+    call Merge_Variant_Calls {
             input:
             pairName=pairName,
             mutect1_cs=Mutect1_Task.mutect1_cs,
             M2=M2WF.filtered_vcf,
             STRELKA2_SNVS=Strelka2Somatic_Task.strelka2SomaticSNVs,
             STRELKA2_INDELS=Strelka2Somatic_Task.strelka2SomaticIndels,
-            Vardict=CombineVariants.merged_vcfVD,
+            Vardict=VardictWF.vardict,
             ctrlName=ctrlName,
             caseName=caseName,
             refFastaDict=refFastaDict,
-            runMode=runMode
-        } 
+            runMode=runMode,
+            callPisces=callPisces,
+            callM2=callM2,
+            callVardict=callVardict,
+            callM1=callM1,
+            minCallers=minCallerSupport
     } 
 
-    if (runMode=="TumOnly") {
-        call Merge_Variant_Calls as TumCall {
-            input:
-            pairName=pairName,
-            mutect1_cs=Mutect1_Task.mutect1_cs,
-            M2=M2WF.filtered_vcf,
-            caseName=caseName,
-            Vardict=CombineVariants.merged_vcfVD,
-            refFastaDict=refFastaDict,
-            runMode=runMode
-        } 
-    }
 
      output {
         
        File? strelka2SomaticSNVs = Strelka2Somatic_Task.strelka2SomaticSNVs
        File? strelka2SomaticIndels = Strelka2Somatic_Task.strelka2SomaticIndels
-        File vardict_out=CombineVariants.merged_vcfVD
       #  M2 workflow2 outputs
-       File M2_filtered_vcf=M2WF.filtered_vcf
-       File M2_filtered_vcf_idx=M2WF.filtered_vcf_idx
+       File? M2_filtered_vcf=M2WF.filtered_vcf
+       File? M2_filtered_vcf_idx=M2WF.filtered_vcf_idx
       #  merged output haplotypecaller
-       File Combined_raw_variants_gz=select_first([PairedCall.MergedVcfGz, TumCall.MergedVcfGz])
-       File Combined_raw_variants_tbi=select_first([PairedCall.MergedVcfIdx, TumCall.MergedVcfIdx])
-       File Combined_raw_variants_maf=select_first([PairedCall.MergedMaf, TumCall.MergedMaf])
-       File VariantSitesBed=select_first([PairedCall.LocBed, TumCall.LocBed])
+       File Combined_raw_variants_gz=Merge_Variant_Calls.MergedVcfGz
+       File Combined_raw_variants_tbi=Merge_Variant_Calls.MergedVcfIdx
+       File Combined_raw_variants_maf=Merge_Variant_Calls.MergedMaf
+       File VariantSitesBed=Merge_Variant_Calls.LocBed
         }
 }
 
@@ -530,11 +518,11 @@ task IntervalToBed {
 
 task Merge_Variant_Calls {
     input {
-        Array[File] mutect1_cs
-        File M2
+        Array[File]? mutect1_cs
+        File? M2
         File? STRELKA2_INDELS
         File? STRELKA2_SNVS
-        File Vardict
+        File? Vardict
         String pairName
         String caseName
         String? ctrlName
@@ -545,14 +533,18 @@ task Merge_Variant_Calls {
         String? memoryGB ="4"
         String? cpu ="1"
         String runMode 
-        Int minCallers =2
+        Int minCallers
+        Boolean callM2
+        Boolean callVardict
+        Boolean callS2
+        Boolean callM1
+        Boolean callPisces
     }
 
     # DEFAULT VALUES
     Int minV = minCallers - 1
        
     Int diskGB = ceil(size(M2, "G"))*4  +  diskGB_buffer
-    String runS2 =if defined(STRELKA2_INDELS) then "1" else "0"
     
     parameter_meta {
         mutect1_cs : "list of mutect variants"
@@ -567,6 +559,16 @@ task Merge_Variant_Calls {
     command <<<
         set -x
 
+        RenameFiles=""
+
+if [ ~{callM1} == true ]; then
+
+# MuTect1 files
+        MUTECT1_CS="~{pairName}.MuTect1.call_stats.txt"
+        MUTECT1_CS_PASSED="~{pairName}.MuTect1.call_stats.passed.txt"
+        MUTECT1_CS_REJECTED="~{pairName}.MuTect1.call_stats.rejected.txt"
+        MUTECT1_CS_VCF="~{pairName}.MuTect1.call_stats.vcf"
+
 python3 <<CODE
 
 mutect1_cs_file_array = '~{sep="," mutect1_cs}'.split(",")
@@ -576,18 +578,8 @@ mutect1_cs_list = open('mutect1_cs_list.txt', 'w')
 for i in range(len(mutect1_cs_file_array)):
     mutect1_cs_list.write(mutect1_cs_file_array[i] + '\n')
 mutect1_cs_list.close()
-
 CODE
-        
-        # MuTect1 files
-        MUTECT1_CS="~{pairName}.MuTect1.call_stats.txt"
-        MUTECT1_CS_PASSED="~{pairName}.MuTect1.call_stats.passed.txt"
-        MUTECT1_CS_REJECTED="~{pairName}.MuTect1.call_stats.rejected.txt"
-        MUTECT1_CS_VCF="~{pairName}.MuTect1.call_stats.vcf"
-        # MuTect2 files
-        MUTECT2_CS_PASSED="~{pairName}.MuTect2.call_stats.passed.vcf"
-        M2temp="~{pairName}.MuTect2.call_stats.vcf"
-        Vardict_PASSED="~{pairName}.Vardict.passed.vcf"
+
         python3 /usr/local/bin/merge_callstats.py "mutect1_cs_list.txt" $MUTECT1_CS
         # Filter MuTect1 mutation calls that passed filter
         python3 /usr/local/bin/filter_passed_mutations.py $MUTECT1_CS $MUTECT1_CS_PASSED $MUTECT1_CS_REJECTED "KEEP"
@@ -595,40 +587,54 @@ CODE
         python3 /usr/local/bin/M1_txt2vcf.py $MUTECT1_CS_PASSED $MUTECT1_CS_VCF "~{caseName}" "~{ctrlName}" -VC "None" --runMode ~{runMode}
         bgzip $MUTECT1_CS_VCF
         tabix -p vcf $MUTECT1_CS_VCF.gz
-          
-        # Name all the merged files
-        MERGED_VCF="~{pairName}.M1_M2_S2_vardict.passed.merged.vcf.gz"
-        RENAME_MERGED_VCF="~{pairName}.M1_M2_S2_vardict.passed.merged2.vcf.gz"
-        RENAME_MERGED_VCF_decomp="~{pairName}.M1_M2_S2_vardict.passed.merged2.vcf"
-        RENAME_MERGED_VCF_ANN="~{pairName}.M1_M2_S2_vardict.merged.ann.vcf"
-        RENAME_MERGED_VCF_FILT="~{pairName}.M1_M2_S2_vardict.merged.filt.vcf"
-
-        echo 'merge vardict files'
-        bgzip ~{Vardict}
-        tabix -p vcf ~{Vardict}.gz
 
     if [ ~{runMode} == "Paired" ];
         then
-        echo -e "~{ctrlName}.M1\n~{caseName}.M1\n~{ctrlName}.M2\n~{caseName}.M2\n~{ctrlName}.S2\n~{caseName}.S2\n~{caseName}.Vardict\n~{ctrlName}.Vardict\n"> samples.txt
-        echo -e "~{caseName}.M1\n~{caseName}.M2\n~{caseName}.S2\n~{caseName}.Vardict\n"> samples_tum.txt
-        elif [ ~{runMode} == "TumOnly" ] ;
-        then
-        echo -e "~{caseName}.M1\n~{caseName}.M2\n~{caseName}.Vardict\n"> samples.txt ##~{caseName}.P\n
-        cp samples.txt samples_tum.txt
-    fi;
+        RenameFiles="${RenameFiles}~{ctrlName}.M1\n~{caseName}.M1\n"
+        else
+        RenameFiles="${RenameFiles}~{caseName}.M1\n"
+    fi
+    
+fi
+        
 
-        echo 'filter out failed variants'
-
+if [ ~{callM2} == true ]; then 
+        # MuTect2 files
+        MUTECT2_CS_PASSED="~{pairName}.MuTect2.call_stats.passed.vcf"
+        M2temp="~{pairName}.MuTect2.call_stats.vcf"
         bcftools view -f PASS ~{M2} > $MUTECT2_CS_PASSED
         bgzip $MUTECT2_CS_PASSED
         tabix -p vcf $MUTECT2_CS_PASSED.gz
-        bcftools view -f PASS ~{Vardict}.gz > $Vardict_PASSED
+
+    if [ ~{runMode} == "Paired" ];
+    then
+        RenameFiles="${RenameFiles}~{ctrlName}.M2\n~{caseName}.M2\n"
+    else
+        RenameFiles="${RenameFiles}~{caseName}.M2\n"
+    fi
+
+fi
+
+if [ ~{callVardict} == true ]; then 
+        Vardict_PASSED="~{pairName}.Vardict.passed.vcf"
+        echo 'merge vardict files'
+        bgzip ~{Vardict}
+        tabix -p vcf ~{Vardict}.gz
+         bcftools view -f PASS ~{Vardict}.gz > $Vardict_PASSED
         bgzip $Vardict_PASSED
         tabix -p vcf $Vardict_PASSED.gz
-        cat samples.txt
-        # Strelka2 files
-    if [ ~{runS2} -eq "1" ];
+
+    if [ ~{runMode} == "Paired" ];
     then
+        RenameFiles="${RenameFiles}~{caseName}.Vardict\n~{ctrlName}.Vardict\n"
+    else
+        RenameFiles="${RenameFiles}~{caseName}.Vardict\n"
+    fi
+
+fi 
+
+          
+if [ ~{callS2} == true ]; then
         STRELKA2_INDEL_REFORMATTED_VCF="~{pairName}.Strelka2.call_stats.indel.re_formatted.vcf"
         STRELKA2_INDEL_PASSED="~{pairName}.Strelka2.call_stats.indel.passed.vcf"
         STRELKA2_SNV_PASSED="~{pairName}.Strelka2.call_stats.snv.passed.vcf"
@@ -651,13 +657,28 @@ CODE
         bcftools concat -a $STRELKA2_SNV_REFORMATTED_VCF.gz $STRELKA2_INDEL_REFORMATTED_VCF.gz -O vcf -o $STRELKA2_MERGE
         tabix -p vcf $STRELKA2_MERGE
 
-        bcftools merge $MUTECT1_CS_VCF.gz $MUTECT2_CS_PASSED.gz $STRELKA2_MERGE $Vardict_PASSED.gz -O vcf -o $MERGED_VCF --force-samples 
-    else 
-        bcftools merge $MUTECT1_CS_VCF.gz $MUTECT2_CS_PASSED.gz $Vardict_PASSED.gz -O vcf -o $MERGED_VCF --force-samples 
-    fi;
+        RenameFiles="${RenameFiles}~{ctrlName}.S2\n~{caseName}.S2\n"
+fi
 
-        bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF
-        tabix -p vcf $RENAME_MERGED_VCF
+       # Name all the merged files
+        MERGED_VCF="~{pairName}.multicall.passed.merged.vcf.gz"
+        RENAME_MERGED_VCF="~{pairName}.multicall.passed.merged2.vcf.gz"
+        RENAME_MERGED_VCF_decomp="~{pairName}.multicall.passed.merged2.vcf"
+        RENAME_MERGED_VCF_ANN="~{pairName}.multicall.merged.ann.vcf"
+        RENAME_MERGED_VCF_FILT="~{pairName}.multicall.merged.filt.vcf"
+        echo -e $RenameFiles > samples.txt
+
+        cat samples.txt
+        # Strelka2 files
+
+       bcftools merge ~{true="$MUTECT1_CS_VCF.gz" false="" callM1} \
+                      ~{true="$MUTECT2_CS_PASSED.gz" false="" callM2} \
+                      ~{true="$Vardict_MERGE.gz" false="" callVardict} \
+                      ~{true="$STRELKA_MERGE.gz" false="" callS2} \
+                       ~{true="$PISCES_MERGE.gz" false="" callPisces} \
+                       -O vcf -o $MERGED_VCF --force-samples
+        bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF_ALL
+        tabix -p vcf $RENAME_MERGED_VCF_ALL
 
         echo 'filter based on the number of callers'
         bcftools query --format '%CHROM\t%POS\t%POS\n' $RENAME_MERGED_VCF > test.output 
