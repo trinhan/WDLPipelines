@@ -200,6 +200,7 @@ workflow runVariantCallers{
             callM2=callM2,
             callVardict=callVardict,
             callM1=callM1,
+            callS2=callStrelka,
             minCallers=minCallerSupport
     } 
 

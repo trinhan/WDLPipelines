@@ -152,8 +152,8 @@ workflow runGermlineVariants{
             refFasta=refFasta,
             refFastaIdx=refFastaIdx,
             refFastaDict=refFastaDict,
-            normalBam=normalBam,
-            normalBamIdx=normalBamIdx,
+            tumorBam=normalBam,
+            tumorBamIdx=normalBamIdx,
             ctrlName=ctrlName,
             gatk_docker=gatk_docker,
             scatterIndices = CallSomaticMutations_Prepare_Task.scatterIndices,
@@ -484,7 +484,7 @@ task Merge_Variants_Germline {
         RenameFiles=""
 
         # reformat if strelka has been run
-        if [ ~{callStrelka} ]; then
+        if [ ~{callStrelka} == true ]; then
         STRELKA_pass="~{ctrlName}.S2.PASS.vcf"
         bcftools view -f PASS "~{STRELKA2}" > $STRELKA_pass
         bgzip $STRELKA_pass
@@ -493,7 +493,7 @@ task Merge_Variants_Germline {
         fi
 
         # reform for piscse
-        if [ ~{callPisces} ]; then
+        if [ ~{callPisces} == true ]; then
         PISCES_pass="~{ctrlName}.Pisces.pass.vcf"
         bcftools view -f PASS "~{PISCES_NORMAL}" > $PISCES_pass
         sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $PISCES_pass
@@ -503,7 +503,7 @@ task Merge_Variants_Germline {
         fi
 
         # reformat for vardict
-        if [ ~{callVardict} ]; then
+        if [ ~{callVardict} == true ]; then
         Vardict_PASSED="~{ctrlName}.Vardict.passed.vcf"
         bcftools view -f PASS "~{Vardict}" > $Vardict_PASSED
         sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $Vardict_PASSED
@@ -513,7 +513,7 @@ task Merge_Variants_Germline {
         fi
 
         # reformat for Haplotupe
-        if [ ~{callHaplotype} ]; then
+        if [ ~{callHaplotype} == true ]; then
         HP_pass="~{ctrlName}.haplo.pass.vcf"
         bcftools view -f PASS "~{Haplotype}" > $HP_pass
         sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $HP_pass
@@ -535,7 +535,7 @@ task Merge_Variants_Germline {
         #merge vcfs
         bcftools merge ~{true="$STRELKA_pass.gz" false="" callStrelka} \
                        ~{true="$PISCES_pass.gz" false="" callPisces} \
-                       ~{true="$Vardict_PASSED.gz" false="" callPisces} \
+                       ~{true="$Vardict_PASSED.gz" false="" callVardict} \
                        ~{true="$HP_pass.gz" false="" callHaplotype} -O vcf -o $MERGED_VCF --force-samples
         bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF_ALL
         tabix -p vcf $RENAME_MERGED_VCF_ALL
