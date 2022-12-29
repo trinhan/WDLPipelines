@@ -17,10 +17,31 @@ workflow VardictWF {
         File tumorBamIdx
         String? ctrlName
         String caseName
-        Array[File] bed_list
-        Array[Int] scatterIndices 
+        Array[File] bed_list_in
+        Array[Int] scatterIndices_in
         String gatk_docker
+        File? InputtargetInterval
     }
+
+
+   Boolean buildIndices = if defined(bed_list_in) then false else true
+   File targetIntervals = select_first([InputtargetInterval, "NULL"])
+
+
+   if (buildIndices){
+    call CallSomaticMutations_Prepare_Task {
+        input:
+            refFasta=refFasta,
+            refFastaIdx=refFastaIdx,
+            refFastaDict=refFastaDict,
+            targetIntervals=targetIntervals,
+            gatk_docker=gatk_docker # takes padded interval file (10bp on each side)
+    }
+}
+
+    Array[File] bed_list=select_first([bed_list_in, CallSomaticMutations_Prepare_Task.bed_list])
+    Array[Int] scatterIndices=select_first([scatterIndices_in, CallSomaticMutations_Prepare_Task.scatterIndices])
+
 
     scatter (idx in scatterIndices) {
         call runVardict {

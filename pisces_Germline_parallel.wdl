@@ -12,7 +12,6 @@ workflow pisces_workflow {
     File normalBam
     File normalBai
     String pairName
-    File? interval
     File? InputtargetInterval
     Array[File]? bed_list_in
     Array[Int]? scatterIndices_in 
@@ -46,7 +45,7 @@ if (buildIndices){
             normalBai=normalBai,
             pairName=pairName,
             pisces_reference=pisces_reference,
-            interval=interval
+            interval=bed_list[idx]
         }
     }
 

@@ -49,7 +49,7 @@ if (buildIndices){
             tumorBai=tumorBai,
             pairName=pairName,
             pisces_reference=pisces_reference,
-            interval=interval,
+            interval=bed_list[idx],
             runMode=runMode
         }
     }

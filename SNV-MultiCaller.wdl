@@ -4,7 +4,7 @@ version 1.0
 
 import "mutect2_wdl/mutect2.wdl" as Mutect2WF
 import "vardict.wdl" as vardict
-#import "pisces_Tumour_parallel.wdl" as pisces
+import "pisces_Tumour_parallel.wdl" as pisces
 
 workflow runVariantCallers{
     input {
@@ -48,6 +48,7 @@ workflow runVariantCallers{
     String runMode = if defined(normalBam) then "Paired" else "TumOnly"
     String gatk_docker
     Int minCallerSupport
+    File? pisces_reference
 
     Boolean callM2
     Boolean callStrelka
@@ -134,12 +135,28 @@ workflow runVariantCallers{
             ctrlName=ctrlName,
             caseName=caseName,
             gatk_docker=gatk_docker,
-            scatterIndices = CallSomaticMutations_Prepare_Task.scatterIndices,
-            bed_list = CallSomaticMutations_Prepare_Task.bed_list
+            scatterIndices_in = CallSomaticMutations_Prepare_Task.scatterIndices,
+            bed_list_in = CallSomaticMutations_Prepare_Task.bed_list
     }
     }
 
-
+    if (callPisces){
+        call pisces.pisces_workflow as piscesWF {
+            input: 
+            refFasta=refFasta,
+            refFastaIdx=refFastaIdx,
+            refFastaDict=refFastaDict,
+            normalBam=normalBam,
+            normalBai=normalBamIdx,
+            tumorBam=tumorBam,
+            tumorBai=tumorBamIdx,
+            pairName=caseName,
+            gatk_docker=gatk_docker,
+            pisces_reference=pisces_reference,
+            scatterIndices_in = CallSomaticMutations_Prepare_Task.scatterIndices,
+            bed_list_in = CallSomaticMutations_Prepare_Task.bed_list
+    }
+    }
 
     if (callM2){
     call Mutect2WF.Mutect2 as M2WF {
@@ -674,8 +691,8 @@ fi
 
        bcftools merge ~{true="$MUTECT1_CS_VCF.gz" false="" callM1} \
                       ~{true="$MUTECT2_CS_PASSED.gz" false="" callM2} \
-                      ~{true="$Vardict_MERGE.gz" false="" callVardict} \
-                      ~{true="$STRELKA_MERGE.gz" false="" callS2} \
+                      ~{true="$Vardict_PASSED.gz" false="" callVardict} \
+                      ~{true="$STRELKA2_MERGE.gz" false="" callS2} \
                        ~{true="$PISCES_MERGE.gz" false="" callPisces} \
                        -O vcf -o $MERGED_VCF --force-samples
         bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF_ALL
