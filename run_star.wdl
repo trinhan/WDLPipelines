@@ -144,6 +144,7 @@ task star {
             ${"--chimOutJunctionFormat " + chimOutJunctionFormat} \
             ${"--sjdbFileChrStartEnd " + sjdbFileChrStartEnd} \
             ${"--readFilesCommand " + readFilesCommand} \
+            --outSAMtype BAM SortedByCoordinate \
             --runThreadN ${num_threads}
 
         ls .

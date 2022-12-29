@@ -152,6 +152,7 @@ workflow runVariantCallers{
             tumorBai=tumorBamIdx,
             pairName=caseName,
             gatk_docker=gatk_docker,
+            runMode=runMode,
             pisces_reference=pisces_reference,
             scatterIndices_in = CallSomaticMutations_Prepare_Task.scatterIndices,
             bed_list_in = CallSomaticMutations_Prepare_Task.bed_list

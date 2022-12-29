@@ -154,7 +154,7 @@ workflow runGermlineVariants{
             refFastaDict=refFastaDict,
             tumorBam=normalBam,
             tumorBamIdx=normalBamIdx,
-            ctrlName=ctrlName,
+            caseName=ctrlName,
             gatk_docker=gatk_docker,
             scatterIndices_in = CallSomaticMutations_Prepare_Task.scatterIndices,
             bed_list_in = CallSomaticMutations_Prepare_Task.bed_list
