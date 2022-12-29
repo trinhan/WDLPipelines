@@ -154,8 +154,8 @@ task star {
         gzip ${prefix}.SJ.out.tab
         gzip ${prefix}.Chimeric.out.junction
         gzip ${prefix}.ReadsPerGene.out.tab
-        samtools sort  --threads ${num_threads} ${prefix}.Chimeric.out.sam -o ${prefix}.Chimeric.out.sorted.bam
-        samtools index ${prefix}.Chimeric.out.sorted.bam
+        ###samtools sort  --threads ${num_threads} ${prefix}.Chimeric.out.sam -o ${prefix}.Chimeric.out.sorted.bam
+        ###samtools index ${prefix}.Chimeric.out.sorted.bam
     }
 
     output {
