@@ -116,6 +116,7 @@ task star {
             --genomeDir star_index \
             --readFilesIn $fastq1_abs $fastq2_abs \
             --outFileNamePrefix ${prefix} \
+            --readFilesCommand zcat \
             ${"--outFilterMultimapNmax " + outFilterMultimapNmax} \
             ${"--alignSJoverhangMin " + alignSJoverhangMin} \
             ${"--alignSJDBoverhangMin " + alignSJDBoverhangMin} \
