@@ -542,6 +542,7 @@ task Merge_Variant_Calls {
         File? STRELKA2_INDELS
         File? STRELKA2_SNVS
         File? Vardict
+        File? Pisces
         String pairName
         String caseName
         String? ctrlName
@@ -557,7 +558,7 @@ task Merge_Variant_Calls {
         Boolean callVardict
         Boolean callS2
         Boolean callM1
-        Boolean callPisces
+        Boolean callPisces = false
     }
 
     # DEFAULT VALUES
@@ -679,6 +680,25 @@ if [ ~{callS2} == true ]; then
         RenameFiles="${RenameFiles}~{ctrlName}.S2\n~{caseName}.S2\n"
 fi
 
+if [ ~{callPisces} == true ]; then 
+        Pisces_PASSED="~{pairName}.Pisces.passed.vcf"
+        echo 'merge pisces files'
+        bgzip ~{Pisces}
+        tabix -p vcf ~{Pisces}.gz
+        bcftools view -f PASS ~{Pisces}.gz > $Pisces_PASSED
+        bgzip $Pisces_PASSED
+        tabix -p vcf $Pisces_PASSED.gz
+
+    if [ ~{runMode} == "Paired" ];
+    then
+        RenameFiles="${RenameFiles}~{caseName}.Pisces\n~{ctrlName}.Vardict\n"
+    else
+        RenameFiles="${RenameFiles}~{caseName}.Pisces\n"
+    fi
+
+fi 
+
+
        # Name all the merged files
         MERGED_VCF="~{pairName}.multicall.passed.merged.vcf.gz"
         RENAME_MERGED_VCF="~{pairName}.multicall.passed.merged2.vcf.gz"
@@ -693,7 +713,7 @@ fi
        bcftools merge ~{true="$MUTECT1_CS_VCF.gz" false="" callM1} \
                       ~{true="$MUTECT2_CS_PASSED.gz" false="" callM2} \
                       ~{true="$Vardict_PASSED.gz" false="" callVardict} \
-                      ~{true="$STRELKA2_MERGE.gz" false="" callS2} \
+                      ~{true="$STRELKA2_MERGE" false="" callS2} \
                        ~{true="$PISCES_MERGE.gz" false="" callPisces} \
                        -O vcf -o $MERGED_VCF --force-samples
         bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF_ALL

@@ -22,9 +22,9 @@ workflow STARfusion {
         # runtime params
         String docker = "trinityctat/starfusion:latest"
         Int num_cpu = 12
-        Float fastq_disk_space_multiplier = 3.25
+        Float fastq_disk_space_multiplier = 5
         String memory = "50G"
-        Float genome_disk_space_multiplier = 2.5
+        Float genome_disk_space_multiplier = 5
         Int preemptible = 2
         Float extra_disk_space = 10
         Boolean use_ssd = true
