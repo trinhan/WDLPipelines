@@ -4,7 +4,7 @@ version 1.0
 
 import "mutect2_wdl/mutect2.wdl" as Mutect2WF
 import "vardict.wdl" as vardict
-import "pisces_Tumour_parallel.wdl" as pisces
+#import "pisces_Tumour_parallel.wdl" as pisces
 
 workflow runVariantCallers{
     input {
