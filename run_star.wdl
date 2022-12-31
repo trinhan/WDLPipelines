@@ -38,6 +38,7 @@ task star {
     File? fastq2
     String prefix
     File star_index
+    File? annotation_gtf
 
     # STAR options
     Int? outFilterMultimapNmax
@@ -66,7 +67,7 @@ task star {
     Int? chimMainSegmentMultNmax
     Int? chimOutJunctionFormat
     File? sjdbFileChrStartEnd
-    String? readFilesCommand
+    String readFilesCommand = "zcat"
 
     String? docker
     Int memory
@@ -74,6 +75,8 @@ task star {
     Int num_threads
     Int num_preempt
 }
+
+    Boolean runTwoPass = if defined(sjdbFileChrStartEnd) then false else true
 
     command {
         set -euo pipefail
@@ -116,7 +119,8 @@ task star {
             --genomeDir star_index \
             --readFilesIn $fastq1_abs $fastq2_abs \
             --outFileNamePrefix "${prefix}." \
-            --readFilesCommand zcat \
+            ${"--sjdbGTFfile " + annotation_gtf} \
+            ${"--readFilesCommand " + readFilesCommand} \
             ${"--outFilterMultimapNmax " + outFilterMultimapNmax} \
             ${"--alignSJoverhangMin " + alignSJoverhangMin} \
             ${"--alignSJDBoverhangMin " + alignSJDBoverhangMin} \
@@ -143,7 +147,7 @@ task star {
             ${"--chimMainSegmentMultNmax " + chimMainSegmentMultNmax} \
             ${"--chimOutJunctionFormat " + chimOutJunctionFormat} \
             ${"--sjdbFileChrStartEnd " + sjdbFileChrStartEnd} \
-            ${"--readFilesCommand " + readFilesCommand} \
+            ${true="--twopassMode Basic" false="" runTwoPass} \
             --outSAMtype BAM SortedByCoordinate \
             --runThreadN ${num_threads}
 
