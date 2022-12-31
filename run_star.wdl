@@ -43,7 +43,7 @@ task star {
     # STAR options
     Int? outFilterMultimapNmax
     String? alignInsertionFlush
-    String? alignSplicedMateMapLminOverLmate
+    Int? alignSplicedMateMapLminOverLmate
     Int? alignSJoverhangMin
     Int? alignSJDBoverhangMin
     Int? alignIntronMin
@@ -58,9 +58,9 @@ task star {
     String? chimOutType
     Int? chimMainSegmentMultNmax
     Int? chimOutJunctionFormat
-    String? chimScoreJunctionNonGTAG
-    String? chimMultimapNmax
-    String? chimNonchimScoreDropMin
+    Int? chimScoreJunctionNonGTAG
+    Int? chimMultimapNmax
+    Int? chimNonchimScoreDropMin
     Int? limitSjdbInsertNsj
     Int? outFilterMismatchNmax
     Float? outFilterMismatchNoverLmax
@@ -75,7 +75,7 @@ task star {
     String? outSAMattrRGline
     String? outSAMattributes
     Int? peOverlapNbasesMin
-    Int? peOverlapMMp
+    Float? peOverlapMMp
     File? varVCFfile
     String? waspOutputMode
     File? sjdbFileChrStartEnd
