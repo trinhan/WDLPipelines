@@ -135,8 +135,8 @@ task star {
             --genomeDir star_index \
             --readFilesIn $fastq1_abs $fastq2_abs \
             --outFileNamePrefix ${prefix}. \
-            ${"--readFilesCommand " + readFilesCommand} \
-            ${"--alignSJstitchMismatchNmax " + alignSJstitchMismatchNmax} \ 
+            --readFilesCommand zcat \
+            ${"--alignSJstitchMismatchNmax " + alignSJstitchMismatchNmax} \
             ${"--alignIntronMin " + alignIntronMin} \
             ${"--alignIntronMax " + alignIntronMax} \
             ${"--alignMatesGapMax " + alignMatesGapMax} \
@@ -172,12 +172,12 @@ task star {
             ${"--peOverlapNbasesMin " + peOverlapNbasesMin} \
             ${"--peOverlapMMp  " + peOverlapMMp} \
             ${"--quantMode " + quantMode} \
-            --runThreadN ${num_threads} \
             ${"--sjdbFileChrStartEnd " + sjdbFileChrStartEnd} \
             ${"--sjdbGTFfile " + annotation_gtf} \
             ${true="--twopassMode Basic" false="" runTwoPass} \
             ${"--varVCFfile " + varVCFfile} \
-            ${"--waspOutputMode " + waspOutputMode} 
+            ${"--waspOutputMode " + waspOutputMode} \
+            --runThreadN ${num_threads}
 
         ls .
 
