@@ -42,41 +42,57 @@ task star {
 
     # STAR options
     Int? outFilterMultimapNmax
+    String? alignInsertionFlush
+    String? alignSplicedMateMapLminOverLmate
     Int? alignSJoverhangMin
     Int? alignSJDBoverhangMin
-    Int? outFilterMismatchNmax
-    Float? outFilterMismatchNoverLmax
     Int? alignIntronMin
     Int? alignIntronMax
     Int? alignMatesGapMax
-    String? outFilterType
-    Float? outFilterScoreMinOverLread
-    Float? outFilterMatchNminOverLread
-    Int? limitSjdbInsertNsj
-    String? outSAMstrandField
-    String? outFilterIntronMotifs
     String? alignSoftClipAtReferenceEnds
-    String? quantMode
-    String? outSAMattrRGline
-    String? outSAMattributes
-    File? varVCFfile
-    String? waspOutputMode
+    String? alignSJstitchMismatchNmax
+    Int? alignSplicedMateMapLmin
+    String? chimMultimapScoreRange
     Int? chimSegmentMin
     Int? chimJunctionOverhangMin
     String? chimOutType
     Int? chimMainSegmentMultNmax
     Int? chimOutJunctionFormat
+    String? chimScoreJunctionNonGTAG
+    String? chimMultimapNmax
+    String? chimNonchimScoreDropMin
+    Int? limitSjdbInsertNsj
+    Int? outFilterMismatchNmax
+    Float? outFilterMismatchNoverLmax
+     String? outFilterType
+    Float? outFilterScoreMinOverLread
+    Float? outFilterMatchNminOverLread
+    String? outSAMstrandField
+    String? outFilterIntronMotifs
+    String? outReadsUnmapped
+    String? outSAMUnmapped
+    String? quantMode
+    String? outSAMattrRGline
+    String? outSAMattributes
+    Int? peOverlapNbasesMin
+    Int? peOverlapMMp
+    File? varVCFfile
+    String? waspOutputMode
     File? sjdbFileChrStartEnd
     String readFilesCommand = "zcat"
+
+
+
+
 
     String? docker
     Int memory
     Int disk_space
     Int num_threads
     Int num_preempt
+    Boolean runTwoPass = if defined(sjdbFileChrStartEnd) then false else true
 }
 
-    Boolean runTwoPass = if defined(sjdbFileChrStartEnd) then false else true
 
     command {
         set -euo pipefail
@@ -119,37 +135,51 @@ task star {
             --genomeDir star_index \
             --readFilesIn $fastq1_abs $fastq2_abs \
             --outFileNamePrefix "${prefix}." \
-            ${"--sjdbGTFfile " + annotation_gtf} \
-            ${"--readFilesCommand " + readFilesCommand} \
-            ${"--outFilterMultimapNmax " + outFilterMultimapNmax} \
-            ${"--alignSJoverhangMin " + alignSJoverhangMin} \
-            ${"--alignSJDBoverhangMin " + alignSJDBoverhangMin} \
-            ${"--outFilterMismatchNmax " + outFilterMismatchNmax} \
-            ${"--outFilterMismatchNoverLmax " + outFilterMismatchNoverLmax} \
+            ${"--alignSJstitchMismatchNmax" + alignSJstitchMismatchNmax} \ 
             ${"--alignIntronMin " + alignIntronMin} \
             ${"--alignIntronMax " + alignIntronMax} \
             ${"--alignMatesGapMax " + alignMatesGapMax} \
-            ${"--outFilterType " + outFilterType} \
-            ${"--outFilterScoreMinOverLread " + outFilterScoreMinOverLread} \
-            ${"--outFilterMatchNminOverLread " + outFilterMatchNminOverLread} \
-            ${"--limitSjdbInsertNsj " + limitSjdbInsertNsj} \
-            ${"--outSAMstrandField " + outSAMstrandField} \
-            ${"--outFilterIntronMotifs " + outFilterIntronMotifs} \
+            ${"--alignInsertionFlush " + alignInsertionFlush} \
+            ${"--alignSplicedMateMapLminOverLmate " + alignSplicedMateMapLminOverLmate} \
+            ${"--alignSplicedMateMapLmin " + alignSplicedMateMapLmin} \
+            ${"--alignSJoverhangMin " + alignSJoverhangMin} \
+            ${"--alignSJDBoverhangMin " + alignSJDBoverhangMin} \
             ${"--alignSoftClipAtReferenceEnds " + alignSoftClipAtReferenceEnds} \
-            ${"--quantMode " + quantMode} \
-            ${"--outSAMattrRGline " + outSAMattrRGline} \
-            ${"--outSAMattributes " + outSAMattributes} \
-            ${"--varVCFfile " + varVCFfile} \
-            ${"--waspOutputMode " + waspOutputMode} \
             ${"--chimSegmentMin " + chimSegmentMin} \
             ${"--chimJunctionOverhangMin " + chimJunctionOverhangMin} \
             ${"--chimOutType " + chimOutType} \
             ${"--chimMainSegmentMultNmax " + chimMainSegmentMultNmax} \
             ${"--chimOutJunctionFormat " + chimOutJunctionFormat} \
-            ${"--sjdbFileChrStartEnd " + sjdbFileChrStartEnd} \
-            ${true="--twopassMode Basic" false="" runTwoPass} \
+            ${"--chimMultimapScoreRange " + chimMultimapScoreRange} \
+            ${"--chimScoreJunctionNonGTAG " + chimScoreJunctionNonGTAG} \
+            ${"--chimMultimapNmax " + chimMultimapNmax} \
+            ${"--chimNonchimScoreDropMin " + chimNonchimScoreDropMin} \
+            ${"--limitSjdbInsertNsj " + limitSjdbInsertNsj} \
             --outSAMtype BAM SortedByCoordinate \
-            --runThreadN ${num_threads}
+            ${"--outFilterMismatchNmax " + outFilterMismatchNmax} \
+            ${"--outFilterMismatchNoverLmax " + outFilterMismatchNoverLmax} \
+            ${"--outSAMstrandField " + outSAMstrandField} \
+            ${"--outFilterIntronMotifs " + outFilterIntronMotifs} \
+            ${"--outFilterMultimapNmax " + outFilterMultimapNmax} \
+            ${"--outFilterScoreMinOverLread " + outFilterScoreMinOverLread} \
+            ${"--outFilterMatchNminOverLread " + outFilterMatchNminOverLread} \
+            ${"--outFilterType " + outFilterType} \
+            ${"--outSAMattrRGline " + outSAMattrRGline} \
+            ${"--outSAMattributes " + outSAMattributes} \
+            ${"--outSAMUnmapped " + outSAMUnmapped} \
+            ${"--outReadsUnmapped " + outReadsUnmapped} \
+            ${"--peOverlapNbasesMin " + peOverlapNbasesMin} \
+            ${"--peOverlapMMp  " + peOverlapMMp} \
+            ${"--quantMode " + quantMode} \
+            ${"--readFilesCommand " + readFilesCommand} \
+            --runThreadN ${num_threads} \
+            ${"--sjdbFileChrStartEnd " + sjdbFileChrStartEnd} \
+            ${"--sjdbGTFfile " + annotation_gtf} \
+            ${true="--twopassMode Basic" false="" runTwoPass} \
+            ${"--varVCFfile " + varVCFfile} \
+            ${"--waspOutputMode " + waspOutputMode} 
+
+
 
         ls .
 
