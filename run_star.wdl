@@ -167,7 +167,7 @@ task star {
             ${"--outFilterType " + outFilterType} \
             ${"--outSAMattrRGline " + outSAMattrRGline} \
             ${"--outSAMattributes " + outSAMattributes} \
-            ${"--outSAMUnmapped " + outSAMUnmapped} \
+            ${"--outSAMunmapped " + outSAMUnmapped} \
             ${"--outReadsUnmapped " + outReadsUnmapped} \
             ${"--peOverlapNbasesMin " + peOverlapNbasesMin} \
             ${"--peOverlapMMp  " + peOverlapMMp} \
