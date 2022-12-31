@@ -134,7 +134,7 @@ task star {
         STAR \
             --genomeDir star_index \
             --readFilesIn $fastq1_abs $fastq2_abs \
-            --outFileNamePrefix "${prefix}." \
+            --outFileNamePrefix ${prefix}. \
             ${"--readFilesCommand " + readFilesCommand} \
             ${"--alignSJstitchMismatchNmax " + alignSJstitchMismatchNmax} \ 
             ${"--alignIntronMin " + alignIntronMin} \
