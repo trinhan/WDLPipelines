@@ -135,7 +135,7 @@ task star {
             --genomeDir star_index \
             --readFilesIn $fastq1_abs $fastq2_abs \
             --outFileNamePrefix "${prefix}." \
-            ${"--alignSJstitchMismatchNmax" + alignSJstitchMismatchNmax} \ 
+            ${"--alignSJstitchMismatchNmax " + alignSJstitchMismatchNmax} \ 
             ${"--alignIntronMin " + alignIntronMin} \
             ${"--alignIntronMax " + alignIntronMax} \
             ${"--alignMatesGapMax " + alignMatesGapMax} \
