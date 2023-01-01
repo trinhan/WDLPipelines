@@ -92,7 +92,7 @@ task star {
     Int num_preempt
     Boolean runTwoPass = if defined(sjdbFileChrStartEnd) then false else true
 }
-
+    Boolean annotFile = if defined(annotation_gtf) then true else false
 
     command {
         set -euo pipefail
@@ -123,6 +123,14 @@ task star {
         echo $(date +"[%b %d %H:%M:%S] Extracting STAR index")
         mkdir star_index
         tar -xvvf ${star_index} -C star_index --strip-components=1
+
+        # gunzip the annotation file
+
+        if [[ ${annotation_gtf} == *".gz" ]]; then
+            gunzip -c ${annotation_gtf} > annotation.file.gtf
+        elif [[ ${annotation_gtf} == *".gtf" ]]; then
+            cp ${annotation_gtf} annotation.file.gtf
+        fi
 
         #mkdir star_out
         # placeholders for optional outputs
@@ -173,7 +181,7 @@ task star {
             ${"--peOverlapMMp  " + peOverlapMMp} \
             ${"--quantMode " + quantMode} \
             ${"--sjdbFileChrStartEnd " + sjdbFileChrStartEnd} \
-            ${"--sjdbGTFfile " + annotation_gtf} \
+            ${true="--sjdbGTFfile annotation.file.gtf" false="" annotFile} \
             ${true="--twopassMode Basic" false="" runTwoPass} \
             ${"--varVCFfile " + varVCFfile} \
             ${"--waspOutputMode " + waspOutputMode} \
