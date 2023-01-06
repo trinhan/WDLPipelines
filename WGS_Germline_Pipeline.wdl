@@ -1,5 +1,5 @@
 ## Author: Anne Trinh
-## Last Modified: 23/11/2022
+## Last Modified: 28/12/2022
 ## This pipeline runs QCcheck, SNV, CNV and Manta
 ##
 ## Overall pipeline for the following
@@ -46,15 +46,15 @@ workflow WGS_Germline_Workflow {
     String refGenome
     File DB_SNP_VCF
     File DB_SNP_VCF_IDX
-    String oncotree
-    File AAlist
-    String OncoKBtoken
+#    String oncotree
+#    File AAlist
+#    String OncoKBtoken
     ## jointdiscovery inputs
     Array[File] HC_resources
     Array[File] HC_resources_index
     File gnomad
     File gnomadidx
-    Int? minCallerSupport
+
     Int? HC_shard_counts
     ## Manta requirements
     File annotSVtar
@@ -74,6 +74,12 @@ workflow WGS_Germline_Workflow {
     Boolean runQC
     Boolean targetedRun
     Boolean save_manta_evidence
+
+    Boolean callStrelka
+    Boolean callPisces
+    Boolean callVardict
+    Boolean callHaplotype
+    Int SNVminCallerSupport
     }
 
     String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
@@ -122,15 +128,16 @@ workflow WGS_Germline_Workflow {
             clinvar=clinvar,
             clinvarTbi=clinvarTbi,
             refGenome=refGenome,
-            oncotree=oncotree,
-            OncoKBtoken=OncoKBtoken,
-            AAlist=AAlist,
             HC_resources=HC_resources,
             HC_resources_index=HC_resources_index,
             gnomad=gnomad,
             gnomadidx=gnomadidx,
             HC_shard_counts=HC_shard_counts,
-            minCallerSupport=minCallerSupport
+            minCallerSupport=SNVminCallerSupport,
+            callPisces=callPisces,
+            callStrelka=callStrelka,
+            callHaplotype=callHaplotype,
+            callVardict=callVardict
     }
 
     call Manta.MantaGermline as runManta {
@@ -197,7 +204,7 @@ output {
         File Merged_germlineIdx=runSNV.Merged_germlineIdx
         File vep_annot = runSNV.vep_annot
         File? vep_summary_html=runSNV.vep_summary_html
-        File oncokbMaf=runSNV.oncokbMaf
+        #File oncokbMaf=runSNV.oncokbMaf
         ## MantaOutputs
         File? manta_evidence_bam = runManta.evidence_bam
         File? manta_evidence_bai = runManta.evidence_bai
@@ -209,6 +216,7 @@ output {
         File genotyped_segments_vcf_indexes=runCNV.genotyped_segments_vcf_indexes
         File genotyped_segments_vcfs=runCNV.genotyped_segments_vcfs
         File sample_contig_ploidy_calls_tars=runCNV.sample_contig_ploidy_calls_tars
+        File gCNV_annotSV = runAnnotSVCNV.sv_variants_tsv
     }
 
 }

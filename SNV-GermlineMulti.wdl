@@ -10,10 +10,10 @@ version 1.0
 
 #import "https://raw.githubusercontent.com/gatk-workflows/gatk4-germline-snps-indels/master/haplotypecaller-gvcf-gatk4.wdl" as HaplotypeCaller
 import "cnn_variant_wdl/cram2filtered.wdl" as CNNFilter
-import "pisces_task.wdl" as pisces
+import "pisces_Germline_parallel.wdl" as pisces
 import "VEP104.wdl" as VEP
 import "run_QC_checks.wdl" as runQC
-import "oncokb.wdl" as oncokb
+#import "oncokb.wdl" as oncokb
 import "vardict.wdl" as vardict
 
 workflow runGermlineVariants{
@@ -46,28 +46,34 @@ workflow runGermlineVariants{
     File? clinvarTbi
     String refGenome
 
+    ## List which callers to use
+    Boolean callVardict 
+    Boolean callHaplotype     
+    Boolean callStrelka 
+    Boolean callPisces 
+
 #    File DB_SNP_VCF
 #    File DB_SNP_VCF_IDX
 
 #    Boolean runQC
 #    Boolean targetedRun
 
-    String oncotree
-    File AAlist
-    String? grepRm
-    String OncoKBtoken
+#    String oncotree
+#    File AAlist
+#    String? grepRm
+#    String OncoKBtoken
 
     ## jointdiscovery inputs
     Array[File] HC_resources
     Array[File] HC_resources_index
-    File gnomad
-    File gnomadidx
+    File? gnomad
+    File? gnomadidx
     String info_key = "CNN_1D"
     String tensor_type = "reference"
     String cnn_extra_args = "-stand-call-conf 0 -A Coverage -A ChromosomeCounts -A BaseQuality -A FragmentLength -A MappingQuality -A ReadPosition "
     Int? HC_shard_counts
 
-    Int? minCallerSupport
+    Int minCallerSupport = 1
     }
 
     String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
@@ -100,6 +106,7 @@ workflow runGermlineVariants{
 #    }
 
         # PREPARE FOR SCATTER
+###if ( callVardict || callPisces ){
     call CallSomaticMutations_Prepare_Task {
         input:
             refFasta=refFasta,
@@ -108,6 +115,7 @@ workflow runGermlineVariants{
             targetIntervals=targetIntervals,
             gatk_docker=gatk_docker # takes padded interval file (10bp on each side)
     }
+###}
 
     call CreateFoFN {
         input:
@@ -123,6 +131,7 @@ workflow runGermlineVariants{
             output_name = targName
     }
 
+    if ( callStrelka ){
     call Strelka2Germline_Task {
         input: 
             refFasta=refFasta,
@@ -135,52 +144,44 @@ workflow runGermlineVariants{
             callRegionsBEDTBI=IntervalToBed.output_bed_tbi,
             name=ctrlName
     }
+    }
 
- scatter (idx in CallSomaticMutations_Prepare_Task.scatterIndices) {
-    call pisces.runpiscesGermline as runpisces {
+    if ( callVardict ) {
+        call vardict.VardictWF as VardictWF {
+            input: 
+            refFasta=refFasta,
+            refFastaIdx=refFastaIdx,
+            refFastaDict=refFastaDict,
+            tumorBam=normalBam,
+            tumorBamIdx=normalBamIdx,
+            caseName=ctrlName,
+            gatk_docker=gatk_docker,
+            scatterIndices_in = CallSomaticMutations_Prepare_Task.scatterIndices,
+            bed_list_in = CallSomaticMutations_Prepare_Task.bed_list
+        }
+    }
+
+    if ( callPisces ) {
+        call pisces.pisces_workflow as piscesWF {
         input:
             refFasta=refFasta,
-            refFastaFai=refFastaIdx,
+            refFastaIdx=refFastaIdx,
             refFastaDict=refFastaDict,
             normalBam=normalBam,
             normalBai=normalBamIdx,
             pairName=ctrlName,
             pisces_reference=pisces_reference,
-            interval=CallSomaticMutations_Prepare_Task.bed_list[idx],
-            runMode="Germline" 
+            gatk_docker=gatk_docker,
+            scatterIndices_in = CallSomaticMutations_Prepare_Task.scatterIndices,
+            bed_list_in = CallSomaticMutations_Prepare_Task.bed_list
+    }
     }
 
-        call vardict.VarDict as runvardict {
-            input:
-                referenceFasta=refFasta,
-                referenceFastaFai=refFastaIdx,
-                tumorBam=normalBam,
-                tumorBamIndex=normalBamIdx,
-                outputName=ctrlName,
-                bedFile=CallSomaticMutations_Prepare_Task.bed_list[idx],
-                tumorSampleName=ctrlName
-        }
-}
 
-    call UpdateHeaders {
-        input:
-            input_vcfsVar =runvardict.vcfFile,
-            input_vcfsPN = runpisces.normal_variants,
-            ref_dict=refFastaDict,
-            gatk_docker = gatk_docker
-    }
+#    Array[File] VardictFiles = select_first([runvardict.vcfFile, "NULL"])
+#    Array[File] PiscesFiles = select_first([runpisces.normal_variants, "NULL"])
 
-    call CombineVariants {
-        input:
-            input_VD=UpdateHeaders.VDhead_vcf,
-            input_PN=UpdateHeaders.PNhead_vcf,
-            ref_fasta = refFasta,
-            ref_fai = refFastaIdx,
-            ref_dict = refFastaDict,
-            gatk_docker = gatk_docker,
-            sample_name = ctrlName
-    }
-
+    if ( callHaplotype ){
     call CNNFilter.Cram2FilteredVcf as CNNScoreVariantsWorkflow {
         input: 
             input_file=normalBam,                  # Aligned CRAM file or Aligned BAM files
@@ -200,15 +201,20 @@ workflow runGermlineVariants{
             calling_intervals=targetIntervals,
             extra_args=cnn_extra_args
     }
+    }
 
     call Merge_Variants_Germline {
         input:
             ctrlName=ctrlName,
             Haplotype=CNNScoreVariantsWorkflow.cnn_filtered_vcf,
             STRELKA2=Strelka2Germline_Task.strelka2GermlineVCF,
-            PISCES_NORMAL=CombineVariants.merged_vcfPN,
-            Vardict=CombineVariants.merged_vcfVD,
-            minCallers=minCallerSupport
+            PISCES_NORMAL=piscesWF.normal_variants,
+            Vardict=VardictWF.vardict,
+            minCallers=minCallerSupport,
+            callVardict=callVardict,
+            callStrelka=callStrelka,
+            callPisces=callPisces,
+            callHaplotype=callHaplotype
     }
 
     call VEP.variant_effect_predictor as vep {
@@ -246,36 +252,23 @@ workflow runGermlineVariants{
           pick=true 
     }
 
-    call oncokb.oncokb as oncokbCalls {
-        input:
-        vcf=vep.annotatedFile,
-        oncotree = oncotree,
-        samplename = ctrlName,
-        token = OncoKBtoken,
-        searchby = "HGVSp_Short",
-        AAlist = AAlist,
-        grepRm=grepRm
-    }    
-
     output {
         # Strelka2Germline
        #File? Picard_QC_Output=normalMM_Task.picard_files
        #File? Picard_HsMetrics=normalMM_Task.hsMetrics
        #File? bam_cleaned = normalMM_Task.bam_unmapped_cleaned
-       File strelka2GermlineVCF=Strelka2Germline_Task.strelka2GermlineVCF
+       File? strelka2GermlineVCF=Strelka2Germline_Task.strelka2GermlineVCF
        # pisces outputs
-       File pisces_normal_variants=CombineVariants.merged_vcfPN
-       File vardict=CombineVariants.merged_vcfVD
-       File HaplotypeVcf=CNNScoreVariantsWorkflow.cnn_filtered_vcf
-       File HaplotypeVcfTbi=CNNScoreVariantsWorkflow.cnn_filtered_vcf_index
+       File? pisces_normal_variants=piscesWF.normal_variants
+       File? vardict=VardictWF.vardict
+       File? HaplotypeVcf=CNNScoreVariantsWorkflow.cnn_filtered_vcf
+       File? HaplotypeVcfTbi=CNNScoreVariantsWorkflow.cnn_filtered_vcf_index
       # merged germline output
        File Merged_germline=Merge_Variants_Germline.MergedGermlineVcf
        File Merged_germlineIdx=Merge_Variants_Germline.MergedGermlineVcfIdx
        ## CNN
        File vep_annot = vep.annotatedFile
        File? vep_summary_html=vep.summary_html
-       File oncokbMaf=oncokbCalls.oncokbout
-
      }
 }
 
@@ -460,10 +453,10 @@ task Merge_Variants_Germline {
 
  input {
     # TASK INPUT PARAMS
-    File PISCES_NORMAL
+    File? PISCES_NORMAL
     File? Haplotype
     File? STRELKA2
-    File Vardict
+    File? Vardict
     String ctrlName
     
     # RUNTIME INPUT PARAMS
@@ -472,7 +465,12 @@ task Merge_Variants_Germline {
     String diskGB_buffer ="5"
     String memoryGB ="4"
     String cpu ="1"
-    Int minCallers = 2
+    Int minCallers
+
+    Boolean callPisces
+    Boolean callVardict
+    Boolean callStrelka
+    Boolean callHaplotype
 
     }
 
@@ -480,45 +478,65 @@ task Merge_Variants_Germline {
     Int minV = minCallers - 1
        
     Int diskGB = ceil(size(Haplotype, "G"))*4  +  diskGB_buffer
-    Boolean runS2 =if defined(STRELKA2) then true else false
 
     command <<<
-        PISCES_pass="~{ctrlName}.Pisces.pass.vcf"
+
+        RenameFiles=""
+
+        # reformat if strelka has been run
+        if [ ~{callStrelka} == true ]; then
         STRELKA_pass="~{ctrlName}.S2.PASS.vcf"
-        Vardict_PASSED="~{ctrlName}.Vardict.passed.vcf"
-        #STRELKA_unzip="~{ctrlName}.S2.unzip.vcf"
-        #HP_unzip="~{ctrlName}.haplo.vcf"
-        HP_pass="~{ctrlName}.haplo.pass.vcf"
-        MERGED_VCF="~{ctrlName}.S2_P_HP_VD.merged.vcf.gz"
-        RENAME_MERGED_VCF_ALL="~{ctrlName}.S2_P_HP_VD.mergedGermline.all.vcf.gz"
-        RENAME_MERGED_VCF_ANN="~{ctrlName}.S2_P_HP_VD.mergedGermline.ann.vcf"
-        RENAME_MERGED_VCF_FILT="~{ctrlName}.S2_P_HP_VD.mergedGermline.filt.vcf"
-
-
-        ## filter out passed germline variants
         bcftools view -f PASS "~{STRELKA2}" > $STRELKA_pass
-        bcftools view -f PASS "~{PISCES_NORMAL}" > $PISCES_pass
-        bcftools view -f PASS "~{Haplotype}" > $HP_pass
-        bcftools view -f PASS "~{Vardict}" > $Vardict_PASSED
-
-        sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $HP_pass
-        sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $PISCES_pass
-        sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $Vardict_PASSED
-
-        ##bgzip $STRELKA_pass
-        bgzip $PISCES_pass
-        bgzip $HP_pass
         bgzip $STRELKA_pass
-        tabix -p vcf $PISCES_pass.gz
         tabix -p vcf $STRELKA_pass.gz
-        #bgzip $HP_pass
-        tabix -p vcf $HP_pass.gz
+        RenameFiles="${RenameFiles}~{ctrlName}.Strelka\n"
+        fi
+
+        # reform for piscse
+        if [ ~{callPisces} == true ]; then
+        PISCES_pass="~{ctrlName}.Pisces.pass.vcf"
+        bcftools view -f PASS "~{PISCES_NORMAL}" > $PISCES_pass
+        sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $PISCES_pass
+        bgzip $PISCES_pass
+        tabix -p vcf $PISCES_pass.gz
+        RenameFiles="${RenameFiles}~{ctrlName}.Pisces\n"
+        fi
+
+        # reformat for vardict
+        if [ ~{callVardict} == true ]; then
+        Vardict_PASSED="~{ctrlName}.Vardict.passed.vcf"
+        bcftools view -f PASS "~{Vardict}" > $Vardict_PASSED
+        sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $Vardict_PASSED
         bgzip $Vardict_PASSED
         tabix -p vcf $Vardict_PASSED.gz
+        RenameFiles="${RenameFiles}~{ctrlName}.Vardict\n"
+        fi
+
+        # reformat for Haplotupe
+        if [ ~{callHaplotype} == true ]; then
+        HP_pass="~{ctrlName}.haplo.pass.vcf"
+        bcftools view -f PASS "~{Haplotype}" > $HP_pass
+        sed -i 's/##FORMAT=<ID=AD,Number=R,/##FORMAT=<ID=AD,Number=.,/g' $HP_pass
+        bgzip $HP_pass
+        tabix -p vcf $HP_pass.gz
+        RenameFiles="${RenameFiles}~{ctrlName}.Haplotype\n"
+        fi
+
+        echo -e $RenameFiles > samples.txt
+
+         #STRELKA_unzip="~{ctrlName}.S2.unzip.vcf"
+        #HP_unzip="~{ctrlName}.haplo.vcf"
+
+        MERGED_VCF="~{ctrlName}.SNV.mergedGermline.vcf.gz"
+        RENAME_MERGED_VCF_ALL="~{ctrlName}.mergedGermline.all.vcf.gz"
+        RENAME_MERGED_VCF_ANN="~{ctrlName}.mergedGermline.ann.vcf"
+        RENAME_MERGED_VCF_FILT="~{ctrlName}.mergedGermline.filt.vcf"
 
         #merge vcfs
-        bcftools merge $STRELKA_pass.gz $PISCES_pass.gz $HP_pass.gz $Vardict_PASSED.gz -O vcf -o $MERGED_VCF --force-samples
-        echo -e "~{ctrlName}.Pisces\n~{ctrlName}.Strelka\n~{ctrlName}.Haplotype\n~{ctrlName}.Vardict\n" > samples.txt
+        bcftools merge ~{true="$STRELKA_pass.gz" false="" callStrelka} \
+                       ~{true="$PISCES_pass.gz" false="" callPisces} \
+                       ~{true="$Vardict_PASSED.gz" false="" callVardict} \
+                       ~{true="$HP_pass.gz" false="" callHaplotype} -O vcf -o $MERGED_VCF --force-samples
         bcftools reheader -s samples.txt $MERGED_VCF > $RENAME_MERGED_VCF_ALL
         tabix -p vcf $RENAME_MERGED_VCF_ALL
 
@@ -550,16 +568,16 @@ task Merge_Variants_Germline {
     }
 
     output {
-        File MergedGermlineVcf="~{ctrlName}.S2_P_HP_VD.mergedGermline.filt.vcf.gz"
-        File MergedGermlineVcfIdx="~{ctrlName}.S2_P_HP_VD.mergedGermline.filt.vcf.gz.tbi"
+        File MergedGermlineVcf="~{ctrlName}.mergedGermline.filt.vcf.gz"
+        File MergedGermlineVcfIdx="~{ctrlName}.mergedGermline.filt.vcf.gz.tbi"
     }     
  
 }
 
 task CombineVariants {
     input {
-        Array[File] input_VD
-        Array[File] input_PN
+        Array[File] input_header
+        String caller
         File ref_fasta
         File ref_fai
         File ref_dict
@@ -568,13 +586,10 @@ task CombineVariants {
         String sample_name
         Int mem_gb= 6
     }
-        Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_VD, "GB"))
+        Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_header, "GB"))
 
     command <<<
-
-        gatk GatherVcfs -I ~{sep=' -I ' input_VD} -R ~{ref_fasta} -O ~{sample_name}.VD.vcf
-        gatk GatherVcfs -I ~{sep=' -I ' input_PN} -R ~{ref_fasta} -O ~{sample_name}.PiscesNorm.vcf
-
+       gatk GatherVcfs -I ~{sep=' -I ' input_header} -R ~{ref_fasta} -O ~{sample_name}.~{caller}.vcf
     >>>
 
     runtime {
@@ -584,47 +599,33 @@ task CombineVariants {
     }
 
     output {
-    File merged_vcfVD = "~{sample_name}.VD.vcf"
-    File merged_vcfPN = "~{sample_name}.PiscesNorm.vcf"
+    File merged_vcf = "~{sample_name}.~{caller}.vcf"
     }
 }
 
 task UpdateHeaders {
     input {
-        Array[File] input_vcfsVar
-        Array[File] input_vcfsPN
+        Array[File] input_vcfs
         File ref_dict
         # runtime
         String gatk_docker
-        Int mem_gb= 6
+        String caller
+        Int mem_gb=6
     }
-        Int diskGB = 4*ceil(size(ref_dict, "GB")+size(input_vcfsVar, "GB"))
+        Int diskGB = 4*ceil(size(ref_dict, "GB"))
 
     command <<<
 
-        # vardict
         count=0
-        for i in ~{sep=' ' input_vcfsVar}; 
+        for i in ~{sep=' ' input_vcfs}; 
         do 
          newstr=`basename $i`
          gatk UpdateVCFSequenceDictionary \
             -V $i \
             --source-dictionary ~{ref_dict} \
-            --output $newstr.$count.reheaderVD.vcf \
+            --output $newstr.$count.reheader.~{caller}.vcf \
             --replace true
          count+=1
-        done
-
-        count=0
-        for i in ~{sep=' ' input_vcfsPN}; 
-        do 
-         newstr=`basename $i`
-         gatk UpdateVCFSequenceDictionary \
-            -V $i \
-            --source-dictionary ~{ref_dict} \
-            --output $newstr.$count.reheaderPN.vcf \
-            --replace true
-          count+=1
         done
 
     >>>
@@ -636,8 +637,7 @@ task UpdateHeaders {
     }
 
     output {
-    Array[File] VDhead_vcf = glob("*.reheaderVD.vcf")
-    Array[File] PNhead_vcf = glob("*.reheaderPN.vcf")
+    Array[File] head_vcf = glob("*.reheader.~{caller}.vcf")
     }
 }
 

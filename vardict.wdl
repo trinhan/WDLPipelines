@@ -1,7 +1,92 @@
+## Steps in this workflow:
+## 1. Parallelise the intervals
+## 2. run vardict on each
+## 3. update headers
+## 4. consolidate into 1 final vcf file
+
 version 1.0
 
+workflow VardictWF {
+    input {
+        File refFastaIdx
+        File refFasta
+        File refFastaDict
+        File? normalBam
+        File? normalBamIdx
+        File tumorBam
+        File tumorBamIdx
+        String? ctrlName
+        String caseName
+        Array[File] bed_list_in
+        Array[Int] scatterIndices_in
+        String gatk_docker
+        File? InputtargetInterval
+    }
 
-task VarDict {
+
+   Boolean buildIndices = if defined(bed_list_in) then false else true
+   File targetIntervals = select_first([InputtargetInterval, "NULL"])
+
+
+   if (buildIndices){
+    call CallSomaticMutations_Prepare_Task {
+        input:
+            refFasta=refFasta,
+            refFastaIdx=refFastaIdx,
+            refFastaDict=refFastaDict,
+            targetIntervals=targetIntervals,
+            gatk_docker=gatk_docker # takes padded interval file (10bp on each side)
+    }
+}
+
+    Array[File] bed_list=select_first([bed_list_in, CallSomaticMutations_Prepare_Task.bed_list])
+    Array[Int] scatterIndices=select_first([scatterIndices_in, CallSomaticMutations_Prepare_Task.scatterIndices])
+
+
+    scatter (idx in scatterIndices) {
+        call runVardict {
+            input:
+                referenceFasta=refFasta,
+                referenceFastaFai=refFastaIdx,
+                tumorBam=tumorBam,
+                tumorBamIndex=tumorBamIdx,
+                normalBam=normalBam,
+                normalBamIndex=normalBamIdx,
+                outputName=caseName,
+                tumorSampleName=caseName,
+                bedFile=bed_list[idx],
+                tumorSampleName=caseName,
+                normalSampleName=ctrlName
+        }
+    }
+
+     call UpdateHeaders {
+        input:
+            input_vcfs = runVardict.vcfFile,
+            ref_dict=refFastaDict,
+            gatk_docker = gatk_docker,
+            caller = "Vardict"
+    }
+
+    call CombineVariants {
+        input:
+            input_header=UpdateHeaders.head_vcf,
+            ref_fasta = refFasta,
+            ref_fai = refFastaIdx,
+            ref_dict = refFastaDict,
+            gatk_docker = gatk_docker,
+            sample_name = caseName,
+            caller="Vardict"
+    }
+
+    output {
+        File vardict=CombineVariants.merged_vcf
+    }
+
+}
+
+
+task runVardict {
     input {
         ## sample information here
         String tumorSampleName
@@ -67,7 +152,7 @@ task VarDict {
         -v ~{minimumVariantDepth} \
         -f ~{minimumAlleleFrequency} \
         > ~{outputName}.vardict.vcf
-
+        
     }
 
     output {
@@ -108,5 +193,130 @@ task VarDict {
         threads: {description: "The number of threads to use.", category: "advanced"}
         memory: {description: "The amount of memory this job will use.", category: "advanced"}
         dockerImage: {description: "The docker image used for this task. Changing this may result in errors which the developers may choose not to address.", category: "advanced"}   
+    }
+}
+
+task CombineVariants {
+    input {
+        Array[File] input_header
+        String caller
+        File ref_fasta
+        File ref_fai
+        File ref_dict
+        # runtime
+        String gatk_docker
+        String sample_name
+        Int mem_gb= 6
+    }
+        Int diskGB = 4*ceil(size(ref_fasta, "GB")+size(input_header, "GB"))
+
+    command <<<
+       gatk GatherVcfs -I ~{sep=' -I ' input_header} -R ~{ref_fasta} -O ~{sample_name}.~{caller}.vcf
+    >>>
+
+    runtime {
+        docker: gatk_docker
+        memory: "~{mem_gb} GB"
+        disk_space: "local-disk ~{diskGB} HDD"
+    }
+
+    output {
+    File merged_vcf = "~{sample_name}.~{caller}.vcf"
+    }
+}
+
+task UpdateHeaders {
+    input {
+        Array[File] input_vcfs
+        File ref_dict
+        # runtime
+        String gatk_docker
+        String caller
+        Int mem_gb=6
+    }
+        Int diskGB = 4*ceil(size(ref_dict, "GB"))
+
+    command <<<
+
+        count=0
+        for i in ~{sep=' ' input_vcfs}; 
+        do 
+         newstr=`basename $i`
+         gatk UpdateVCFSequenceDictionary \
+            -V $i \
+            --source-dictionary ~{ref_dict} \
+            --output $newstr.$count.reheader.~{caller}.vcf \
+            --replace true
+         count+=1
+        done
+
+    >>>
+
+    runtime {
+        docker: gatk_docker
+        memory: "~{mem_gb} GB"
+        disk_space: "local-disk ~{diskGB} HDD"
+    }
+
+    output {
+    Array[File] head_vcf = glob("*.reheader.~{caller}.vcf")
+    }
+}
+
+task CallSomaticMutations_Prepare_Task {
+    input {
+    # TASK INPUT PARAMS
+    File targetIntervals
+    File refFasta
+    File refFastaIdx
+    File refFastaDict
+
+    String nWay = "10"
+
+    # RUNTIME INPUT PARAMS
+    String preemptible = "1"
+    String diskGB_boot = "15"
+
+    String gatk_docker
+}
+
+    parameter_meta {
+        nWay : "Number of ways to scatter (MuTect1 and MuTect2)"
+        targetIntervals : "a list of genomic intervals over which MuTect1 will operate"
+        refFasta : "FASTA file for the appropriate genome build (Reference sequence file)"
+        refFastaIdx : "FASTA file index for the reference genome"
+        refFastaDict : "FASTA file dictionary for the reference genome"
+    }
+
+    command {
+        set -euxo pipefail
+        seq 0 $((~{nWay}-1)) > indices.dat
+        # create a list of intervalfiles
+        mkdir intervalfolder
+        gatk SplitIntervals -R ~{refFasta} -L ~{targetIntervals} --scatter-count ~{nWay} --subdivision-mode BALANCING_WITHOUT_INTERVAL_SUBDIVISION -O intervalfolder
+        cp intervalfolder/*.interval_list .
+
+        ## make the list of bed files
+        mkdir bedfolder
+        for file in *.interval_list;
+        do 
+            gatk IntervalListToBed -I $file -O bedfolder/$file.bed
+            ##small hack to subtract 1 from the bed file
+        done 
+
+        cp bedfolder/*.bed .
+    }
+
+    runtime {
+        docker         : gatk_docker
+        bootDiskSizeGb : diskGB_boot
+        preemptible    : preemptible
+        memory         : "1 GB"
+    }
+
+    output {
+        Array[File] interval_files=glob("*.interval_list")
+        Array[Int] scatterIndices=read_lines("indices.dat")
+        Array[File] bed_list=glob("*.bed")
     }
 }

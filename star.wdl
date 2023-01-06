@@ -46,6 +46,7 @@ task star {
     Int? chimOutJunctionFormat
     File? sjdbFileChrStartEnd
     String? readFilesCommand
+    String docker
 
     Int memory
     Int disk_space
@@ -89,8 +90,9 @@ task star {
         touch star_out/${prefix}.Chimeric.out.sorted.bam.bai
         touch star_out/${prefix}.ReadsPerGene.out.tab  # run_STAR.py will gzip
 
-        /src/run_STAR.py \
-            star_index $fastq1_abs $fastq2_abs ${prefix} \
+        STAR \
+            --genomeDir star_index \
+            --readFilesIn $fastq1_abs $fastq2_abs ${prefix} \
             --output_dir star_out \
             ${"--outFilterMultimapNmax " + outFilterMultimapNmax} \
             ${"--alignSJoverhangMin " + alignSJoverhangMin} \
@@ -136,7 +138,7 @@ task star {
     }
 
     runtime {
-        docker: "us-docker.pkg.dev/depmap-omics/public/gtex-rnaseq:V9"
+        docker: select_first([docker, "broadinstitute/gtex_rnaseq:V10"])
         memory: "${memory}GB"
         disks: "local-disk ${disk_space} HDD"
         cpu: "${num_threads}"

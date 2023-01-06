@@ -24,11 +24,12 @@ workflow oncokbAnnotate {
     String oncotree
     String samplename
     String token
+    String runMode
     # Options for searchby: "hgvsp", "hgvsp_short", "hgvsg"
     String searchby = "HGVSp_Short" 
     File AAlist
     String? grepRm = "intergenic|synonymous|pseudogene|non_coding_transcript_variant"
-    String? canonical = "FALSE"
+    Boolean? canonical = "FALSE"
     }
 
 # start listing all the tasks in your workflow here and the required inputs. This example only has one
@@ -42,7 +43,8 @@ workflow oncokbAnnotate {
         searchby = searchby,
         AAlist = AAlist,
         grepRm=grepRm,
-        canonical=canonical
+        canonical=canonical,
+        runMode=runMode
     }
 # outputs and their types specified here
     output {
@@ -61,7 +63,8 @@ task oncokb {
     String? memoryGB ="10"
     Float? diskGB_buffer = 5
     String? grepRm
-    String? canonical = "FALSE"
+    Boolean? canonical = false
+    String runMode
     }
 
     Int diskGB = 3*ceil(size(vcf, "GB") + diskGB_buffer)
@@ -79,33 +82,30 @@ with open('clinannot.txt', 'w') as f:
     f.close()
 CODE
 
-    OutputMaf=${samplename}.maf
-    OutputMaf2=${samplename}.prot.maf
-    MafFilt=${samplename}.prot.onco.filt.maf
-    vcfMod=${samplename}.vcf
-    vcfMod2=${samplename}.2.vcf
+    annotMaf="~{samplename}.maf"
+#    OutputMaf2=~{samplename}.prot.maf
+    vcfMod="~{samplename}.filt.vcf.gz"
 
     echo ${memoryGB}
     echo ${diskGB}
 
-    gunzip -c ${vcf} > $vcfMod
-
     if [ ${rmSamps} -eq "1" ] ;
     then 
-        grep -v -E "${grepRm}" $vcfMod > $vcfMod2
-        mv $vcfMod2 $vcfMod
+        gunzip -c ~{vcf} | grep -v -E "${grepRm}" > $vcfMod 
+    else
+        cp ~{vcf} $vcfMod
     fi
 
     ## parallelise if the number of samples is super long?
 
 # Run the Rscript: step 1, create the maf
 
-    Rscript /opt/vepVCF2maf4Oncokb.R --vcffile $vcfMod --outputfile $OutputMaf --sampleName ${samplename} --canonical "${canonical}" 
-    Rscript /opt/HGVSMafAnnot.R --maffile $OutputMaf --outputfile $OutputMaf2 --AAlist ${AAlist}
+    Rscript /opt/vepVCF2maf.R --vcffile $vcfMod --outputfile $annotMaf --sampleName ~{samplename} --canonical ~{canonical} --runMode ~{runMode} --AAlist ~{AAlist} 
+    ##Rscript /opt/HGVSMafAnnot.R --maffile $annotMaf --outputfile $OutputMaf
     ## Run the Rscript: step 2 annotate the data file with pfam and pirsf
     ## Run the Rscript: step 2 annotate the data file with pfam and pirsf
 
-python3 /oncokb/MafAnnotator.py -i $OutputMaf2 -o "${samplename}_oncokb.maf" -c "clinannot.txt" -b ${token} -q ${searchby}
+python3 /oncokb/MafAnnotator.py -i $annotMaf -o "${samplename}_oncokb.maf" -c "clinannot.txt" -b ${token} -q ${searchby}
 gzip ${samplename}_oncokb.maf
 
     }
@@ -116,7 +116,7 @@ gzip ${samplename}_oncokb.maf
     }
 
     runtime {
-    docker: "trinhanne/oncokb:v3.2.2Renv"
+    docker: "trinhanne/oncokb:v3.2.4Renv"
     preemptible: "3"
     memory: memoryGB + "GB"
     disks: "local-disk ${diskGB} HDD"

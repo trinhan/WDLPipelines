@@ -1,4 +1,4 @@
-## This WDL pipeline runs star (STAR-2.6.1d, GTex-9 docker image) from single and paired-end fastq files.
+## This WDL pipeline runs star from single and paired-end fastq files.
 ## See https://github.com/alexdobin/STAR for more details
 ##
 ## 1. (Optional) Run fastqc (v0.11.8) to check quality of fastqs.
@@ -38,41 +38,61 @@ task star {
     File? fastq2
     String prefix
     File star_index
+    File? annotation_gtf
 
     # STAR options
     Int? outFilterMultimapNmax
+    String? alignInsertionFlush
+    Int? alignSplicedMateMapLminOverLmate
     Int? alignSJoverhangMin
     Int? alignSJDBoverhangMin
-    Int? outFilterMismatchNmax
-    Float? outFilterMismatchNoverLmax
     Int? alignIntronMin
     Int? alignIntronMax
     Int? alignMatesGapMax
-    String? outFilterType
-    Float? outFilterScoreMinOverLread
-    Float? outFilterMatchNminOverLread
-    Int? limitSjdbInsertNsj
-    String? outSAMstrandField
-    String? outFilterIntronMotifs
     String? alignSoftClipAtReferenceEnds
-    String? quantMode
-    String? outSAMattrRGline
-    String? outSAMattributes
-    File? varVCFfile
-    String? waspOutputMode
+    String? alignSJstitchMismatchNmax
+    Int? alignSplicedMateMapLmin
+    String? chimMultimapScoreRange
     Int? chimSegmentMin
     Int? chimJunctionOverhangMin
     String? chimOutType
     Int? chimMainSegmentMultNmax
     Int? chimOutJunctionFormat
+    Int? chimScoreJunctionNonGTAG
+    Int? chimMultimapNmax
+    Int? chimNonchimScoreDropMin
+    Int? limitSjdbInsertNsj
+    Int? outFilterMismatchNmax
+    Float? outFilterMismatchNoverLmax
+     String? outFilterType
+    Float? outFilterScoreMinOverLread
+    Float? outFilterMatchNminOverLread
+    String? outSAMstrandField
+    String? outFilterIntronMotifs
+    String? outReadsUnmapped
+    String? outSAMUnmapped
+    String? quantMode
+    String? outSAMattrRGline
+    String? outSAMattributes
+    Int? peOverlapNbasesMin
+    Float? peOverlapMMp
+    File? varVCFfile
+    String? waspOutputMode
     File? sjdbFileChrStartEnd
-    String? readFilesCommand
+    String readFilesCommand = "zcat"
 
+
+
+
+
+    String? docker
     Int memory
     Int disk_space
     Int num_threads
     Int num_preempt
+    Boolean runTwoPass = if defined(sjdbFileChrStartEnd) then false else true
 }
+    Boolean annotFile = if defined(annotation_gtf) then true else false
 
     command {
         set -euo pipefail
@@ -104,61 +124,95 @@ task star {
         mkdir star_index
         tar -xvvf ${star_index} -C star_index --strip-components=1
 
-        mkdir star_out
-        # placeholders for optional outputs
-        touch star_out/${prefix}.Aligned.toTranscriptome.out.bam
-        touch star_out/${prefix}.Chimeric.out.sorted.bam
-        touch star_out/${prefix}.Chimeric.out.sorted.bam.bai
-        touch star_out/${prefix}.ReadsPerGene.out.tab  # run_STAR.py will gzip
+        # gunzip the annotation file
 
-        /src/run_STAR.py \
-            star_index $fastq1_abs $fastq2_abs ${prefix} \
-            --output_dir star_out \
-            ${"--outFilterMultimapNmax " + outFilterMultimapNmax} \
-            ${"--alignSJoverhangMin " + alignSJoverhangMin} \
-            ${"--alignSJDBoverhangMin " + alignSJDBoverhangMin} \
-            ${"--outFilterMismatchNmax " + outFilterMismatchNmax} \
-            ${"--outFilterMismatchNoverLmax " + outFilterMismatchNoverLmax} \
+        if [[ ${annotation_gtf} == *".gz" ]]; then
+            gunzip -c ${annotation_gtf} > annotation.file.gtf
+        elif [[ ${annotation_gtf} == *".gtf" ]]; then
+            cp ${annotation_gtf} annotation.file.gtf
+        fi
+
+        #mkdir star_out
+        # placeholders for optional outputs
+        #touch star_out/${prefix}.Aligned.toTranscriptome.out.bam
+        #touch star_out/${prefix}.Chimeric.out.sorted.bam
+        #touch star_out/${prefix}.Chimeric.out.sorted.bam.bai
+        #touch star_out/${prefix}.ReadsPerGene.out.tab  # run_STAR.py will gzip
+
+        STAR \
+            --genomeDir star_index \
+            --readFilesIn $fastq1_abs $fastq2_abs \
+            --outFileNamePrefix ${prefix}. \
+            --readFilesCommand zcat \
+            ${"--alignSJstitchMismatchNmax " + alignSJstitchMismatchNmax} \
             ${"--alignIntronMin " + alignIntronMin} \
             ${"--alignIntronMax " + alignIntronMax} \
             ${"--alignMatesGapMax " + alignMatesGapMax} \
-            ${"--outFilterType " + outFilterType} \
-            ${"--outFilterScoreMinOverLread " + outFilterScoreMinOverLread} \
-            ${"--outFilterMatchNminOverLread " + outFilterMatchNminOverLread} \
-            ${"--limitSjdbInsertNsj " + limitSjdbInsertNsj} \
-            ${"--outSAMstrandField " + outSAMstrandField} \
-            ${"--outFilterIntronMotifs " + outFilterIntronMotifs} \
+            ${"--alignInsertionFlush " + alignInsertionFlush} \
+            ${"--alignSplicedMateMapLminOverLmate " + alignSplicedMateMapLminOverLmate} \
+            ${"--alignSplicedMateMapLmin " + alignSplicedMateMapLmin} \
+            ${"--alignSJoverhangMin " + alignSJoverhangMin} \
+            ${"--alignSJDBoverhangMin " + alignSJDBoverhangMin} \
             ${"--alignSoftClipAtReferenceEnds " + alignSoftClipAtReferenceEnds} \
-            ${"--quantMode " + quantMode} \
-            ${"--outSAMattrRGline " + outSAMattrRGline} \
-            ${"--outSAMattributes " + outSAMattributes} \
-            ${"--varVCFfile " + varVCFfile} \
-            ${"--waspOutputMode " + waspOutputMode} \
             ${"--chimSegmentMin " + chimSegmentMin} \
             ${"--chimJunctionOverhangMin " + chimJunctionOverhangMin} \
             ${"--chimOutType " + chimOutType} \
             ${"--chimMainSegmentMultNmax " + chimMainSegmentMultNmax} \
             ${"--chimOutJunctionFormat " + chimOutJunctionFormat} \
+            ${"--chimMultimapScoreRange " + chimMultimapScoreRange} \
+            ${"--chimScoreJunctionNonGTAG " + chimScoreJunctionNonGTAG} \
+            ${"--chimMultimapNmax " + chimMultimapNmax} \
+            ${"--chimNonchimScoreDropMin " + chimNonchimScoreDropMin} \
+            ${"--limitSjdbInsertNsj " + limitSjdbInsertNsj} \
+            --outSAMtype BAM SortedByCoordinate \
+            ${"--outFilterMismatchNmax " + outFilterMismatchNmax} \
+            ${"--outFilterMismatchNoverLmax " + outFilterMismatchNoverLmax} \
+            ${"--outSAMstrandField " + outSAMstrandField} \
+            ${"--outFilterIntronMotifs " + outFilterIntronMotifs} \
+            ${"--outFilterMultimapNmax " + outFilterMultimapNmax} \
+            ${"--outFilterScoreMinOverLread " + outFilterScoreMinOverLread} \
+            ${"--outFilterMatchNminOverLread " + outFilterMatchNminOverLread} \
+            ${"--outFilterType " + outFilterType} \
+            ${"--outSAMattrRGline " + outSAMattrRGline} \
+            ${"--outSAMattributes " + outSAMattributes} \
+            ${"--outSAMunmapped " + outSAMUnmapped} \
+            ${"--outReadsUnmapped " + outReadsUnmapped} \
+            ${"--peOverlapNbasesMin " + peOverlapNbasesMin} \
+            ${"--peOverlapMMp  " + peOverlapMMp} \
+            ${"--quantMode " + quantMode} \
             ${"--sjdbFileChrStartEnd " + sjdbFileChrStartEnd} \
-            ${"--readFilesCommand " + readFilesCommand}\
-            --threads ${num_threads}
+            ${true="--sjdbGTFfile annotation.file.gtf" false="" annotFile} \
+            ${true="--twopassMode Basic" false="" runTwoPass} \
+            ${"--varVCFfile " + varVCFfile} \
+            ${"--waspOutputMode " + waspOutputMode} \
+            --runThreadN ${num_threads}
+
+        ls .
+
+        # post processing
+        samtools index ${prefix}.Aligned.sortedByCoord.out.bam
+        gzip ${prefix}.SJ.out.tab
+        gzip ${prefix}.Chimeric.out.junction
+        gzip ${prefix}.ReadsPerGene.out.tab
+        ###samtools sort  --threads ${num_threads} ${prefix}.Chimeric.out.sam -o ${prefix}.Chimeric.out.sorted.bam
+        ###samtools index ${prefix}.Chimeric.out.sorted.bam
     }
 
     output {
-        File bam_file = "star_out/${prefix}.Aligned.sortedByCoord.out.bam"
-        File bam_index = "star_out/${prefix}.Aligned.sortedByCoord.out.bam.bai"
+        File bam_file = "${prefix}.Aligned.sortedByCoord.out.bam"
+        File bam_index = "${prefix}.Aligned.sortedByCoord.out.bam.bai"
         ##File transcriptome_bam = "star_out/${prefix}.Aligned.toTranscriptome.out.bam"
-        File chimeric_junctions = "star_out/${prefix}.Chimeric.out.junction.gz"
+        File chimeric_junctions = "${prefix}.Chimeric.out.junction.gz"
         ##File chimeric_bam_file = "star_out/${prefix}.Chimeric.out.sorted.bam"
         ##File chimeric_bam_index = "star_out/${prefix}.Chimeric.out.sorted.bam.bai"
-        File read_counts = "star_out/${prefix}.ReadsPerGene.out.tab.gz"
-        File junctions = "star_out/${prefix}.SJ.out.tab.gz"
-        File junctions_pass1 = "star_out/${prefix}._STARpass1/${prefix}.SJ.pass1.out.tab.gz"
-        File Finallog = "star_out/${prefix}.Log.final.out"
+        File read_counts = "${prefix}.ReadsPerGene.out.tab.gz"
+        File junctions = "${prefix}.SJ.out.tab.gz"
+        ##File junctions_pass1 = "${prefix}._STARpass1/${prefix}.SJ.pass1.out.tab.gz"
+        File Finallog = "${prefix}.Log.final.out"
     }
 
     runtime {
-        docker: "us-docker.pkg.dev/depmap-omics/public/gtex-rnaseq:V9"
+        docker: select_first([docker, "broadinstitute/gtex_rnaseq:V10"])
         memory: "${memory}GB"
         disks: "local-disk ${disk_space} HDD"
         cpu: "${num_threads}"

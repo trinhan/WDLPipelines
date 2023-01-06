@@ -24,10 +24,11 @@ task star_generate_index {
         String? disk_space
         Int? preemptible
         File annotation
+        String? docker
 
     }
 
-        String disk_space = select_first([disk_space, "100"])
+        String disk_spaceSelect = select_first([disk_space, "100"])
         String memory=select_first([mem, "40"])
 
     command {
@@ -47,9 +48,9 @@ task star_generate_index {
     }
 
      runtime {
-        docker: "us-docker.pkg.dev/depmap-omics/public/gtex-rnaseq:V9"
+        docker: select_first([docker, "broadinstitute/gtex_rnaseq:V10"])
         memory: "${memory}GB"
-        disks: "local-disk ${disk_space} HDD"
+        disks: "local-disk ${disk_spaceSelect} HDD"
         cpu: "~{nthreads}"
         preemptible: select_first([preemptible, 3])
     }
