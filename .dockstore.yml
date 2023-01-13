@@ -129,5 +129,3 @@ workflows:
   - name: STARFusion
     subclass: WDL
     primaryDescriptorPath: /STARfusion.wdl
-
-
