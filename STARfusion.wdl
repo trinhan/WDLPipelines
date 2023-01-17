@@ -1,26 +1,47 @@
-## STAR fusion
+## STAR fusion pipeline, Jan 2022
+## This workflow is an adaptation of the workflow found here: https://github.com/STAR-Fusion/STAR-Fusion
+## specifically, using this workflow: https://raw.githubusercontent.com/STAR-Fusion/STAR-Fusion/Terra-1.10.1/WDL/star_fusion_workflow.wdl
+##
+## The inputs are:
+## - raw fastq files
+## 
+## The outputs are:
+## - fastqc html 
+## - Aligned bam file
+## - HTSeq counts table
+## - STARFusion list of fusions
+##
+## Key steps:
+## 1. Fastqc of files
+## 2. Trimmomatic of fastqs
+## 3. Run STAR fusion on trimmed fastq
+## 4. Index and sort output bam file
+## 5. HTSeq on bam file
 
 version 1.0
 
-import "https://raw.githubusercontent.com/STAR-Fusion/STAR-Fusion/Terra-1.10.1/WDL/star_fusion_workflow.wdl" as starfusion
+import "star_fusion_workflow.wdl" as starfusion
+import "FastQC.wdl" as FastQC
 
 workflow STARfusion {
 
     input {
         String sample_id
-        String runMode # Fastq or ChimJunc
         File genome_plug_n_play_tar_gz
         # Inputs required for full pipeline
-        File? left_fq
+        File left_fq
         File? right_fq
-        File? fastq_pair_tar_gz
         String? fusion_inspector
+        File gtf #for annotation of genecounts
         Boolean examine_coding_effect
-        # Inputs required for full chimeric pipeline
-        File? ChimericJunction
-    
+        # Optional inputs for fastqc
+        File? adap # input fasta file for adapter sequences, optional
+        Boolean runTrimmomatic = true # run trimmomatic on the fastq files
+        String? trimmomaticSettings = ":2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36"
         # runtime params
-        String docker = "trinityctat/starfusion:latest"
+        String FusionDocker = "trinityctat/starfusion:1.10.1"
+        String samtoolsDocker = "trinhanne/sambcfhts:v1.13.3"
+
         Int num_cpu = 12
         Float fastq_disk_space_multiplier = 5
         String memory = "50G"
@@ -28,52 +49,70 @@ workflow STARfusion {
         Int preemptible = 2
         Float extra_disk_space = 10
         Boolean use_ssd = true
+
+        # small tasks eg. samtools, fastqc etc
+        Int smallCPU=1
+        Int smallMem=12
     }
 
-    File ChimJun = select_first([ChimericJunction, "NULL"])
-
-    if ( runMode == "Fastq" ){
-        call starfusion.star_fusion as star_fusion {
-            input: 
-                left_fq = left_fq,
-                right_fq = right_fq,
-                fastq_pair_tar_gz = fastq_pair_tar_gz,
-                genome = genome_plug_n_play_tar_gz,
-                sample_id = sample_id,
-                examine_coding_effect = examine_coding_effect,
-                preemptible = preemptible,
-                docker = docker,
-                cpu = num_cpu,
-                memory = memory,
-                extra_disk_space = extra_disk_space,
-                fastq_disk_space_multiplier = fastq_disk_space_multiplier,
-                genome_disk_space_multiplier = genome_disk_space_multiplier,
-                fusion_inspector = fusion_inspector,
-                use_ssd = use_ssd
-        }
+    call FastQC.Fastqc as fastqc {
+        input:
+            f1=left_fq,
+            f2=right_fq,
+            sampleName=sample_id,
+            adap=adap,
+            runTrimmomatic=runTrimmomatic,
+            settings=trimmomaticSettings,
+            cpu=smallCPU
     }
 
-    if ( runMode == "ChimJunc" ){
-        call ChimFusion {
-            input: 
-                ChimericJunction = ChimJun,
-                genome = genome_plug_n_play_tar_gz,
-                sample_id = sample_id,
-                preemptible = preemptible,
-                docker = docker,
-                num_cpu = num_cpu,
-                machine_mem_gb = memory,
-                fastq_disk_space_multiplier = fastq_disk_space_multiplier,
-                genome_disk_space_multiplier = genome_disk_space_multiplier,
-                examine_coding_effect = examine_coding_effect
-        }
+    File f1 = select_first([fastqc.trim_f1, left_fq])
+    File f2 = select_first([fastqc.trim_f2, right_fq])
+
+    call starfusion.star_fusion as star_fusion {
+        input: 
+            left_fq = f1,
+            right_fq = f2,
+            genome = genome_plug_n_play_tar_gz,
+            sample_id = sample_id,
+            examine_coding_effect = examine_coding_effect,
+            preemptible = preemptible,
+            docker = FusionDocker,
+            cpu = num_cpu,
+            memory = memory,
+            extra_disk_space = extra_disk_space,
+            fastq_disk_space_multiplier = fastq_disk_space_multiplier,
+            genome_disk_space_multiplier = genome_disk_space_multiplier,
+            fusion_inspector = fusion_inspector,
+            use_ssd = use_ssd
+    }
+
+    call samtoolsSortTask {
+        input:
+            inputBAM = star_fusion.bam,
+            sample_id = sample_id,
+            dockerImage=samtoolsDocker,
+            preemptible=preemptible,
+            cpu=smallCPU,
+            memoryGB=smallMem
+    }
+
+    call HTSeqCount {
+        input:
+            inputBAM=samtoolsSortTask.outputBAM,
+            gtf=gtf,
+            preemptible=preemptible,
+            sample_id=sample_id,
+            cpu=smallCPU,
+            memoryGB=smallMem
     }
 
     output {
-        File fusion_predictions = select_first([star_fusion.fusion_predictions, ChimFusion.fusions])
-        File fusion_predictions_abridged = select_first([star_fusion.fusion_predictions_abridged, ChimFusion.fusionsAbridged])
+        File fusion_predictions = star_fusion.fusion_predictions
+        File fusion_predictions_abridged = star_fusion.fusion_predictions_abridged
+        File bam = samtoolsSortTask.outputBAM
+        File bai = samtoolsSortTask.outputBAI
         File? junction = star_fusion.junction
-        File? bam = star_fusion.bam
         File? sj = star_fusion.sj
         File? coding_effect = star_fusion.coding_effect
         Array[File]? extract_fusion_reads = star_fusion.extract_fusion_reads
@@ -82,6 +121,65 @@ workflow STARfusion {
         File? fusion_inspector_validate_web = star_fusion.fusion_inspector_validate_web
         File? fusion_inspector_inspect_fusions_abridged = star_fusion.fusion_inspector_inspect_fusions_abridged
         File? fusion_inspector_inspect_web = star_fusion.fusion_inspector_inspect_web
+        File geneCounts = HTSeqCount.ReadCounts
+    }
+}
+
+task HTSeqCount {
+    input {
+        File inputBAM
+        File gtf
+        String sample_id
+        Int preemptible =1
+        Int memoryGB = 8
+        Int cpu=1
+    }
+        Int diskSpace=3*ceil(size(inputBAM,"GB")+size(gtf, "GB"))
+
+
+    command <<<
+         htseq-count ~{inputBAM} ~{gtf} -f bam > ~{sample_id}.ReadCounts.txt
+    >>>
+
+    runtime {
+        docker: "biocontainers/htseq:v0.11.2-1-deb-py3_cv1"
+        disks: "local-disk ~{diskSpace} HDD"
+        memory: memoryGB + "GB"
+        cpu: cpu
+        preemptible: preemptible
+    }
+    output {
+        File ReadCounts="~{sample_id}.ReadCounts.txt"
+    }
+}
+
+task samtoolsSortTask {
+    input { 
+        File inputBAM
+        String sample_id 
+        String dockerImage
+        Int memoryGB = 16 
+        Int cpu = 1
+        Int preemptible = 1
+    }
+        Int diskSpace = 3*ceil(size(inputBAM, "GB"))
+
+    
+    command <<<
+        samtools sort -o ~{sample_id}.sorted.bam ~{inputBAM} && \
+        samtools index ~{sample_id}.sorted.bam
+    >>>
+
+    runtime {
+        docker: dockerImage
+        disks: "local-disk ~{diskSpace} HDD"
+        memory: memoryGB + "GB"
+        cpu: cpu
+        preemptible: preemptible
+    }
+    output {
+        File outputBAM="~{sample_id}.sorted.bam"
+        File outputBAI="~{sample_id}.sorted.bam"
     }
 }
 
