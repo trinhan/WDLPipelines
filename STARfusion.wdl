@@ -20,7 +20,6 @@
 
 version 1.0
 
-##import "https://raw.githubusercontent.com/STAR-Fusion/STAR-Fusion/Terra-1.10.1/WDL/star_fusion_workflow.wdl" as starfusion
 import "star_fusion_workflow.wdl" as starfusion
 import "FastQC.wdl" as FastQC
 
@@ -42,6 +41,7 @@ workflow STARfusion {
         # runtime params
         String FusionDocker = "trinityctat/starfusion:1.10.1"
         String samtoolsDocker = "trinhanne/sambcfhts:v1.13.3"
+
         Int num_cpu = 12
         Float fastq_disk_space_multiplier = 5
         String memory = "50G"
@@ -49,6 +49,7 @@ workflow STARfusion {
         Int preemptible = 2
         Float extra_disk_space = 10
         Boolean use_ssd = true
+
         # small tasks eg. samtools, fastqc etc
         Int smallCPU=1
         Int smallMem=12
