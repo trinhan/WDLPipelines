@@ -68,8 +68,8 @@ case $yn in
                     echo "deleting sample ${line[0]}"
                     if [ $s -eq "1" ]
                     then
-                        #echo 'run'
-                        gsutil rm "${line[0]}";;
+                        echo run
+                        gsutil rm "${line[0]}"
                     fi;;
             esac
         done < $i ;;
