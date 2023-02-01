@@ -49,7 +49,7 @@ task star {
     String docker
 
     Int memory
-    Int disk_space
+    Int disk_space = 9*ceil(size(fastq1, "GB")+size(fastq2, "GB"))+3*ceil(size(star_index, "GB"))
     Int num_threads
     Int num_preempt
 

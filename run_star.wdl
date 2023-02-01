@@ -81,18 +81,14 @@ task star {
     File? sjdbFileChrStartEnd
     String readFilesCommand = "zcat"
 
-
-
-
-
     String? docker
     Int memory
-    Int disk_space
     Int num_threads
     Int num_preempt
     Boolean runTwoPass = if defined(sjdbFileChrStartEnd) then false else true
 }
     Boolean annotFile = if defined(annotation_gtf) then true else false
+    Int disk_space = 9*ceil(size(fastq1, "GB")+size(fastq2, "GB"))+3*ceil(size(star_index, "GB"))
 
     command {
         set -euo pipefail
