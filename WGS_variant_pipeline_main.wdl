@@ -1,5 +1,5 @@
 ## Author: Anne Trinh
-## Last Modified: 18/11/2022
+## Last Modified: 31/03/2023
 ## This pipeline is a modification of the Getz somatic variant pipeline modified for hg38
 ## Legacy features have been retained in this pipeline and can be turned off using Boolean input
 ##
@@ -111,6 +111,11 @@ workflow WGS_SNV_CNV_Workflow {
         String runMode
         String refGenome
         # Boolean optains
+        Boolean callM2
+        Boolean callStrelka
+        Boolean callVardict
+        Boolean callM1
+        Boolean callPisces = false
         Boolean run_CNQC
         Boolean run_Picard_tumor
         Boolean run_CrossCheck
@@ -123,6 +128,7 @@ workflow WGS_SNV_CNV_Workflow {
         Boolean run_SV_paired
         Boolean save_manta_evidence=true
         Float? fracContam =0.01 # by default set at 0.01
+        Int minCallerSupport
     }
     String assembly = if refGenome=="hg19" then "GRCh37" else "GRCh38"
     Int tumorBam_size=ceil(size(tumorBam, "G")+size(tumorBamIdx, "G"))
@@ -193,7 +199,13 @@ workflow WGS_SNV_CNV_Workflow {
             fracContam=new_contam_frac,
             runMode=runMode,
             gatk_docker=gatk_docker,
-            strelka_config=strelka_config
+            minCallerSupport=minCallerSupport,
+            strelka_config=strelka_config,
+            callM1=callM1,
+            callM2=callM2,
+            callStrelka=callStrelka,
+            callPisces=callPisces,
+            callVardict=callVardict
      }
 
     #### run the variant checking pipeline 
@@ -233,7 +245,13 @@ workflow WGS_SNV_CNV_Workflow {
                 refGenome=refGenome,
                 tumorBam_size=tumorBam_size,
                 runAbra2Realign=run_abra2,
-                runBlatRealign=run_blat
+                runBlatRealign=run_blat,
+                minCallerSupport=minCallerSupport,
+                callM1=callM1,
+                callM2=callM2,
+                callStrelka=callStrelka,
+                callPisces=callPisces,
+                callVardict=callVardict
         }
      }
 
@@ -387,8 +405,8 @@ workflow WGS_SNV_CNV_Workflow {
         File? strelka2SomaticSNVs = somaticVC.strelka2SomaticSNVs
         File? strelka2SomaticIndels = somaticVC.strelka2SomaticIndels
         ####### M2 workflow2 outputs #####
-        File M2_filtered_vcf=somaticVC.M2_filtered_vcf
-        File M2_filtered_vcf_idx=somaticVC.M2_filtered_vcf_idx
+        File? M2_filtered_vcf=somaticVC.M2_filtered_vcf
+        File? M2_filtered_vcf_idx=somaticVC.M2_filtered_vcf_idx
         ####### merged output haplotypecaller
         File Combined_raw_variants_gz=somaticVC.Combined_raw_variants_gz
         File Combined_raw_variants_tbi=somaticVC.Combined_raw_variants_tbi

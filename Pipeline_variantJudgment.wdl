@@ -57,6 +57,14 @@ workflow variantJudgement {
     Int tumorBam_size
     File strelka_config
     String refGenome
+    Int minCallerSupport
+
+    Boolean callM2
+    Boolean callStrelka
+    Boolean callVardict
+    Boolean callM1
+    Boolean callPisces = false
+
     }
 
     Boolean runBlat = if ( defined(genome_bit) && refGenome =="hg19" && runBlatRealign == true) then true else false
@@ -115,7 +123,13 @@ workflow variantJudgement {
             fracContam=fracContam,
             runMode=runMode,
             gatk_docker=gatk_docker,
-            strelka_config=strelka_config
+            minCallerSupport=minCallerSupport,
+            strelka_config=strelka_config,
+            callM2=callM2,
+            callStrelka=callStrelka,
+            callPisces=callPisces,
+            callVardict=callVardict,
+            callM1=callM1
     }
     }
 
