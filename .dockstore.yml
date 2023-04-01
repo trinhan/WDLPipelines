@@ -129,3 +129,6 @@ workflows:
   - name: STARFusion
     subclass: WDL
     primaryDescriptorPath: /STARfusion.wdl
+  - name: pisces
+    subclass: WDL
+    primaryDescriptorPath: /pisces_parallel.wdl
