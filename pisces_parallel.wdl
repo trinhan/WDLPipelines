@@ -88,10 +88,11 @@ if (buildIndices){
     }
     }
 
-    Array[File] normal_variants = select_first([select_first([piscesGermline.variants, runpiscesSomaticPaired.normal_variants_same_site]), "NULL"])
-    Array[File] tumor_variants = select_first([select_first([piscesTumOnly.variants, runpiscesSomaticPaired.tumor_unique_variants]), "NULL"])
+    ##Array[File] normal_variants = select_first([select_first([piscesGermline.variants, runpiscesSomaticPaired.normal_variants_same_site]), "NULL"])
+    ##Array[File] tumor_variants = select_first([select_first([piscesTumOnly.variants, runpiscesSomaticPaired.tumor_unique_variants]), "NULL"])
 
-if (runMode != "TumOnly"){
+if (runMode == "Germline"){
+    Array[File] normal_variants = select_first([piscesGermline.variants,"NULL"])
     call UpdateHeaders as NormHeaders {
         input:
             input_vcfs = normal_variants,
@@ -112,10 +113,36 @@ if (runMode != "TumOnly"){
     }
 }
 
-if (runMode != "Germline"){
+if (runMode == "TumOnly"){
+    Array[File] tumO_variants = select_first([piscesTumOnly.variants,"NULL"])
+
+    call UpdateHeaders as TumOHeaders {
+        input:
+            input_vcfs = tumO_variants,
+            ref_dict=refFastaDict,
+            gatk_docker = gatk_docker,
+            caller = "Pisces"
+    }
+
+    call CombineVariants as TumOVariants {
+        input:
+            input_header=TumOHeaders.head_vcf,
+            ref_fasta = refFasta,
+            ref_fai = refFastaIdx,
+            ref_dict = refFastaDict,
+            gatk_docker = gatk_docker,
+            sample_name = pairName,
+            caller="Pisces"
+    }
+}
+
+if (runMode == "Paired"){
+    Array[File] tum_variants = select_first([runpiscesSomaticPaired.tumor_unique_variants,"NULL"])
+    Array[File] match_normal = select_first([runpiscesSomaticPaired.normal_variants_same_site,"NULL"])
+
     call UpdateHeaders as TumHeaders {
         input:
-            input_vcfs = tumor_variants,
+            input_vcfs = tum_variants,
             ref_dict=refFastaDict,
             gatk_docker = gatk_docker,
             caller = "Pisces"
@@ -131,11 +158,32 @@ if (runMode != "Germline"){
             sample_name = pairName,
             caller="Pisces"
     }
+
+    call UpdateHeaders as MatchNormHeaders {
+        input:
+            input_vcfs = match_normal,
+            ref_dict=refFastaDict,
+            gatk_docker = gatk_docker,
+            caller = "Pisces"
+    }
+
+    call CombineVariants as MatchNormVariants {
+        input:
+            input_header=MatchNormHeaders.head_vcf,
+            ref_fasta = refFasta,
+            ref_fai = refFastaIdx,
+            ref_dict = refFastaDict,
+            gatk_docker = gatk_docker,
+            sample_name = pairName,
+            caller="Pisces"
+    }
+
 }
 
+
     output {
-        File? normal_variants=NormVariants.merged_vcf
-        File? tumour_variants=TumVariants.merged_vcf
+        File? normal_variants=select_first([NormVariants.merged_vcf, MatchNormVariants.merged_vcf])
+        File? tumour_variants=select_first([TumOVariants.merged_vcf, TumVariants.merged_vcf])
     }
 }
 
