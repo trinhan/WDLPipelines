@@ -182,8 +182,8 @@ if (runMode == "Paired"){
 
 
     output {
-        File? normal_variants=select_first([select_first([NormVariants.merged_vcf, MatchNormVariants.merged_vcf]), "NULL"])
-        File? tumour_variants=select_first([select_first([TumOVariants.merged_vcf, TumVariants.merged_vcf]), "NULL"])
+        File? normal_variants=select_first([select_first([NormVariants.merged_vcf, "NULL"]), MatchNormVariants.merged_vcf])
+        File? tumour_variants=select_first([select_first([TumOVariants.merged_vcf,"NULL"]), TumVariants.merged_vcf])
     }
 }
 
