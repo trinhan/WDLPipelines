@@ -182,8 +182,8 @@ if (runMode == "Paired"){
 
 
     output {
-        File? normal_variants=select_first([NormVariants.merged_vcf, MatchNormVariants.merged_vcf])
-        File? tumour_variants=select_first([TumOVariants.merged_vcf, TumVariants.merged_vcf])
+        File? normal_variants=select_first([select_first([NormVariants.merged_vcf, MatchNormVariants.merged_vcf]), "NULL"])
+        File? tumour_variants=select_first([select_first([TumOVariants.merged_vcf, TumVariants.merged_vcf]), "NULL"])
     }
 }
 
@@ -217,9 +217,9 @@ task runpiscesSingle {
 
         mkdir somatic_~{pairName}
         sname=~{pisces_reference}
-
-        ## Build the reference libraries here if they do not exist
-
+        ###########################################################
+        ## A. Build the reference libraries here if they do not exist
+        ############################################################
         if [ ~{buildRef} -eq "1" ];
         then
         echo 'create the reference'
@@ -242,21 +242,17 @@ task runpiscesSingle {
         sname=`basename ~{pisces_reference}`
         sname=$(echo $sname| cut -f 1 -d '.')
         fi
-
+        ##############################
+        ## B.variant calling with recalibration
+        ###############################
         dotnet /app/Pisces_5.2.10.49/Pisces.dll -g $sname -b ~{normalBam} -CallMNVs ~{MNVcall} -gVCF false --threadbychr ~{scatterchr} --collapse true \
         ~{"-ploidy " + ploidy} ~{"-c " + minDepth} \
         --filterduplicates true --maxthreads ~{nthreads} -o somatic_~{pairName} ~{"-i " + interval}
-
         dotnet /app/VariantQualityRecalibration_5.2.10.49/VariantQualityRecalibration.dll --vcf somatic_~{pairName}/~{normPrefix}.vcf --out somatic_~{pairName}
-
-        ##if [[ -f somatic_~{pairName}/~{normPrefix}.vcf.recal ]];
-        ##    then
-        ##      cp somatic_~{pairName}/~{normPrefix}.vcf.recal somatic_~{pairName}/~{normPrefix}.recal.vcf
-        ##    elif [[ -f somatic_~{pairName}/~{normPrefix}.vcf ]];
-        ##    then
-        ##      cp somatic_~{pairName}/~{normPrefix}.vcf somatic_~{pairName}/~{normPrefix}.recal.vcf
-        ##fi
-
+        cp somatic_~{pairName}/~{normPrefix}.vcf.recal somatic_~{pairName}/~{normPrefix}.recal.vcf
+        ############################
+        ## C. Run scylla to phase MNVs - not run by default
+        ############################
         if [ ~{runScylla} -eq "1" ];
         then  
         ## perform phasing here
@@ -438,9 +434,10 @@ task runpiscesSomaticPaired {
 
         mkdir somatic_~{pairName}
         sname=~{pisces_reference}
-
-        ## Build the reference libraries here if they do not exist
-
+        ###########################################################
+        ## A. Build the reference libraries here if they do not exist
+        ############################################################
+        # Build the reference
         if [ ~{buildRef} -eq "1" ];
         then
         echo 'create the reference'
@@ -453,43 +450,61 @@ task runpiscesSomaticPaired {
         cp ~{refFastaDict} $sname
         dotnet /app/CreateGenomeSizeFile_5.2.10.49/CreateGenomeSizeFile.dll -g $sname -s "Homo sapien $sname" -o $sname
         fi 
-        
+        # Otherwise just unpack it
         if [ ~{buildRef} -eq "0" ];
         then
         ## to unpack the tar file
-        tar xvzf ~{pisces_reference}
-        ## use this when using a reference file
-        ## cp -r ~{pisces_reference} . 
+        tar xvzf ~{pisces_reference} 
         sname=`basename ~{pisces_reference}`
         sname=$(echo $sname| cut -f 1 -d '.')
         fi
-
-        ## run the variant calling: this works
-        # Pisces
+        ##############################
+        ## B.variant calling - tumour
+        ###############################
+        ## Step1.  Pisces
         dotnet /app/Pisces_5.2.10.49/Pisces.dll -g $sname -b ~{tumorBam} -CallMNVs ~{MNVcall} -gVCF false --threadbychr ~{scatterchr} --collapse true -c 5 \
         --filterduplicates true --maxthreads ~{nthreads} -o somatic_~{pairName} ~{"-i " + interval}
-         ## VSQR
+        ## Step2. VSQR
         dotnet /app/VariantQualityRecalibration_5.2.10.49/VariantQualityRecalibration.dll --vcf somatic_~{pairName}/~{tumPrefix}.vcf --out somatic_~{pairName}
-        ## check that this is for
-        
-        ## Find the intersection between the two samples
+        ## Step3. Rename the sample
+        cp somatic_~{pairName}/~{normPrefix}.vcf.recal somatic_~{pairName}/~{normPrefix}.recal.vcf
+        ##############################
+        ## C. variant calling - nomal
+        ###############################
+        ## Step1.  Pisces
+        dotnet /app/Pisces_5.2.10.49/Pisces.dll -g $sname -b ~{normalBam} -CallMNVs ~{MNVcall} -gVCF false --threadbychr ~{scatterchr} --collapse true -ploidy diploid \
+        --filterduplicates true --maxthreads ~{nthreads} -o somatic_~{pairName} ~{"-i " + interval}
+        ## Step2. VSQR
+        dotnet /app/VariantQualityRecalibration_5.2.10.49/VariantQualityRecalibration.dll --vcf somatic_~{pairName}/~{normPrefix}.vcf --out somatic_~{pairName}
+        ## Step3. Rename the sample
+        cp somatic_~{pairName}/~{normPrefix}.vcf.recal somatic_~{pairName}/~{normPrefix}.recal.vcf
+        ############################
+        ## D. Find the intersection between the two samples
+        ############################
         dotnet /app/VennVcf_5.2.10.49/VennVcf.dll -if somatic_~{pairName}/~{tumPrefix}.recal.vcf,somatic_~{pairName}/~{normPrefix}.recal.vcf -o venn
         tar -zvcf ~{pairName}_venn_pisces.tar.gz venn
         sampID="venn/~{tumPrefix}.recal_not_~{normPrefix}.recal.vcf"
+        # Write the tumour unique sites to an output bed file
         awk '! /\#/' $sampID | awk '{if(length($4) > length($5)) print $1"\t"($2-1)"\t"($2+length($4)-1); else print $1"\t"($2-1)"\t"($2+length($5)-1)}' > output.bed
-        ## Call the normal variants at the same site (if they don't appear)
+        # Move the output file to a more useful location
+        mv venn/~{tumPrefix}.recal_not_~{normPrefix}.recal.vcf ~{tumPrefix}.somatic.unique.recal.vcf
+        ############################
+        ## E. Force Call the normal variants at the unique tumour sites
+        ############################
         dotnet /app/Pisces_5.2.10.49/Pisces.dll -g $sname -b ~{normalBam} -CallMNVs ~{MNVcall} -gVCF true --threadbychr ~{scatterchr} --collapse true -ploidy diploid --filterduplicates true --maxthreads ~{nthreads} -o variant2_~{pairName} -i output.bed
         dotnet /app/VariantQualityRecalibration_5.2.10.49/VariantQualityRecalibration.dll --vcf variant2_~{pairName}/~{normPrefix}.genome.vcf --out variant2_~{pairName}
-        
-            
-        mv venn/~{tumPrefix}.recal_not_~{normPrefix}.recal.vcf ~{tumPrefix}.somatic.unique.recal.vcf
-
+        mv variant2_~{pairName}/~{normPrefix}.genome.vcf.recal variant2_~{pairName}/~{normPrefix}.genome.recal.vcf
+        ############################
+        ## F. Run scylla to phase MNVs - not run by default
+        ############################
         if [ ~{runScylla} -eq "1" ];
         then  
         ## perform phasing here
         dotnet /app/Scylla_5.2.10.49/Scylla.dll -g $sname --vcf ~{tumPrefix}.somatic.unique.recal.vcf --bam ~{tumorBam}
         fi
-
+        ############################
+        ## G. Save the pisces reference file - not run by default
+        ############################
         if [ ~{saveDict} -eq "1" ];
         then
             tar -zvcf refPisces.tar.gz $sname
