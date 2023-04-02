@@ -68,7 +68,7 @@ task MantaSomaticSV {
        
     }
     runtime {
-        docker: "quay.io/biocontainers/manta:1.6.0--h9ee0642_2"
+        docker: "quay.io/biocontainers/manta@sha256:670d32a1b93910e7a5bdfba4951543a5615942bfb19a41c534c9dd9f85516999"
         memory: mem_size + " GB"
         cpu: cpu_num
         disks: "local-disk " + disk_size + " HDD"
@@ -129,7 +129,7 @@ task MantaGermline{
         fi 
     }
     runtime {
-        docker: "quay.io/biocontainers/manta:1.6.0--h9ee0642_2"
+        docker: "quay.io/biocontainers/manta@sha256:670d32a1b93910e7a5bdfba4951543a5615942bfb19a41c534c9dd9f85516999"
         memory: mem_size + " GB"
         cpu: cpu_num
         disks: "local-disk " + disk_size + " HDD"
