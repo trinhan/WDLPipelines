@@ -467,7 +467,7 @@ task runpiscesSomaticPaired {
         ## Step2. VSQR
         dotnet /app/VariantQualityRecalibration_5.2.10.49/VariantQualityRecalibration.dll --vcf somatic_~{pairName}/~{tumPrefix}.vcf --out somatic_~{pairName}
         ## Step3. Rename the sample
-        cp somatic_~{pairName}/~{normPrefix}.vcf.recal somatic_~{pairName}/~{normPrefix}.recal.vcf
+        cp somatic_~{pairName}/~{tumPrefix}.vcf.recal somatic_~{pairName}/~{tumPrefix}.recal.vcf
         ##############################
         ## C. variant calling - nomal
         ###############################
