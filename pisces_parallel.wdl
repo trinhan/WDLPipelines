@@ -92,10 +92,10 @@ if (buildIndices){
     ##Array[File] tumor_variants = select_first([select_first([piscesTumOnly.variants, runpiscesSomaticPaired.tumor_unique_variants]), "NULL"])
 
 if (runMode == "Germline"){
-    Array[File] normal_variants = select_first([piscesGermline.variants,"NULL"])
+    #Array[File] normal_variants = select_first([piscesGermline.variants,"NULL"])
     call UpdateHeaders as NormHeaders {
         input:
-            input_vcfs = normal_variants,
+            input_vcfs = piscesGermline.variants,
             ref_dict=refFastaDict,
             gatk_docker = gatk_docker,
             caller = "Pisces"
@@ -114,11 +114,11 @@ if (runMode == "Germline"){
 }
 
 if (runMode == "TumOnly"){
-    Array[File] tumO_variants = select_first([piscesTumOnly.variants,"NULL"])
+    #Array[File] tumO_variants = select_first([piscesTumOnly.variants,"NULL"])
 
     call UpdateHeaders as TumOHeaders {
         input:
-            input_vcfs = tumO_variants,
+            input_vcfs = piscesTumOnly.variants,
             ref_dict=refFastaDict,
             gatk_docker = gatk_docker,
             caller = "Pisces"
@@ -137,12 +137,12 @@ if (runMode == "TumOnly"){
 }
 
 if (runMode == "Paired"){
-    Array[File] tum_variants = select_first([runpiscesSomaticPaired.tumor_unique_variants,"NULL"])
-    Array[File] match_normal = select_first([runpiscesSomaticPaired.normal_variants_same_site,"NULL"])
+   # Array[File] tum_variants = select_first([runpiscesSomaticPaired.tumor_unique_variants,"NULL"])
+   # Array[File] match_normal = select_first([runpiscesSomaticPaired.normal_variants_same_site,"NULL"])
 
     call UpdateHeaders as TumHeaders {
         input:
-            input_vcfs = tum_variants,
+            input_vcfs = runpiscesSomaticPaired.tumor_unique_variants,
             ref_dict=refFastaDict,
             gatk_docker = gatk_docker,
             caller = "Pisces"
@@ -161,7 +161,7 @@ if (runMode == "Paired"){
 
     call UpdateHeaders as MatchNormHeaders {
         input:
-            input_vcfs = match_normal,
+            input_vcfs = runpiscesSomaticPaired.normal_variants_same_site,
             ref_dict=refFastaDict,
             gatk_docker = gatk_docker,
             caller = "Pisces"
@@ -278,7 +278,7 @@ task runpiscesSingle {
 
 task CombineVariants {
     input {
-        Array[File] input_header
+        Array[File?] input_header
         String caller
         File ref_fasta
         File ref_fai
@@ -307,7 +307,7 @@ task CombineVariants {
 
 task UpdateHeaders {
     input {
-        Array[File] input_vcfs
+        Array[File?] input_vcfs
         File ref_dict
         # runtime
         String gatk_docker
