@@ -19,10 +19,13 @@ workflow pisces_workflow {
     Array[Int]? scatterIndices_in 
     String gatk_docker
     String runMode
+    String ploidy
+    String minDepth
    }
 
    Boolean buildIndices = if defined(bed_list_in) then false else true
    File targetIntervals = select_first([InputtargetInterval, "NULL"])
+   Boolean singleMode = if (runMode=="Germline" || runMode=="TumOnly") then true else false
 
 if (buildIndices){
     call CallSomaticMutations_Prepare_Task {
@@ -39,8 +42,8 @@ if (buildIndices){
     Array[Int] scatterIndices=select_first([scatterIndices_in, CallSomaticMutations_Prepare_Task.scatterIndices])
 
     scatter (idx in scatterIndices){
-        if (runMode == "Germline"){
-            call runpiscesSingle as piscesGermline {
+        if (singleMode){
+            call runpiscesSingle {
             input:
                 refFasta=refFasta,
                 refFastaFai=refFastaIdx,
@@ -50,22 +53,8 @@ if (buildIndices){
                 pairName=pairName,
                 pisces_reference=pisces_reference,
                 interval=bed_list[idx],
-                ploidy="diploid"
-            }
-        }
-
-        if (runMode == "TumOnly"){
-            call runpiscesSingle as piscesTumOnly {
-            input:
-                refFasta=refFasta,
-                refFastaFai=refFastaIdx,
-                refFastaDict=refFastaDict,
-                normalBam=Bam,
-                normalBai=Bai,
-                pairName=pairName,
-                pisces_reference=pisces_reference,
-                interval=bed_list[idx],
-                minDepth=5
+                ploidy=ploidy,
+                minDepth=minDepth
             }
         }
 
@@ -88,14 +77,11 @@ if (buildIndices){
     }
     }
 
-    ##Array[File] normal_variants = select_first([select_first([piscesGermline.variants, runpiscesSomaticPaired.normal_variants_same_site]), "NULL"])
-    ##Array[File] tumor_variants = select_first([select_first([piscesTumOnly.variants, runpiscesSomaticPaired.tumor_unique_variants]), "NULL"])
-
-if (runMode == "Germline"){
+if (singleMode){
     #Array[File] normal_variants = select_first([piscesGermline.variants,"NULL"])
     call UpdateHeaders as NormHeaders {
         input:
-            input_vcfs = piscesGermline.variants,
+            input_vcfs = runpiscesSingle.variants,
             ref_dict=refFastaDict,
             gatk_docker = gatk_docker,
             caller = "Pisces"
@@ -113,28 +99,6 @@ if (runMode == "Germline"){
     }
 }
 
-if (runMode == "TumOnly"){
-    #Array[File] tumO_variants = select_first([piscesTumOnly.variants,"NULL"])
-
-    call UpdateHeaders as TumOHeaders {
-        input:
-            input_vcfs = piscesTumOnly.variants,
-            ref_dict=refFastaDict,
-            gatk_docker = gatk_docker,
-            caller = "Pisces"
-    }
-
-    call CombineVariants as TumOVariants {
-        input:
-            input_header=TumOHeaders.head_vcf,
-            ref_fasta = refFasta,
-            ref_fai = refFastaIdx,
-            ref_dict = refFastaDict,
-            gatk_docker = gatk_docker,
-            sample_name = pairName,
-            caller="Pisces"
-    }
-}
 
 if (runMode == "Paired"){
    # Array[File] tum_variants = select_first([runpiscesSomaticPaired.tumor_unique_variants,"NULL"])
@@ -179,11 +143,10 @@ if (runMode == "Paired"){
     }
 
 }
-
-
     output {
-        File? normal_variants=select_first([select_first([NormVariants.merged_vcf, "NULL"]), MatchNormVariants.merged_vcf])
-        File? tumour_variants=select_first([select_first([TumOVariants.merged_vcf,"NULL"]), TumVariants.merged_vcf])
+        File? single_mode_variants=select_first([NormVariants.merged_vcf, "NULL"])
+        File? tumour_variants=select_first([TumVariants.merged_vcf, "NULL"])
+        File? matched_normal_variant=select_first([MatchNormVariants.merged_vcf, "NULL"])
     }
 }
 
