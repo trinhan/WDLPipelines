@@ -19,8 +19,8 @@ workflow pisces_workflow {
     Array[Int]? scatterIndices_in 
     String gatk_docker
     String runMode
-    String ploidy
-    String minDepth
+    String? ploidy
+    String? minDepth
    }
 
    Boolean buildIndices = if defined(bed_list_in) then false else true
