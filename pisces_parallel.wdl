@@ -50,7 +50,7 @@ if (buildIndices){
                 pairName=pairName,
                 pisces_reference=pisces_reference,
                 interval=bed_list[idx],
-                ploidy="ploidy"
+                ploidy="diploid"
             }
         }
 
