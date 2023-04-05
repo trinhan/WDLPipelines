@@ -56,6 +56,8 @@ workflow runVariantCallers{
     Boolean callM1
     Boolean callPisces = false
 
+    String m1_diskGB_buffer = "20"
+
     }
 
     String targName=basename(sub(targetIntervals,"\\.interval_list", ""))
@@ -118,7 +120,8 @@ workflow runVariantCallers{
                 refFasta_size=refFasta_size,
                 db_snp_vcf_size=db_snp_vcf_size,
                 tumorBam_size=tumorBam_size,
-                normalBam_size=normalBam_size
+                normalBam_size=normalBam_size,
+                diskGB_buffer=m1_diskGB_buffer
         }
     }
 
