@@ -363,6 +363,14 @@ task runpiscesall {
         
     >>>
 
+    runtime {
+        docker: "trinhanne/pisces:5.2.10"
+        cpu: nthreads
+        preemptible: preemptible
+        memory: "${mem} GB"
+        disks: "local-disk ${disk_size} HDD"
+    }
+
     output {
         File? tumor_unique_variants= select_first(["~{tumPrefix}.somatic.unique.recal.vcf", "somatic_~{pairName}/~{tumPrefix}.recal.vcf" ])
         #File? tumor_unique_variants_phased= "~{tumPrefix}.somatic.unique.recal.phased.vcf" 
