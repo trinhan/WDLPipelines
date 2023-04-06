@@ -56,7 +56,7 @@ workflow runVariantCallers{
     Boolean callM1
     Boolean callPisces = false
 
-    String m1_diskGB_buffer = "20"
+    Int m1_diskGB_buffer = 20
 
     }
 
@@ -273,7 +273,7 @@ task Mutect1_Task {
     # RUNTIME INPUT PARAMS
     String preemptible = "1"
     String diskGB_boot = "15"
-    String diskGB_buffer = "20"
+    Int diskGB_buffer = 20
     String machine_memoryGB ="15"
     String cpu ="1"
 }
@@ -369,7 +369,7 @@ task Strelka2Somatic_Task {
     # RUNTIME INPUT PARAMS
     String preemptible ="1"
     String diskGB_boot = "15"
-    String diskGB_buffer ="20"
+    Int diskGB_buffer = 20
     String machine_memoryGB ="25"
     String cpu ="1"
 }
@@ -552,7 +552,7 @@ task Merge_Variant_Calls {
         File refFastaDict
         String? preemptible = "2"
         String? diskGB_boot = "10"
-        String? diskGB_buffer ="5"
+        Int? diskGB_buffer = 5
         String? memoryGB ="4"
         String? cpu ="1"
         String runMode 
