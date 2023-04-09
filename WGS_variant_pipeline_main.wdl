@@ -401,6 +401,7 @@ workflow WGS_SNV_CNV_Workflow {
         File? normal_hsmetrics=QCChecks.normal_bam_hsmetrics
         File? tumor_cleaned_unmapped_bam=QCChecks.tumor_cleaned_unmapped_bam
         File? normal_cleaned_unmapped_bam=QCChecks.normal_cleaned_unmapped_bam
+
         ####### merged SNV output
         File Raw_variants_vcf=somaticVC.Combined_raw_variants_gz
         File Raw_variants_vcf_tbi=somaticVC.Combined_raw_variants_tbi
