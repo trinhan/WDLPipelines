@@ -401,16 +401,11 @@ workflow WGS_SNV_CNV_Workflow {
         File? normal_hsmetrics=QCChecks.normal_bam_hsmetrics
         File? tumor_cleaned_unmapped_bam=QCChecks.tumor_cleaned_unmapped_bam
         File? normal_cleaned_unmapped_bam=QCChecks.normal_cleaned_unmapped_bam
-        ####### SNV outputs ##########
-        File? strelka2SomaticSNVs = somaticVC.strelka2SomaticSNVs
-        File? strelka2SomaticIndels = somaticVC.strelka2SomaticIndels
-        ####### M2 workflow2 outputs #####
-        File? M2_filtered_vcf=somaticVC.M2_filtered_vcf
-        File? M2_filtered_vcf_idx=somaticVC.M2_filtered_vcf_idx
-        ####### merged output haplotypecaller
-        File Combined_raw_variants_gz=somaticVC.Combined_raw_variants_gz
-        File Combined_raw_variants_tbi=somaticVC.Combined_raw_variants_tbi
-        File Combined_raw_variants_maf=somaticVC.Combined_raw_variants_maf
+
+        ####### merged SNV output
+        File Raw_variants_vcf=somaticVC.Combined_raw_variants_gz
+        File Raw_variants_vcf_tbi=somaticVC.Combined_raw_variants_tbi
+        File Raw_variants_vcf_maf=somaticVC.Combined_raw_variants_maf
         File VariantSitesBed=somaticVC.VariantSitesBed
         ####### Copy Number - GATK4 CNV #######
         File? gatk4_het_allelic_counts_tumor = GATK4CNV.het_allelic_counts_tumor
@@ -431,8 +426,8 @@ workflow WGS_SNV_CNV_Workflow {
         File titan_optimal_params = runtitan.opt_params
         File titan_cluster_figs=runtitan.cluster_figures
         ###### VEP ##########
-        File new_variants_gz=new_variants_vcf
-        File vep_annot = vep.annotatedFile
+        File Final_variants_vcf=new_variants_vcf
+        File vep_annot_vcf = vep.annotatedFile
         File? vep_summary_html=vep.summary_html
         ##### Manta outputs #####
         File manta = AnnotSVWF.sv_variants_tsv

@@ -56,6 +56,8 @@ workflow runVariantCallers{
     Boolean callM1
     Boolean callPisces = false
 
+    Int m1_diskGB_buffer = 20
+
     }
 
     String targName=basename(sub(targetIntervals,"\\.interval_list", ""))
@@ -118,7 +120,8 @@ workflow runVariantCallers{
                 refFasta_size=refFasta_size,
                 db_snp_vcf_size=db_snp_vcf_size,
                 tumorBam_size=tumorBam_size,
-                normalBam_size=normalBam_size
+                normalBam_size=normalBam_size,
+                diskGB_buffer=m1_diskGB_buffer
         }
     }
 
@@ -218,7 +221,7 @@ workflow runVariantCallers{
             callM2=callM2,
             callVardict=callVardict,
             callM1=callM1,
-            callS2=callStrelka,
+            callS2=runS2,
             minCallers=minCallerSupport
     } 
 
@@ -270,7 +273,7 @@ task Mutect1_Task {
     # RUNTIME INPUT PARAMS
     String preemptible = "1"
     String diskGB_boot = "15"
-    String diskGB_buffer = "20"
+    Int diskGB_buffer = 20
     String machine_memoryGB ="15"
     String cpu ="1"
 }
@@ -366,7 +369,7 @@ task Strelka2Somatic_Task {
     # RUNTIME INPUT PARAMS
     String preemptible ="1"
     String diskGB_boot = "15"
-    String diskGB_buffer ="20"
+    Int diskGB_buffer = 20
     String machine_memoryGB ="25"
     String cpu ="1"
 }
@@ -549,7 +552,7 @@ task Merge_Variant_Calls {
         File refFastaDict
         String? preemptible = "2"
         String? diskGB_boot = "10"
-        String? diskGB_buffer ="5"
+        Int? diskGB_buffer = 5
         String? memoryGB ="4"
         String? cpu ="1"
         String runMode 
