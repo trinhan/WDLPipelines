@@ -1,5 +1,5 @@
 ## Author: Anne Trinh
-## Last Modified: 31/03/2023
+## Last Modified: 10/05/2023
 ## This pipeline is a modification of the Getz somatic variant pipeline modified for hg38
 ## Legacy features have been retained in this pipeline and can be turned off using Boolean input
 ##
@@ -21,7 +21,7 @@
 ##  6. include titan
 ##  7. consolidate gatk docker files and .jar files
 ##  8. allow hg38 compatibility
-##  9. Include Manta and AnnotSV
+##  9. Include Manta and AnnotSV - allow annotation of gatk outputs
 ##
 ## 
 ############################################
@@ -389,6 +389,17 @@ workflow WGS_SNV_CNV_Workflow {
           caller="Manta"
     }
 
+        call AnnotSV.annotsv as AnnotSVCNV {
+        input:
+          input_vcf=GATK4CNV.called_copy_ratio_segments_tumor_bed,
+          genome_build=assembly,
+          annotSVtar=annotSVtar,
+          sampleName=caseName,
+          typeofAnnotation="both",
+          caller="gatkSomaticCNV",
+          additional_params="-svtBEDcol 7"
+
+    }
 
     output {
         ####### QC check #######
@@ -417,7 +428,8 @@ workflow WGS_SNV_CNV_Workflow {
         File gatk4_oncotated_called_file_tumor = select_first([GATK4CNV.oncotated_called_file_tumor, "null"])
         File gatk4_oncotated_called_gene_list_file_tumor = select_first([GATK4CNV.oncotated_called_gene_list_file_tumor, "null"])
         File gatk4_funcotated_called_file_tumor = select_first([GATK4CNV.funcotated_called_file_tumor, "null"])
-        File gark4_funcotated_called_gene_list_file_tumor = select_first([GATK4CNV.funcotated_called_gene_list_file_tumor, "null"])
+        File gatk4_funcotated_called_gene_list_file_tumor = select_first([GATK4CNV.funcotated_called_gene_list_file_tumor, "null"])
+        File gatk4_called_gene_annotsv=AnnotSVCNV.sv_variants_tsv
         ####### Absolute #######
         File? absolute_highres_plot=absolute.absolute_highres_plot
         File? absolute_rdata=absolute.absolute_rdata
@@ -498,4 +510,3 @@ task absolute {
         File absolute_rdata="${pairName}.PP-modes.data.RData"
     }
 }
-
