@@ -19,6 +19,8 @@ workflow pisces_workflow {
     Array[Int]? scatterIndices_in 
     String gatk_docker
     String runMode
+    String? ploidy
+    String? minDepth
    }
 
    Boolean buildIndices = if defined(bed_list_in) then false else true
@@ -51,8 +53,7 @@ if (buildIndices){
                 tumorBai=tumourBam,
                 pairName=pairName,
                 pisces_reference=pisces_reference,
-                interval=bed_list[idx],
-                runMode=runMode
+                interval=bed_list[idx]
         }
     }
 
@@ -362,14 +363,6 @@ task runpiscesall {
         fi
         
     >>>
-
-    runtime {
-        docker: "trinhanne/pisces:5.2.10"
-        cpu: nthreads
-        preemptible: preemptible
-        memory: "${mem} GB"
-        disks: "local-disk ${disk_size} HDD"
-    }
 
     output {
         File? tumor_unique_variants= select_first(["~{tumPrefix}.somatic.unique.recal.vcf", "somatic_~{pairName}/~{tumPrefix}.recal.vcf" ])

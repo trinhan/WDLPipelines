@@ -21,7 +21,6 @@ workflow pisces_workflow {
     String gatk_docker
    }
 
-
    Boolean buildIndices = if defined(bed_list_in) then false else true
    File targetIntervals = select_first([InputtargetInterval, "NULL"])
 

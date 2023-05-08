@@ -60,6 +60,7 @@ task annotsv {
     String typeofAnnotation ="full"
     Int space_buffer = 10
     Int memory = 8
+    String? additional_params
   }
 
   Int space_needed_gb = space_buffer + ceil( size(input_vcf, "GB")+ size(annotSVtar, "GB"))
@@ -77,7 +78,7 @@ task annotsv {
    tar xvzf ~{annotSVtar} -C AnnotationsFolder
 
     /opt/AnnotSV_3.1/bin/AnnotSV -SVinputFile ~{input_vcf} -bedtools /opt/bedtools2/bin/bedtools -bcftools /opt/bcftools-1.13/bcftools -snvIndelPASS ~{snvIndelPASS} \
-    -genomeBuild ~{genome_build} -annotationsDir AnnotationsFolder -annotationMode ~{typeofAnnotation} -outputFile ~{sampleName}.~{caller}.annotSV.tsv -outputDir .
+    -genomeBuild ~{genome_build} -annotationsDir AnnotationsFolder -annotationMode ~{typeofAnnotation} -outputFile ~{sampleName}.~{caller}.annotSV.tsv -outputDir . ~{additional_params}
 
     gzip ~{sampleName}.~{caller}.annotSV.tsv
     #### -vcfFiles ~{sep="," snps_vcf}
