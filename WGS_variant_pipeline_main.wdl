@@ -389,6 +389,17 @@ workflow WGS_SNV_CNV_Workflow {
           caller="Manta"
     }
 
+        call AnnotSV.annotsv as AnnotSVCNV {
+        input:
+          input_vcf=GATK4CNV.called_copy_ratio_segments_tumor_bed,
+          genome_build=assembly,
+          annotSVtar=annotSVtar,
+          sampleName=caseName,
+          typeofAnnotation="both",
+          caller="gatkSomaticCNV",
+          additional_params="-svtBEDcol 7"
+
+    }
 
     output {
         ####### QC check #######
@@ -417,7 +428,8 @@ workflow WGS_SNV_CNV_Workflow {
         File gatk4_oncotated_called_file_tumor = select_first([GATK4CNV.oncotated_called_file_tumor, "null"])
         File gatk4_oncotated_called_gene_list_file_tumor = select_first([GATK4CNV.oncotated_called_gene_list_file_tumor, "null"])
         File gatk4_funcotated_called_file_tumor = select_first([GATK4CNV.funcotated_called_file_tumor, "null"])
-        File gark4_funcotated_called_gene_list_file_tumor = select_first([GATK4CNV.funcotated_called_gene_list_file_tumor, "null"])
+        File gatk4_funcotated_called_gene_list_file_tumor = select_first([GATK4CNV.funcotated_called_gene_list_file_tumor, "null"])
+        File gatk4_called_gene_annotsv=AnnotSVCNV.sv_variants_tsv
         ####### Absolute #######
         File? absolute_highres_plot=absolute.absolute_highres_plot
         File? absolute_rdata=absolute.absolute_rdata
@@ -498,4 +510,3 @@ task absolute {
         File absolute_rdata="${pairName}.PP-modes.data.RData"
     }
 }
-

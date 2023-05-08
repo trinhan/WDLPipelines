@@ -5,9 +5,9 @@ version 1.0
 ## Minor Update: 2020-07-16 BS
 ## scripts version: 1.0.1
 ##
-##
 # VEP on WDL
-## Annotate File and produce a result format in Tab-delimited or VCF format.
+## 1. Annotate File and produce a result format in Tab-delimited or VCF format.
+## 2. Option to filter based on existing parameters
 ##
 ## **VEP version**: 104
 ## **Cache version**: 104
@@ -162,12 +162,10 @@ task variant_effect_predictor {
 
     command {
         set -e
-
         mkdir -v vep_data_dir
         #delete the existing directory first to make a successful link
         rm -rf ~/.vep
         ln -vs `pwd`/vep_data_dir ~/.vep
-
         tar xvzf ${cache} -C vep_data_dir
 
         plugins=""
@@ -226,21 +224,6 @@ task variant_effect_predictor {
         then 
         runclinvar="$runclinvar --custom ${MGRB},mgrb,vcf,exact,0,MGRB_AF"
         fi
-
-        ## gnomad
-
-    
-        ### Plugin
-        ##    "GRCh38"    
-        ## --plugin dbNSFP,/cromwell_root/data/vep/.vep/dbNSFP/4.0/dbNSFP4.0b2.gz,ALL
-        ## --plugin dbscSNV,/cromwell_root/data/vep/.vep/dbscSNV/dbscSNV1.1_GRCh38.txt.gz
-        ##  "GRCh37"
-        ## --plugin dbNSFP,/cromwell_root/data/vep/.vep/dbNSFP/3.5/dbNSFP_hg19.gz,ALL
-        ## --plugin dbscSNV,/cromwell_root/data/vep/.vep/dbscSNV/dbscSNV1.1_GRCh37.txt.gz
-        ## "--plugin CADD --plugin REVEL"
-
-
-
 
         ## Running Section
         ${VepDIR} \
@@ -335,13 +318,67 @@ task variant_effect_predictor {
         File annotatedFile = "${sample_name}.${assembly}_vep.vcf.gz"
         File? summary_html = "${sample_name}.${assembly}_vep_summary.html"
         }
-
 }
+
+task vep_filter {
+
+    input {
+        File vcf
+        File vep_filter_criteria
+        String sample_name
+        ## runtime
+        String docker_image = "ensemblorg/ensembl-vep:release_104.3"
+        String VepDIR = "/opt/vep/src/ensembl-vep/filter_vep"
+        String VEP_DATA="/opt/vep/.vep/"
+        String VEP_DATA_PLUGINS="/opt/vep/.vep/Plugins"
+        Int machine_mem_gb = 6
+        Int? preemptible_tries
+        Int? max_retries
+        Int? cpu
+    }
+        Int disk_space_gb = ceil(size(vcf, "GB")+10)
+
+    command <<<
+
+        set -e
+        mkdir -v vep_data_dir
+        rm -rf ~/.vep
+        ln -vs `pwd`/vep_data_dir ~/.vep
+
+        filtopts=`cat ~{vep_filter_criteria}`
+        echo -e $filtopts
+
+        filter_vep \
+        --input_file ~{vcf}  \
+        --gz \
+        --output_file ~{sample_name}.filtered.vcf \
+        --format vcf \
+        --force_overwrite \
+        --only_matched \
+        --filter "${filtopts}" \
+        --compress_output bgzip 
+    >>>
+
+    output {
+        File vep_filt="~{sample_name}.filtered.vcf.gz"
+    }
+
+    runtime {
+          docker: docker_image
+          preemptible: select_first([preemptible_tries, 1])
+          maxRetries: select_first([max_retries, 1])
+          memory: machine_mem_gb + " GB"
+          disks: "local-disk " + disk_space_gb + " HDD"
+          cpu: cpu
+    }
+}
+
 
 workflow VEP {
     input {
     File inputFile
     String sample_name
+    Boolean runFilter
     ## Keep this string - this refers to the cache
     String species ="homo_sapiens"
     ## Keep this: default is vcf
@@ -372,6 +409,8 @@ workflow VEP {
     File? gnomad
     ## example gs://gatk-best-practices/somatic-b37/af-only-gnomad.raw.sites.vcf.idx
     File? gnomadIdx
+    File vep_filter_criteria
+    Int threads
     } 
 
     call variant_effect_predictor  {
@@ -393,7 +432,19 @@ workflow VEP {
           clinvar=clinvar,
           clinvarTbi=clinvarTbi,
           gnomad=gnomad,
-          gnomadIdx=gnomadIdx
+          gnomadIdx=gnomadIdx,
+          fork=threads
+    }
+
+    if (runFilter){
+        call vep_filter {
+            input:
+                vcf=variant_effect_predictor.annotatedFile,
+                sample_name=sample_name,
+                vep_filter_criteria=vep_filter_criteria,
+                cpu=1
+
+        }
     }
     output {
      File VEP_annotatedFile = variant_effect_predictor.annotatedFile
