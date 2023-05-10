@@ -774,10 +774,11 @@ task CallCopyRatioSegments {
             --output ~{entity_id}.called.seg
 
         # create a modification here to allow input into AnnotSV at a later date
+        tmpBed="tmpBed"
         outputBed="~{entity_id}.called.bed"
-        grep "^chr" ~{entity_id}.called.seg > $outputBed
+        grep "^chr" ~{entity_id}.called.seg > $tmpBed
         # also include a column to make sure the SV Type includes DUP or DEL
-        awk '{$(NF+1) = ($6 == "+") ? "DUP" : "DEL"; print}' $outputBed
+        awk '{$(NF+1) = ($6 == "+") ? "DUP" : "DEL"; print}' $tmpBed > outputBed
 
     >>>
 
