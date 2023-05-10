@@ -778,7 +778,7 @@ task CallCopyRatioSegments {
         outputBed="~{entity_id}.called.bed"
         grep "^chr" ~{entity_id}.called.seg > $tmpBed
         # also include a column to make sure the SV Type includes DUP or DEL
-        awk '{$(NF+1) = ($6 == "+") ? "DUP" : "DEL"; print}' $tmpBed > outputBed
+        awk '{$(NF+1) = ($6 == "+") ? "DUP" : "DEL"; print}' $tmpBed > $outputBed
 
     >>>
 
