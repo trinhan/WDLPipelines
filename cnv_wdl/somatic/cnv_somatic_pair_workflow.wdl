@@ -533,6 +533,7 @@ workflow CNVSomaticPairWorkflow {
         File copy_ratio_parameters_tumor = ModelSegmentsTumor.copy_ratio_parameters
         File allele_fraction_parameters_tumor = ModelSegmentsTumor.allele_fraction_parameters
         File called_copy_ratio_segments_tumor = CallCopyRatioSegmentsTumor.called_copy_ratio_segments
+        File called_copy_ratio_segments_tumor_bed = CallCopyRatioSegmentsTumor.called_copy_ratio_bed
         File called_copy_ratio_legacy_segments_tumor = CallCopyRatioSegmentsTumor.called_copy_ratio_legacy_segments
         File denoised_copy_ratios_plot_tumor = PlotDenoisedCopyRatiosTumor.denoised_copy_ratios_plot
         File standardized_MAD_tumor = PlotDenoisedCopyRatiosTumor.standardized_MAD
@@ -563,6 +564,7 @@ workflow CNVSomaticPairWorkflow {
         File? copy_ratio_parameters_normal = ModelSegmentsNormal.copy_ratio_parameters
         File? allele_fraction_parameters_normal = ModelSegmentsNormal.allele_fraction_parameters
         File? called_copy_ratio_segments_normal = CallCopyRatioSegmentsNormal.called_copy_ratio_segments
+        File? called_copy_ratio_segments_normal_bed = CallCopyRatioSegmentsNormal.called_copy_ratio_bed
         File? called_copy_ratio_legacy_segments_normal = CallCopyRatioSegmentsNormal.called_copy_ratio_legacy_segments
         File? denoised_copy_ratios_plot_normal = PlotDenoisedCopyRatiosNormal.denoised_copy_ratios_plot
         File? standardized_MAD_normal = PlotDenoisedCopyRatiosNormal.standardized_MAD
@@ -770,6 +772,15 @@ task CallCopyRatioSegments {
             --outlier-neutral-segment-copy-ratio-z-score-threshold ~{default="2.0" outlier_neutral_segment_copy_ratio_z_score_threshold} \
             --calling-copy-ratio-z-score-threshold ~{default="2.0" calling_copy_ratio_z_score_threshold} \
             --output ~{entity_id}.called.seg
+
+        # create a modification here to allow input into AnnotSV at a later date
+        
+        outputBed="~{entity_id}.called.bed"
+        grep "^chr" ~{entity_id}.called.seg > tmpBed
+        # also include a column to make sure the SV Type includes DUP or DEL
+        awk '$6 != 0' tmpBed > tmpBed2
+        awk -v OFS='\t' '{$(NF+1) = ($6 == "+") ? "DUP" : "DEL"; print}' tmpBed2 > $outputBed
+
     >>>
 
     runtime {
@@ -783,6 +794,7 @@ task CallCopyRatioSegments {
     output {
         File called_copy_ratio_segments = "~{entity_id}.called.seg"
         File called_copy_ratio_legacy_segments = "~{entity_id}.called.igv.seg"
+        File called_copy_ratio_bed = "~{entity_id}.called.bed"
     }
 }
 
